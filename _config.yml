@@ -6,6 +6,8 @@
 
 #footer: 'follow us on <a href="https://twitter.com/">twitter</a>'
 
+remote_theme: b2a3e8/jekyll-theme-console
+# Optional but recommended
 plugins:
   - jekyll-seo-tag
 
