@@ -3,8 +3,11 @@
 source "https://rubygems.org"
 gemspec
 
-
+gem "csv"
 gem 'webrick'
+gem "base64"
+gem "bigdecimal"
+gem "logger"
 
 # Use libsass via jekyll-sass-converter 2.x to avoid Dart Sass
 # deprecation warnings for @import during local development.
