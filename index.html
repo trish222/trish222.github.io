@@ -6,47 +6,64 @@
 
     <title>Trish | Portfolio</title>
 
-    <!-- Tailwind v4 CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap" 
+    rel="stylesheet">
     <!-- Your custom script (Vite handles this automatically) -->
-    <script type="module" src="/src/main.js"></script>
   </head>
 
-  <body class="bg-blue-500">
+  <body class="bg-black">
   <!-- nagivation bar -->
-    <nav class="flex items-center justify-left md:justify-center  shadow-sm p-5 bg-blue">
-      <p class="text-lg font-medium">Trish Nguyen( ) { </p>
-      <ul class="hidden md:flex gap-6 p-2">
-        <li><a href="#about" class="text-lg font-medium hover:text-gray-400 hover:underline">about;</a></li>
-        <li><a href="#experience" class="text-lg font-medium hover:text-gray-400 hover:underline">experience;</a></li>
-        <li><a href="#projects" class="text-lg font-medium hover:text-gray-400 hover:underline">projects;</a></li>
-        <li><a href="#skills" class="text-lg font-medium hover:text-gray-400 hover:underline">skills;</a></li>
-      </ul>
-      <p class="text-lg font-medium"> }</p>
-      <button class="md:hidden ml-auto bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-600">menu</button>  
+    <nav class="flex flex-col md:justify-center  shadow-sm p-5 bg-blue">
+      
+      <div class="flex items-center justify-left">
+        <p class="text-white text-lg font-medium">Trish Nguyen( ) { </p>
+        <ul class="hidden md:flex gap-5 p-2">
+          <li><a href="#about" class="text-white text-lg font-medium hover:text-gray-400 hover:underline">About;</a></li>
+          <li><a href="#experience" class="text-white text-lg font-medium hover:text-gray-400 hover:underline">Experience;</a></li>
+          <li><a href="#projects" class="text-white text-lg font-medium hover:text-gray-400 hover:underline">Projects;</a></li>
+          <li><a href="#skills" class="text-white text-lg font-medium hover:text-gray-400 hover:underline">Skills;</a></li>
+        </ul>
+        <p class="text-white text-lg font-medium"> }</p>
+        <button class="md:hidden ml-auto bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-600">menu</button>  
+      </div>
+      
+      <!-- menu button (mobile)-->
+      <h1 class="font-heading text-3xl">Montserrat Heading</h1>
+      <p class="font-mono">JetBrains Mono body text</p>
+
+      <div class="p-6 bg-black text-green-400 font-mono">
+        Tailwind working text
+      </div>
+
+      <!-- dropdown menu (mobile)-->
+      <container class="md:hidden ">
+
+      </container>
     </nav>
     
 
     <section id="hero" class="flex items-center justify-center h-screen">
-      <h1 class="text-8xl font-bold">Trish Nguyen( ) {...}</h1>
+      <h1 class="text-white text-8xl font-bold">Trish Nguyen( ) {...}</h1>
     </section>
 
     <section id="about" class="h-screen">
-      <h2 class="text-3xl font-semibold text-center mt-8">about me</h2>
+      <h2 class="text-white text-3xl font-semibold text-center mt-8">about me</h2>
     </section>
 
     <section id="experience" class="h-screen">
-      <h2 class="text-3xl font-semibold text-center mt-8">experience</h2>
+      <h2 class="text-white text-3xl font-semibold text-center mt-8">experience</h2>
     </section>
 
     <section id="projects" class="h-screen">
-      <h2 class="text-3xl font-semibold text-center mt-8">projects</h2>
+      <h2 class="text-white text-3xl font-semibold text-center mt-8">projects</h2>
     </section>
 
     <section id="skills" class="h-screen">
-      <h2 class="text-3xl font-semibold text-center mt-8">skills</h2>
+      <h2 class="text-white text-3xl font-semibold text-center mt-8">skills</h2>
     </section>
 
+    <script type="module" src="/src/main.js"></script>
   </body>
 </html>
