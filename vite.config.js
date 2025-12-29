@@ -6,5 +6,5 @@ export default defineConfig({
     tailwindcss(),
   ],
   // Ensures GitHub Pages finds files correctly
-  base: './', 
+  base: '/', 
 })
