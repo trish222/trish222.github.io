@@ -4,18 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <title>Trish| Portfolio</title>
+    <title>Trish | Portfolio</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap" 
     rel="stylesheet">
-    <!-- Your custom script (Vite handles this automatically) -->
   </head>
 
   <body class="bg-black text-white">
   <!-- nagivation bar -->
-    <nav class="flex flex-col shadow-sm p-5 md:justify-center">
+    <nav class="relative flex flex-col shadow-sm p-5 md:justify-center">
       <div class="flex items-center justify-left">
         <p class="text-white text-lg font-bold font-mono tracking-widest">Trish Nguyen( ) { </p>
         <ul class="hidden md:flex gap-5 p-2">
@@ -24,8 +23,17 @@
           <li><a href="#projects" class="text-white text-lg font-medium hover:text-gray-400 hover:underline">Projects;</a></li>
           <li><a href="#skills" class="text-white text-lg font-medium hover:text-gray-400 hover:underline">Skills;</a></li>
         </ul>
-        <p class="text-white text-lg font-bold font-heading tracking-widest"> }</p>
-        <button class="md:hidden ml-auto bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-600">menu</button>  
+        <p class="text-white text-lg font-bold font-mono tracking-widest"> }</p>
+        
+        <button id="menu-btn" class="md:hidden ml-auto bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-600">menu</button>  
+      </div>
+      <!-- dropdown menu (mobile) (still in nav bar btw)-->
+      <div id="mobile-menu" class="hidden absolute left-95 right-5 flex flex-col items-end top-16 gap-4 bg-red-500 font-mono">
+        <a href="#about" class="text-neon-green hover:text-gray-500">About;</a>
+        <a href="#experience" class="text-neon-green hover:text-gray-500">Experience;</a>
+        <a href="#projects" class="text-neon-green hover:text-gray-500">Projects;</a>
+        <a href="#skills" class="text-neon-green hover:text-gray-500">Skills;</a>
+
       </div>
       
       <!-- menu button (mobile)-->
@@ -36,10 +44,7 @@
         Tailwind working text
       </div>
 
-      <!-- dropdown menu (mobile)-->
-      <div class="md:hidden ">
-
-      </div>
+      
     </nav>
     
 
