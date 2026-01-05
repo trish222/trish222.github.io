@@ -15,37 +15,37 @@
   <body class="bg-black text-white">
   <!-- nagivation bar -->
     <nav class="relative flex flex-col shadow-sm p-5 md:justify-center">
-      <div class="flex items-center justify-left">
-        <p class="text-white text-lg font-bold font-mono tracking-widest">Trish Nguyen( ) { </p>
-        <ul class="hidden md:flex gap-5 p-2">
-          <li><a href="#about" class="text-white text-lg font-medium hover:text-gray-400 hover:underline">About;</a></li>
-          <li><a href="#experience" class="text-white text-lg font-medium hover:text-gray-400 hover:underline">Experience;</a></li>
-          <li><a href="#projects" class="text-white text-lg font-medium hover:text-gray-400 hover:underline">Projects;</a></li>
-          <li><a href="#skills" class="text-white text-lg font-medium hover:text-gray-400 hover:underline">Skills;</a></li>
-        </ul>
-        <p class="text-white text-lg font-bold font-mono tracking-widest"> }</p>
-        
-        <button id="menu-btn" class="md:hidden ml-auto bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-600">menu</button>  
-      </div>
-      <!-- dropdown menu (mobile) (still in nav bar btw)-->
-      <div id="mobile-menu" class="hidden absolute left-95 right-5 flex flex-col items-end top-16 gap-4 bg-red-500 font-mono">
-        <a href="#about" class="text-neon-green hover:text-gray-500">About;</a>
-        <a href="#experience" class="text-neon-green hover:text-gray-500">Experience;</a>
-        <a href="#projects" class="text-neon-green hover:text-gray-500">Projects;</a>
-        <a href="#skills" class="text-neon-green hover:text-gray-500">Skills;</a>
-
+      <div class="relative flex items-center justify-between w-full">
+        <div class="flex items-center">
+          <p class="text-white text-lg font-bold font-mono tracking-widest">Trish Nguyen( ) { </p>
+          <ul class="hidden md:flex gap-5 p-2">
+            <li><a href="#about" class="text-white text-lg font-medium hover:text-gray-400 hover:underline">About;</a></li>
+            <li><a href="#experience" class="text-white text-lg font-medium hover:text-gray-400 hover:underline">Experience;</a></li>
+            <li><a href="#projects" class="text-white text-lg font-medium hover:text-gray-400 hover:underline">Projects;</a></li>
+            <li><a href="#skills" class="text-white text-lg font-medium hover:text-gray-400 hover:underline">Skills;</a></li>
+          </ul>
+          <p class="text-white text-lg font-bold font-mono tracking-widest"> }</p>  
+        </div>
+        <!-- menu button (mobile)-->
+        <button id="menu-btn" class="md:hidden bg-black/80 text-white px-5 py-3 rounded hover:bg-blue-600">menu</button> 
+        <!-- dropdown menu (mobile) (still in nav bar btw)-->
+        <div id="mobile-menu" class="hidden absolute z-50 right-0 top-full flex flex-col items-end gap-4 bg-red-500 font-mono p-4 mt-2 min-w-[150px] transition-all duration-200 ease-out opacity-100 scale-100">
+          <a href="#about" class="text-neon-green hover:text-gray-500">About;</a>
+          <a href="#experience" class="text-neon-green hover:text-gray-500">Experience;</a>
+          <a href="#projects" class="text-neon-green hover:text-gray-500">Projects;</a>
+          <a href="#skills" class="text-neon-green hover:text-gray-500">Skills;</a>
+        </div>
       </div>
       
-      <!-- menu button (mobile)-->
       <h1 class="font-heading !text-neon-green glow text-3xl tracking-widest">Montserrat Heading</h1>
       <p class="font-mono !text-neon-green">JetBrains Mono body text</p>
 
-      <div class="p-6 bg-black text-green-400 font-mono">
-        Tailwind working text
-      </div>
-
       
     </nav>
+
+    <div class="p-6 bg-black text-green-400 font-mono">
+      Tailwind working text
+    </div>
     
 
     <section id="hero" class="flex items-center justify-center h-screen">
