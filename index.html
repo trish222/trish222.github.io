@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -10,6 +10,15 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap" 
     rel="stylesheet">
+
+    <!-- script runs before the body renders, no white flash -->
+    <script>
+      if (localStorage.getItem('theme') === 'light') {
+        document.documentElement.classList.remove('dark');
+      } else {
+        document.documentElement.classList.add('dark');
+      }
+    </script>
   </head>
 
   <body class="bg-black text-white">
@@ -26,8 +35,13 @@
           </ul>
           <p class="text-white text-lg font-bold font-mono tracking-widest"> }</p>  
         </div>
+
+        <!-- theme toggle button -->
+        <button id="theme-toggle" class="bg-black/80 text-white px-5 py-3 rounded hover:bg-blue-600">theme</button>
+        
         <!-- menu button (mobile)-->
         <button id="menu-btn" class="md:hidden bg-black/80 text-white px-5 py-3 rounded hover:bg-blue-600">menu</button> 
+        
         <!-- dropdown menu (mobile) (still in nav bar btw)-->
         <div id="mobile-menu" class="absolute z-50 right-0 top-full flex flex-col items-end gap-4 bg-red-500 font-mono p-4 mt-2 min-w-[150px] 
                                      transition-all duration-200 ease-out origin-top-right
@@ -70,6 +84,6 @@
       <h2 class="text-white text-3xl font-semibold text-center mt-8">skills</h2>
     </section>
 
-    <script type="module" src="./src/main.js"></script>
+    <script type="module" src="./src/main.js" defer></script>
   </body>
 </html>
