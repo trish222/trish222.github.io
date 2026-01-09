@@ -1,16 +1,37 @@
 @import "tailwindcss";
 
 @theme {
+    /* BASE = LIGHT */
+    --color-page-bg: #ffffff;
+    --color-page-text: #0f172a;
     --color-neon-green: #00ff9c;
 
     --font-heading: "Montserrat", sans-serif;
     --font-mono: "JetBrains Mono", monospace;
+
 }
 
 @variant dark (&:where(.dark, .dark *));
+
+.dark {
+    --color-page-bg: #0f172a; /* Deep slate */
+    --color-page-text: #f8fafc; /* Off white */
+}
 
 .glow {
     text-shadow: 
     0 0 6px rgba(0, 255, 156, 0.6),
     0 0 12px rgba(0, 255, 156, 0.4);
+}
+
+@layer base {
+  html, body {
+    /* Only transition colors, not layout things like width or height */
+    @apply transition-colors duration-300 ease-in-out;
+  }
+  
+  /* You can also target specific elements if you want them to fade too */
+  a, button, div {
+     @apply transition-colors duration-300 ease-in-out;
+  }
 }

@@ -15,32 +15,30 @@
     <script>
       if (localStorage.getItem('theme') === 'light') {
         document.documentElement.classList.remove('dark');
-      } else {
-        document.documentElement.classList.add('dark');
-      }
+      } 
     </script>
   </head>
 
-  <body class="bg-black text-white">
+  <body class="bg-page-bg text-page-text transition-colors duration-300">
   <!-- nagivation bar -->
     <nav class="relative flex flex-col shadow-sm p-5 md:justify-center">
       <div class="relative flex items-center justify-between w-full">
         <div class="flex items-center">
-          <p class="text-white text-lg font-bold font-mono tracking-widest">Trish Nguyen( ) { </p>
+          <p class="text-lg font-bold font-mono tracking-widest">Trish Nguyen( ) { </p>
           <ul class="hidden md:flex gap-5 p-2">
-            <li><a href="#about" class="text-white text-lg font-medium hover:text-gray-400 hover:underline">About;</a></li>
-            <li><a href="#experience" class="text-white text-lg font-medium hover:text-gray-400 hover:underline">Experience;</a></li>
-            <li><a href="#projects" class="text-white text-lg font-medium hover:text-gray-400 hover:underline">Projects;</a></li>
-            <li><a href="#skills" class="text-white text-lg font-medium hover:text-gray-400 hover:underline">Skills;</a></li>
+            <li><a href="#about" class="text-lg font-medium hover:text-gray-400 hover:underline">About;</a></li>
+            <li><a href="#experience" class="text-lg font-medium hover:text-gray-400 hover:underline">Experience;</a></li>
+            <li><a href="#projects" class="text-lg font-medium hover:text-gray-400 hover:underline">Projects;</a></li>
+            <li><a href="#skills" class="text-lg font-medium hover:text-gray-400 hover:underline">Skills;</a></li>
           </ul>
-          <p class="text-white text-lg font-bold font-mono tracking-widest"> }</p>  
+          <p class="text-lg font-bold font-mono tracking-widest"> }</p>  
         </div>
 
         <!-- theme toggle button -->
-        <button id="theme-toggle" class="bg-black/80 text-white px-5 py-3 rounded hover:bg-blue-600">theme</button>
+        <button id="theme-toggle" class="bg-page-bg/80 px-5 py-3 rounded hover:bg-blue-600">theme</button>
         
         <!-- menu button (mobile)-->
-        <button id="menu-btn" class="md:hidden bg-black/80 text-white px-5 py-3 rounded hover:bg-blue-600">menu</button> 
+        <button id="menu-btn" class="md:hidden bg-page-bg/80 px-5 py-3 rounded hover:bg-blue-600">menu</button> 
         
         <!-- dropdown menu (mobile) (still in nav bar btw)-->
         <div id="mobile-menu" class="absolute z-50 right-0 top-full flex flex-col items-end gap-4 bg-red-500 font-mono p-4 mt-2 min-w-[150px] 
@@ -59,29 +57,29 @@
       
     </nav>
 
-    <div class="p-6 bg-black text-green-400 font-mono">
+    <div class="p-6 bg-page-bg text-green-400 font-mono">
       Tailwind working text
     </div>
     
 
     <section id="hero" class="flex items-center justify-center h-screen">
-      <h1 class="text-white text-8xl font-bold">Trish Nguyen( ) {...}</h1>
+      <h1 class="text-8xl font-bold">Trish Nguyen( ) {...}</h1>
     </section>
 
     <section id="about" class="h-screen">
-      <h2 class="text-white text-3xl font-semibold text-center mt-8">about me</h2>
+      <h2 class="text-3xl font-semibold text-center mt-8">about me</h2>
     </section>
 
     <section id="experience" class="h-screen">
-      <h2 class="text-white text-3xl font-semibold text-center mt-8">experience</h2>
+      <h2 class="text-3xl font-semibold text-center mt-8">experience</h2>
     </section>
 
     <section id="projects" class="h-screen">
-      <h2 class="text-white text-3xl font-semibold text-center mt-8">projects</h2>
+      <h2 class="text-3xl font-semibold text-center mt-8">projects</h2>
     </section>
 
     <section id="skills" class="h-screen">
-      <h2 class="text-white text-3xl font-semibold text-center mt-8">skills</h2>
+      <h2 class="text-3xl font-semibold text-center mt-8">skills</h2>
     </section>
 
     <script type="module" src="./src/main.js" defer></script>
