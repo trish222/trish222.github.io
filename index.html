@@ -21,8 +21,8 @@
 
   <body class="bg-page-bg text-page-text transition-colors duration-300">
   <!-- nagivation bar -->
-    <nav class="relative flex flex-col shadow-sm p-5 md:justify-center">
-      <div class="relative flex items-center justify-between w-full">
+    <nav class="relative flex flex-col p-5 md:justify-center">
+      <div class="relative flex justify-between w-full">
         <div class="flex items-center">
           <p class="text-lg font-bold font-mono tracking-widest">Trish Nguyen( ) { </p>
           <ul class="hidden md:flex gap-5 p-2">
@@ -34,12 +34,23 @@
           <p class="text-lg font-bold font-mono tracking-widest"> }</p>  
         </div>
 
-        <!-- theme toggle button -->
-        <button id="theme-toggle" class="bg-page-bg/80 px-5 py-3 rounded hover:bg-blue-600">theme</button>
+        <div class="flex gap-2">
+          <!-- theme toggle button -->
+           <button id="theme-toggle" class="p-2 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer" aria-label="Toggle Theme">
+  
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 block dark:hidden lucide lucide-sun-icon lucide-sun"><circle cx="12" cy="12" r="4"/>
+              <path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+            </svg>
+
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden dark:block lucide lucide-moon-icon lucide-moon">
+              <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/>
+            </svg>
+            
+          </button>
         
-        <!-- menu button (mobile)-->
-        <button id="menu-btn" class="md:hidden bg-page-bg/80 px-5 py-3 rounded hover:bg-blue-600">menu</button> 
-        
+          <!-- menu button (mobile)-->
+          <button id="menu-btn" class="md:hidden bg-page-bg/80 ml-auto px-4 py-3 rounded hover:bg-blue-600 cursor-pointer">menu</button> 
+        </div>
         <!-- dropdown menu (mobile) (still in nav bar btw)-->
         <div id="mobile-menu" class="absolute z-50 right-0 top-full flex flex-col items-end gap-4 bg-red-500 font-mono p-4 mt-2 min-w-[150px] 
                                      transition-all duration-200 ease-out origin-top-right
@@ -51,31 +62,55 @@
         </div>
       </div>
       
-      <h1 class="font-heading !text-neon-green glow text-3xl tracking-widest">Montserrat Heading</h1>
-      <p class="font-mono !text-neon-green">JetBrains Mono body text</p>
-
+      <h1 class="font-heading text-neon-green glow text-3xl tracking-widest">Montserrat Heading</h1>
+      <p class="font-mono text-neon-green">JetBrains Mono body text</p>
       
     </nav>
 
     <div class="p-6 bg-page-bg text-green-400 font-mono">
       Tailwind working text
     </div>
-    
 
     <section id="hero" class="flex items-center justify-center h-screen">
-      <h1 class="text-8xl font-bold">Trish Nguyen( ) {...}</h1>
+      <h1 class="glow text-cyan-400 text-8xl font-heading">Trish Nguyen( ) {...}</h1>
     </section>
 
-    <section id="about" class="h-screen">
-      <h2 class="text-3xl font-semibold text-center mt-8">about me</h2>
+    <section id="about" class="folder-container">
+      <div class="folder-tab">
+        <span class="block skew-x-12 font-mono text-sm font-bold uppercase tracking-widest text-cyan-500 dark:text-fuchsia-400">
+          about;
+        </span>
+      </div>
+      <div class="folder-body">
+        <div class="folder-seam"></div>
+        <div class="folder-content">
+          <h2 class="font-heading text-3xl mb-4 text-page-text">About Me</h2>
+          <p class="font-mono text-slate-400">Your bio content goes here...</p>
+        </div>
+      </div>
     </section>
 
     <section id="experience" class="h-screen">
       <h2 class="text-3xl font-semibold text-center mt-8">experience</h2>
     </section>
 
-    <section id="projects" class="h-screen">
-      <h2 class="text-3xl font-semibold text-center mt-8">projects</h2>
+    <section id="projects" class="folder-container animate-flicker">
+      <div class="folder-tab">
+        <span class="block skew-x-12 font-mono text-sm font-bold uppercase tracking-widest text-cyan-500 dark:text-fuchsia-400">
+          projects;
+        </span>
+      </div>
+
+      <div class="folder-body">
+        <div class="folder-seam"></div>
+        
+        <div class="folder-content">
+          <h2 class="font-heading text-3xl mb-4">Selected Work</h2>
+          <p class="font-mono text-slate-400">
+            // List of projects goes here...
+          </p>
+        </div>
+      </div>
     </section>
 
     <section id="skills" class="h-screen">

@@ -5,6 +5,8 @@
     --color-page-bg: #ffffff;
     --color-page-text: #0f172a;
     --color-neon-green: #00ff9c;
+    --color-neon-cyan: #22d3ee;
+    --color-neon-fuchsia: #d946ef;
 
     --font-heading: "Montserrat", sans-serif;
     --font-mono: "JetBrains Mono", monospace;
@@ -18,11 +20,6 @@
     --color-page-text: #f8fafc; /* Off white */
 }
 
-.glow {
-    text-shadow: 
-    0 0 6px rgba(0, 255, 156, 0.6),
-    0 0 12px rgba(0, 255, 156, 0.4);
-}
 
 @layer base {
   html, body {
@@ -34,4 +31,58 @@
   a, button, div {
      @apply transition-colors duration-300 ease-in-out;
   }
+}
+
+/* custom glow effect */
+@layer utilities { 
+  .glow {
+    /* We use multiple layers of 'currentColor' to create the bloom.
+       Since we aren't using white, we use different opacities 
+       to make the glow feel thick and natural. */
+    text-shadow: 
+      /* 1. The 'Hot' inner glow (high opacity) */
+      0 0 8px currentColor,
+      
+      /* 2. The 'Mid' glow (slightly faded) */
+      0 0 20px color-mix(in srgb, currentColor, transparent 25%),
+      
+      /* 3. The 'Soft' outer bloom (very faded) */
+      0 0 40px color-mix(in srgb, currentColor, transparent 60%);
+  }
+}
+
+@layer components {
+  .folder-container {
+    @apply relative mx-auto mt-32 mb-20 max-w-4xl px-6;
+  }
+  .folder-body {
+    @apply relative p-8 md:p-12 -skew-x-12 border-2 bg-page-bg rounded-br-3xl transition-all duration-300;
+    @apply border-neon-cyan shadow-[0_0_15px_rgba(34,211,238,0.3)];
+    @apply dark:border-neon-fuchsia dark:shadow-[0_0_15px_rgba(192,38,211,0.3)];
+  }
+  .folder-tab {
+    @apply absolute -top-[2px] left-10 -translate-y-full md:left-16 px-6 py-2 -skew-x-12 border-t-2 border-l-2 border-r-2 rounded-t-lg bg-page-bg;
+    @apply border-neon-cyan dark:border-neon-fuchsia;
+  }
+  .folder-seam {
+    @apply absolute -top-[2px] left-[42px] md:left-[66px] h-[2px] w-24 md:w-32 bg-page-bg z-10;
+  }
+  .folder-content {
+    @apply skew-x-12;
+  }
+}
+
+/* Neon Flicker Animation */
+@keyframes neon-flicker {
+  0%, 18%, 22%, 25%, 53%, 57%, 100% {
+    opacity: 1;
+  }
+  20%, 24%, 55% {
+    opacity: 0.3;
+    filter: brightness(0.5);
+  }
+}
+
+.animate-flicker {
+  animation: neon-flicker 1.5s ease-out forwards;
 }
