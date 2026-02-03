@@ -10,7 +10,6 @@
 
     --font-heading: "Montserrat", sans-serif;
     --font-mono: "JetBrains Mono", monospace;
-
 }
 
 @variant dark (&:where(.dark, .dark *));
@@ -20,6 +19,17 @@
     --color-page-text: #f8fafc; /* Off white */
 }
 
+/* 1. THE PULSE ANIMATION */
+@keyframes neon-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 2px var(--glow-color)) brightness(1);
+    opacity: 1;
+  }
+  50% {
+    filter: drop-shadow(0 0 15px var(--glow-color)) brightness(1.2);
+    opacity: 0.9;
+  }
+}
 
 @layer base {
   html, body {
@@ -33,42 +43,56 @@
   }
 }
 
-/* custom glow effect */
-@layer utilities { 
-  .glow {
-    /* We use multiple layers of 'currentColor' to create the bloom.
-       Since we aren't using white, we use different opacities 
-       to make the glow feel thick and natural. */
-    text-shadow: 
-      /* 1. The 'Hot' inner glow (high opacity) */
-      0 0 8px currentColor,
-      
-      /* 2. The 'Mid' glow (slightly faded) */
-      0 0 20px color-mix(in srgb, currentColor, transparent 25%),
-      
-      /* 3. The 'Soft' outer bloom (very faded) */
-      0 0 40px color-mix(in srgb, currentColor, transparent 60%);
+@layer components {
+  .folder-container {
+    /* Define the glow color variable here so children can use it */
+    --glow-color: var(--color-neon-cyan);
+    @apply relative mx-auto mt-40 mb-24 max-w-4xl px-6;
+    animation: neon-pulse 4s infinite ease-in-out;
+  }
+
+  .dark .folder-container {
+    --glow-color: var(--color-neon-fuchsia);
+  }
+
+  .folder-tab {
+    /* 1. Changed -top-[4px] to top-[2px] to sink it into the 6px border */
+    /* 2. Increased rounding slightly to match the body better */
+    @apply absolute top-[7px] left-10 -translate-y-full translate-x-[23px] md:left-16 px-10 py-3 -skew-x-12 z-20;
+    @apply border-[6px] rounded-t-[2.5rem] bg-page-bg;
+    
+    /* Neon Colors + Bottom border matching bg to hide the seam */
+    @apply border-[var(--glow-color)] border-b-page-bg;
+    
+    text-shadow: 0 0 10px var(--glow-color);
+  }
+
+  .folder-body {
+    /* Rounding ALL corners [2.5rem], 6px thick */
+    @apply relative p-10 md:p-14 -skew-x-12 border-[6px] bg-page-bg rounded-[2.5rem] transition-all duration-300 z-10;
+    @apply border-[var(--glow-color)];
+    
+    /* Dynamic Shadow using the variable */
+    box-shadow: 0 0 20px color-mix(in srgb, var(--glow-color), transparent 50%),
+                0 0 40px color-mix(in srgb, var(--glow-color), transparent 80%);
+  }
+
+  .folder-content {
+    @apply skew-x-12;
+  }
+
+  /* Apply glow to headings inside folders automatically */
+  .folder-content h2 {
+    @apply font-heading;
+    text-shadow: 0 0 15px var(--glow-color);
   }
 }
 
-@layer components {
-  .folder-container {
-    @apply relative mx-auto mt-32 mb-20 max-w-4xl px-6;
-  }
-  .folder-body {
-    @apply relative p-8 md:p-12 -skew-x-12 border-2 bg-page-bg rounded-br-3xl transition-all duration-300;
-    @apply border-neon-cyan shadow-[0_0_15px_rgba(34,211,238,0.3)];
-    @apply dark:border-neon-fuchsia dark:shadow-[0_0_15px_rgba(192,38,211,0.3)];
-  }
-  .folder-tab {
-    @apply absolute -top-[2px] left-10 -translate-y-full md:left-16 px-6 py-2 -skew-x-12 border-t-2 border-l-2 border-r-2 rounded-t-lg bg-page-bg;
-    @apply border-neon-cyan dark:border-neon-fuchsia;
-  }
-  .folder-seam {
-    @apply absolute -top-[2px] left-[42px] md:left-[66px] h-[2px] w-24 md:w-32 bg-page-bg z-10;
-  }
-  .folder-content {
-    @apply skew-x-12;
+/* 2. FIXING THE GENERAL GLOW UTILITY */
+@layer utilities { 
+  .glow {
+    text-shadow: 0 0 8px currentColor,
+                 0 0 20px color-mix(in srgb, currentColor, transparent 30%);
   }
 }
 
@@ -84,5 +108,6 @@
 }
 
 .animate-flicker {
-  animation: neon-flicker 1.5s ease-out forwards;
+  animation: neon-pulse 4s infinite ease-in-out, neon-flicker 1.5s ease-out infinite;
 }
+
