@@ -46,6 +46,10 @@
 @layer components {
   .folder-container {
   --glow-color: var(--color-neon-cyan); /* add this */
+  @apply relative mx-auto mt-40 mb-24 max-w-4xl px-6;
+  
+
+
   opacity: 0.25;
   animation: none;
   filter: none;
