@@ -45,14 +45,40 @@
 
 @layer components {
   .folder-container {
-    /* Define the glow color variable here so children can use it */
-    --glow-color: var(--color-neon-cyan);
-    @apply relative mx-auto mt-40 mb-24 max-w-4xl px-6;
-    animation: neon-pulse 4s infinite ease-in-out;
+  --glow-color: var(--color-neon-cyan); /* add this */
+  opacity: 0.25;
+  animation: none;
+  filter: none;
+  transition: opacity 400ms ease, filter 400ms ease;
   }
+
+  /* OFF state: kill neon glow on inner parts */
+  .folder-container:not(.is-active) .folder-body {
+    box-shadow: none;
+  }
+
+  .folder-container:not(.is-active) .folder-tab {
+    text-shadow: none;
+  }
+
+  /* Optional: dim borders when off */
+  .folder-container:not(.is-active) .folder-body,
+  .folder-container:not(.is-active) .folder-tab {
+    border-color: color-mix(in srgb, var(--glow-color), transparent 70%);
+  }
+
 
   .dark .folder-container {
     --glow-color: var(--color-neon-fuchsia);
+  }
+
+
+  /* active: glow turns on */
+  .folder-container.is-active {
+    /* on when in view */
+    opacity: 1;
+    animation: neon-pulse 4s infinite ease-in-out;
+    filter: drop-shadow(0 0 6px var(--glow-color));
   }
 
   .folder-tab {
