@@ -15,7 +15,7 @@
 @variant dark (&:where(.dark, .dark *));
 
 .dark {
-    --color-page-bg: #0f172a; /* Deep slate */
+    --color-page-bg: #121321; /* Deep slate */
     --color-page-text: #f8fafc; /* Off white */
 }
 
