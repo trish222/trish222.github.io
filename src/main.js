@@ -11,7 +11,8 @@ const menuBtn = document.getElementById('menu-btn');
 const mobileMenu = document.getElementById('mobile-menu');
 const themeToggleBtn = document.getElementById('theme-toggle');
 const folders = document.querySelectorAll(".folder-container");
-
+const backToTopBtn = document.getElementById('back-to-top');
+const nav = document.querySelector('nav'); //looks for first <nav>
 
 /* ==========================================
    FUNCTIONS
@@ -74,11 +75,31 @@ const setupGlowOnScroll = () => {
   folders.forEach((el) => observer.observe(el));
 };
 
+// close menu when scrolled out of view
+const setupMenuCloseOnScroll = () => {
+  if (!nav || !mobileMenu) return;
+
+  const navObserver = new IntersectionObserver(
+    (entries) => {
+      const entry = entries[0];
+      if (!entry.isIntersecting) {
+        closeMobileMenu();
+      }
+    },
+
+    { threshold: 0 }
+  );
+
+  navObserver.observe(nav);
+
+}
+
 /* ==========================================
    INITIALIZATION (run once on load)
    ========================================== */
 setThemeClassFromStorage();
 setupGlowOnScroll();
+setupMenuCloseOnScroll();
 
 /* ==========================================
    EVENT LISTENERS
@@ -101,8 +122,21 @@ if (menuBtn && mobileMenu) {
 
     if (!clickedInsideMenu && !clickedMenuBtn) closeMobileMenu();
   });
+
+  // close the menu when menu option is clicked
+  mobileMenu.querySelectorAll("a").forEach(link => {
+    link.addEventListener("click", () => {
+      closeMobileMenu();
+    })
+  })
 }
+
 
 if (themeToggleBtn) {
     themeToggleBtn.addEventListener('click', toggleTheme);
 }
+
+// back to top button
+backToTopBtn.addEventListener('click', () => {
+  window.scrollTo({top: 0, behavior: 'smooth'});
+})
