@@ -141,3 +141,71 @@
   animation: neon-pulse 4s infinite ease-in-out, neon-flicker 1.5s ease-out infinite;
 }
 
+/* Hero neon sign animation */
+@keyframes hero-neon-flicker {
+  0%, 18%, 22%, 25%, 54%, 56%, 100% {
+    text-shadow:
+      0 0 10px rgba(0, 255, 255, 1),
+      0 0 20px rgba(0, 255, 255, 0.9),
+      0 0 30px rgba(0, 255, 255, 0.8),
+      0 0 40px rgba(0, 255, 255, 0.7),
+      0 0 50px rgba(0, 255, 255, 0.6),
+      0 0 60px rgba(0, 255, 255, 0.5),
+      inset 0 0 20px rgba(0, 255, 255, 0.3);
+    color: rgba(0, 255, 255, 1);
+  }
+  20%, 24%, 55% {
+    text-shadow:
+      0 0 5px rgba(0, 255, 255, 0.6),
+      0 0 15px rgba(0, 255, 255, 0.4),
+      0 0 25px rgba(0, 255, 255, 0.2);
+    color: rgba(0, 255, 255, 0.6);
+  }
+}
+
+@keyframes hero-neon-light-up {
+  0% {
+    text-shadow:
+      0 0 2px rgba(0, 255, 255, 0.2),
+      0 0 4px rgba(0, 255, 255, 0.1);
+    color: rgba(0, 255, 255, 0.3);
+    opacity: 0.3;
+  }
+  50% {
+    text-shadow:
+      0 0 10px rgba(0, 255, 255, 1),
+      0 0 20px rgba(0, 255, 255, 0.9),
+      0 0 30px rgba(0, 255, 255, 0.8),
+      0 0 40px rgba(0, 255, 255, 0.7),
+      0 0 50px rgba(0, 255, 255, 0.6),
+      0 0 60px rgba(0, 255, 255, 0.5),
+      inset 0 0 20px rgba(0, 255, 255, 0.3);
+    color: rgba(0, 255, 255, 1);
+    opacity: 1;
+  }
+  100% {
+    text-shadow:
+      0 0 10px rgba(0, 255, 255, 1),
+      0 0 20px rgba(0, 255, 255, 0.9),
+      0 0 30px rgba(0, 255, 255, 0.8),
+      0 0 40px rgba(0, 255, 255, 0.7),
+      0 0 50px rgba(0, 255, 255, 0.6),
+      0 0 60px rgba(0, 255, 255, 0.5),
+      inset 0 0 20px rgba(0, 255, 255, 0.3);
+    color: rgba(0, 255, 255, 1);
+    opacity: 1;
+  }
+}
+
+.neon-sign {
+  perspective: 1000px;
+  font-size: 0;
+}
+
+.neon-letter {
+  display: inline-block;
+  font-size: 1em;
+  animation: hero-neon-light-up var(--duration) ease-in-out var(--delay) forwards,
+             hero-neon-flicker 0.5s ease-in-out calc(var(--delay) + var(--duration)) infinite;
+}
+

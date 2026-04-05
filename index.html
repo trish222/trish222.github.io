@@ -20,74 +20,6 @@
   </head>
 
   <body class="bg-page-bg text-page-text transition-colors duration-300">
-  <style>
-    /* Neon sign animation */
-    @keyframes neon-flicker {
-      0%, 18%, 22%, 25%, 54%, 56%, 100% {
-        text-shadow: 
-          0 0 10px rgba(0, 255, 255, 1),
-          0 0 20px rgba(0, 255, 255, 0.9),
-          0 0 30px rgba(0, 255, 255, 0.8),
-          0 0 40px rgba(0, 255, 255, 0.7),
-          0 0 50px rgba(0, 255, 255, 0.6),
-          0 0 60px rgba(0, 255, 255, 0.5),
-          inset 0 0 20px rgba(0, 255, 255, 0.3);
-        color: rgba(0, 255, 255, 1);
-      }
-      20%, 24%, 55% {
-        text-shadow: 
-          0 0 5px rgba(0, 255, 255, 0.6),
-          0 0 15px rgba(0, 255, 255, 0.4),
-          0 0 25px rgba(0, 255, 255, 0.2);
-        color: rgba(0, 255, 255, 0.6);
-      }
-    }
-
-    @keyframes neon-light-up {
-      0% {
-        text-shadow: 
-          0 0 2px rgba(0, 255, 255, 0.2),
-          0 0 4px rgba(0, 255, 255, 0.1);
-        color: rgba(0, 255, 255, 0.3);
-        opacity: 0.3;
-      }
-      50% {
-        text-shadow: 
-          0 0 10px rgba(0, 255, 255, 1),
-          0 0 20px rgba(0, 255, 255, 0.9),
-          0 0 30px rgba(0, 255, 255, 0.8),
-          0 0 40px rgba(0, 255, 255, 0.7),
-          0 0 50px rgba(0, 255, 255, 0.6),
-          0 0 60px rgba(0, 255, 255, 0.5),
-          inset 0 0 20px rgba(0, 255, 255, 0.3);
-        color: rgba(0, 255, 255, 1);
-        opacity: 1;
-      }
-      100% {
-        text-shadow: 
-          0 0 10px rgba(0, 255, 255, 1),
-          0 0 20px rgba(0, 255, 255, 0.9),
-          0 0 30px rgba(0, 255, 255, 0.8),
-          0 0 40px rgba(0, 255, 255, 0.7),
-          0 0 50px rgba(0, 255, 255, 0.6),
-          0 0 60px rgba(0, 255, 255, 0.5),
-          inset 0 0 20px rgba(0, 255, 255, 0.3);
-        color: rgba(0, 255, 255, 1);
-        opacity: 1;
-      }
-    }
-
-    .neon-sign {
-      perspective: 1000px;
-    }
-
-    .neon-letter {
-      display: inline-block;
-      animation: neon-light-up var(--duration) ease-in-out var(--delay) forwards,
-                 neon-flicker 0.5s ease-in-out calc(var(--delay) + var(--duration)) infinite;
-      letter-spacing: 0.05em;
-    }
-  </style>
   <!-- nagivation bar -->
     <nav class="relative flex flex-col p-5 md:justify-center">
       <div class="relative flex justify-between w-full">
@@ -141,7 +73,7 @@
 
     <section id="hero" class="flex items-center justify-center h-screen">
       <div class="neon-sign">
-        <h1 class="text-8xl font-heading tracking-wider">
+        <h1 class="text-8xl font-heading">
           <span class="neon-letter" style="--delay: 0s; --duration: 5.5s">h</span>
           <span class="neon-letter" style="--delay: 0.5s; --duration: 6.5s">e</span>
           <span class="neon-letter" style="--delay: 1s; --duration: 5s">l</span>
