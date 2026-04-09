@@ -3,9 +3,232 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
+  <title>Trish Nguyen — Portfolio</title>
+  <script type="module" src="/src/main.js"></script>
 </head>
 <body>
-  
+
+  <!-- ===== DESKTOP ===== -->
+  <div id="desktop">
+
+    <!-- Desktop Icons -->
+    <div class="desktop-icons">
+      <div class="desktop-icon" data-window="about">
+        <div class="icon-img">👤</div>
+        <span>About Me</span>
+      </div>
+      <div class="desktop-icon" data-window="projects">
+        <div class="icon-img">📁</div>
+        <span>Projects</span>
+      </div>
+      <div class="desktop-icon" data-window="skills">
+        <div class="icon-img">⚙️</div>
+        <span>Skills</span>
+      </div>
+      <div class="desktop-icon" data-window="contact">
+        <div class="icon-img">✉️</div>
+        <span>Contact</span>
+      </div>
+    </div>
+
+    <!-- ===== ABOUT WINDOW ===== -->
+    <div class="window" id="window-about" style="top:50px; left:130px; width:480px;">
+      <div class="window-titlebar" data-drag="window-about">
+        <span class="window-title">👤 About Me</span>
+        <div class="window-controls">
+          <button class="win-btn minimize-btn" data-target="about">_</button>
+          <button class="win-btn maximize-btn" data-target="about">□</button>
+          <button class="win-btn close-btn" data-target="about">✕</button>
+        </div>
+      </div>
+      <div class="window-menubar">
+        <span>File</span><span>Edit</span><span>View</span><span>Help</span>
+      </div>
+      <div class="window-body">
+        <div class="about-content">
+          <div class="profile-section">
+            <div class="profile-pic">👩‍💻</div>
+            <div class="profile-info">
+              <h1>Trish Nguyen</h1>
+              <p class="tagline">Software Developer</p>
+            </div>
+          </div>
+          <div class="divider-raised"></div>
+          <p>Hi! I'm Trish — a web developer who loves building things for the web.</p>
+          <p style="margin-top:6px;">Welcome to my portfolio, circa 1995.</p>
+        </div>
+      </div>
+      <div class="window-statusbar"><span>Ready</span></div>
+    </div>
+
+    <!-- ===== PROJECTS WINDOW ===== -->
+    <div class="window hidden" id="window-projects" style="top:70px; left:190px; width:560px;">
+      <div class="window-titlebar" data-drag="window-projects">
+        <span class="window-title">📁 Projects</span>
+        <div class="window-controls">
+          <button class="win-btn minimize-btn" data-target="projects">_</button>
+          <button class="win-btn maximize-btn" data-target="projects">□</button>
+          <button class="win-btn close-btn" data-target="projects">✕</button>
+        </div>
+      </div>
+      <div class="window-menubar">
+        <span>File</span><span>Edit</span><span>View</span><span>Help</span>
+      </div>
+      <div class="window-body">
+        <div class="file-explorer">
+          <div class="project-card">
+            <div class="project-icon">💻</div>
+            <div class="project-info">
+              <strong>Project One</strong>
+              <p>A web app built with React and Node.js. Replace this with your real project description.</p>
+              <div class="project-tags">
+                <span class="tag">React</span>
+                <span class="tag">Node.js</span>
+                <span class="tag">PostgreSQL</span>
+              </div>
+            </div>
+          </div>
+          <div class="project-card">
+            <div class="project-icon">🌐</div>
+            <div class="project-info">
+              <strong>Project Two</strong>
+              <p>Another cool project. Replace this with your real project description.</p>
+              <div class="project-tags">
+                <span class="tag">Python</span>
+                <span class="tag">Flask</span>
+              </div>
+            </div>
+          </div>
+          <div class="project-card">
+            <div class="project-icon">📱</div>
+            <div class="project-info">
+              <strong>Project Three</strong>
+              <p>Mobile-friendly application. Replace this with your real project description.</p>
+              <div class="project-tags">
+                <span class="tag">TypeScript</span>
+                <span class="tag">Vue</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="window-statusbar"><span>3 objects</span></div>
+    </div>
+
+    <!-- ===== SKILLS WINDOW ===== -->
+    <div class="window hidden" id="window-skills" style="top:90px; left:250px; width:400px;">
+      <div class="window-titlebar" data-drag="window-skills">
+        <span class="window-title">⚙️ Skills</span>
+        <div class="window-controls">
+          <button class="win-btn minimize-btn" data-target="skills">_</button>
+          <button class="win-btn maximize-btn" data-target="skills">□</button>
+          <button class="win-btn close-btn" data-target="skills">✕</button>
+        </div>
+      </div>
+      <div class="window-body">
+        <div class="skills-content">
+          <div class="skill-group">
+            <div class="skill-group-label">Languages</div>
+            <div class="skill-list">
+              <div class="skill-item">
+                <span>JavaScript</span>
+                <div class="skill-bar"><div class="skill-fill" style="width:90%"></div></div>
+              </div>
+              <div class="skill-item">
+                <span>TypeScript</span>
+                <div class="skill-bar"><div class="skill-fill" style="width:80%"></div></div>
+              </div>
+              <div class="skill-item">
+                <span>Python</span>
+                <div class="skill-bar"><div class="skill-fill" style="width:75%"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="skill-group" style="margin-top:12px;">
+            <div class="skill-group-label">Frameworks</div>
+            <div class="skill-list">
+              <div class="skill-item">
+                <span>React</span>
+                <div class="skill-bar"><div class="skill-fill" style="width:85%"></div></div>
+              </div>
+              <div class="skill-item">
+                <span>Node.js</span>
+                <div class="skill-bar"><div class="skill-fill" style="width:80%"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="window-statusbar"><span>5 skills</span></div>
+    </div>
+
+    <!-- ===== CONTACT WINDOW ===== -->
+    <div class="window hidden" id="window-contact" style="top:110px; left:310px; width:360px;">
+      <div class="window-titlebar" data-drag="window-contact">
+        <span class="window-title">✉️ Contact</span>
+        <div class="window-controls">
+          <button class="win-btn minimize-btn" data-target="contact">_</button>
+          <button class="win-btn maximize-btn" data-target="contact">□</button>
+          <button class="win-btn close-btn" data-target="contact">✕</button>
+        </div>
+      </div>
+      <div class="window-body">
+        <div class="contact-content">
+          <div class="contact-item">
+            <span class="contact-label">Email:</span>
+            <a href="mailto:hello@example.com">hello@example.com</a>
+          </div>
+          <div class="contact-item">
+            <span class="contact-label">GitHub:</span>
+            <a href="https://github.com/trish222" target="_blank">github.com/trish222</a>
+          </div>
+          <div class="contact-item">
+            <span class="contact-label">LinkedIn:</span>
+            <a href="#" target="_blank">linkedin.com/in/trish</a>
+          </div>
+          <div class="divider-raised" style="margin:10px 0;"></div>
+          <p style="font-weight:bold; margin-bottom:6px;">Send a Message:</p>
+          <div class="form-field">
+            <label>Name:</label>
+            <input type="text" class="win-input" placeholder="Your name">
+          </div>
+          <div class="form-field">
+            <label>Message:</label>
+            <textarea class="win-input" rows="3" placeholder="Your message..."></textarea>
+          </div>
+          <button class="win-button">Send</button>
+        </div>
+      </div>
+      <div class="window-statusbar"><span>Ready</span></div>
+    </div>
+
+  </div><!-- /#desktop -->
+
+  <!-- ===== TASKBAR ===== -->
+  <div id="taskbar">
+    <button id="start-button">
+      <span class="start-logo">⊞</span>
+      <strong>Start</strong>
+    </button>
+    <div class="taskbar-divider"></div>
+    <div id="taskbar-windows"></div>
+    <div id="taskbar-tray">
+      <div id="taskbar-clock">12:00 PM</div>
+    </div>
+  </div>
+
+  <!-- ===== START MENU ===== -->
+  <div id="start-menu" class="hidden">
+    <div class="start-menu-sidebar"><span>Trish Nguyen</span></div>
+    <div class="start-menu-items">
+      <div class="start-menu-item" data-window="about">👤 About Me</div>
+      <div class="start-menu-item" data-window="projects">📁 Projects</div>
+      <div class="start-menu-item" data-window="skills">⚙️ Skills</div>
+      <div class="start-menu-item" data-window="contact">✉️ Contact</div>
+      <div class="start-menu-divider"></div>
+      <div class="start-menu-item" id="shutdown-item">🔌 Shut Down...</div>
+    </div>
+  </div>
+
 </body>
 </html>
