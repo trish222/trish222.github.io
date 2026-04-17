@@ -1,142 +1,164 @@
-/* ==========================================
-   IMPORTS
-   ========================================== */
 import './style.css';
 
 /* ==========================================
    CONSTANTS
    ========================================== */
-const html = document.documentElement;
-const menuBtn = document.getElementById('menu-btn');
-const mobileMenu = document.getElementById('mobile-menu');
-const themeToggleBtn = document.getElementById('theme-toggle');
-const folders = document.querySelectorAll(".folder-container");
-const backToTopBtn = document.getElementById('back-to-top');
-const nav = document.querySelector('nav'); //looks for first <nav>
+const popup       = document.getElementById('popup');
+const popupClosed = document.getElementById('popup-closed');
+const statusText  = document.getElementById('status-text');
+
+const SECTION_LABELS = {
+  home:       'TRISH_NGUYEN.EXE',
+  about:      'TRISH_NGUYEN.EXE — ABOUT',
+  experience: 'TRISH_NGUYEN.EXE — EXPERIENCE',
+  projects:   'TRISH_NGUYEN.EXE — PROJECTS',
+  skills:     'TRISH_NGUYEN.EXE — SKILLS',
+  contact:    'TRISH_NGUYEN.EXE — CONTACT',
+};
+
+const STATUS_MESSAGES = {
+  home:       'SYSTEM READY ●',
+  about:      'LOADING ABOUT.DAT...',
+  experience: 'LOADING EXPERIENCE.DAT...',
+  projects:   'LOADING PROJECTS.DAT...',
+  skills:     'LOADING SKILLS.DAT...',
+  contact:    'LOADING CONTACT.DAT...',
+};
 
 /* ==========================================
-   FUNCTIONS
+   SCREEN NAVIGATION
    ========================================== */
-const setThemeClassFromStorage = () => {
-  // Default is dark (you already set <html class="dark"> in HTML)
-  // But if storage says light, remove dark.
-  const stored = localStorage.getItem("theme");
-  if (stored === "light") html.classList.remove("dark");
-  if (stored === "dark") html.classList.add("dark");
-};
 
-const toggleTheme = () => {
-    html.classList.toggle('dark');
-    const isDark = html.classList.contains('dark');
-    localStorage.setItem('theme', isDark ? 'dark' : 'light');
-};
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
 
-// Mobile menu state helpers
-const openMobileMenu = () => {
-  if (!mobileMenu) return;
-  mobileMenu.classList.remove("invisible", "opacity-0", "scale-95");
-  mobileMenu.classList.add("visible", "opacity-100", "scale-100");
-};
+  const screen = document.getElementById(`screen-${id}`);
+  if (screen) screen.classList.add('active');
 
-const closeMobileMenu = () => {
-  if (!mobileMenu) return;
-  mobileMenu.classList.add("invisible", "opacity-0", "scale-95");
-  mobileMenu.classList.remove("visible", "opacity-100", "scale-100");
-};
+  document.getElementById('popup-title-text').textContent =
+    SECTION_LABELS[id] ?? SECTION_LABELS.home;
 
-const toggleMobileMenu = () => {
-  if (!mobileMenu) return;
-  const isOpen = mobileMenu.classList.contains("visible");
-  if (isOpen) closeMobileMenu();
-  else openMobileMenu();
-};
+  setStatus(STATUS_MESSAGES[id] ?? STATUS_MESSAGES.home);
+}
 
-// Glow-on-scroll setup
-const setupGlowOnScroll = () => {
-  if (!folders.length) return;
-
-  // Accessibility: reduce motion
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    folders.forEach((el) => el.classList.add("is-active"));
-    return;
+function setStatus(msg, duration = 1200) {
+  statusText.textContent = msg;
+  if (msg !== STATUS_MESSAGES.home) {
+    setTimeout(() => {
+      statusText.textContent = STATUS_MESSAGES.home;
+    }, duration);
   }
-
-  const observer = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        // Glow only while visible
-        if (entry.isIntersecting) entry.target.classList.add("is-active");
-        else entry.target.classList.remove("is-active");
-      });
-    },
-    { threshold: 0.35 }
-  );
-
-  folders.forEach((el) => observer.observe(el));
-};
-
-// close menu when scrolled out of view
-const setupMenuCloseOnScroll = () => {
-  if (!nav || !mobileMenu) return;
-
-  const navObserver = new IntersectionObserver(
-    (entries) => {
-      const entry = entries[0];
-      if (!entry.isIntersecting) {
-        closeMobileMenu();
-      }
-    },
-
-    { threshold: 0 }
-  );
-
-  navObserver.observe(nav);
-
 }
 
 /* ==========================================
-   INITIALIZATION (run once on load)
+   NAV TILES
    ========================================== */
-setThemeClassFromStorage();
-setupGlowOnScroll();
-setupMenuCloseOnScroll();
+
+document.querySelectorAll('.nav-tile').forEach(btn => {
+  btn.addEventListener('click', () => showScreen(btn.dataset.section));
+});
+
+document.querySelectorAll('.back-btn').forEach(btn => {
+  btn.addEventListener('click', () => showScreen('home'));
+});
 
 /* ==========================================
-   EVENT LISTENERS
+   WINDOW CONTROLS
    ========================================== */
 
-if (menuBtn && mobileMenu) {
-  menuBtn.addEventListener("click", toggleMobileMenu);
+document.getElementById('btn-close').addEventListener('click', () => {
+  popup.style.display = 'none';
+  popupClosed.classList.add('visible');
+});
 
-  // close menu on Escape
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeMobileMenu();
-  });
+document.getElementById('reopen-btn')?.addEventListener('click', () => {
+  popup.style.display = 'flex';
+  popupClosed.classList.remove('visible');
+  showScreen('home');
+});
 
-  // close menu if you click outside it
-  document.addEventListener("click", (e) => {
-    if (!mobileMenu.classList.contains("visible")) return;
+let maximized = false;
+let prevStyle  = {};
 
-    const clickedInsideMenu = mobileMenu.contains(e.target);
-    const clickedMenuBtn = menuBtn.contains(e.target);
+document.getElementById('btn-maximize').addEventListener('click', () => {
+  if (!maximized) {
+    prevStyle = { width: popup.style.width, maxWidth: popup.style.maxWidth };
+    popup.style.width    = '100vw';
+    popup.style.maxWidth = '100vw';
+    popup.style.position = 'fixed';
+    popup.style.top      = '0';
+    popup.style.left     = '0';
+    popup.style.transform = 'none';
+    maximized = true;
+  } else {
+    popup.style.width    = prevStyle.width    || '';
+    popup.style.maxWidth = prevStyle.maxWidth || '';
+    popup.style.position = '';
+    popup.style.top      = '';
+    popup.style.left     = '';
+    popup.style.transform = '';
+    maximized = false;
+  }
+});
 
-    if (!clickedInsideMenu && !clickedMenuBtn) closeMobileMenu();
-  });
+let minimized = false;
+const popupBody    = document.getElementById('popup-body');
+const popupMenubar = document.getElementById('popup-menubar');
+const popupStatus  = document.getElementById('popup-statusbar');
 
-  // close the menu when menu option is clicked
-  mobileMenu.querySelectorAll("a").forEach(link => {
-    link.addEventListener("click", () => {
-      closeMobileMenu();
-    })
-  })
+document.getElementById('btn-minimize').addEventListener('click', () => {
+  minimized = !minimized;
+  popupBody.style.display    = minimized ? 'none' : '';
+  popupMenubar.style.display = minimized ? 'none' : '';
+  popupStatus.style.display  = minimized ? 'none' : '';
+});
+
+/* ==========================================
+   DRAG
+   ========================================== */
+
+let dragState = null;
+
+document.getElementById('popup-titlebar').addEventListener('mousedown', e => {
+  if (e.target.classList.contains('ctrl-btn') || maximized) return;
+
+  const rect = popup.getBoundingClientRect();
+  dragState = {
+    startX: e.clientX - rect.left,
+    startY: e.clientY - rect.top,
+  };
+
+  // Switch from flex centering to absolute position
+  popup.style.position  = 'fixed';
+  popup.style.transform = 'none';
+  popup.style.left      = `${rect.left}px`;
+  popup.style.top       = `${rect.top}px`;
+  popup.style.margin    = '0';
+
+  e.preventDefault();
+});
+
+document.addEventListener('mousemove', e => {
+  if (!dragState) return;
+  popup.style.left = `${e.clientX - dragState.startX}px`;
+  popup.style.top  = `${e.clientY - dragState.startY}px`;
+});
+
+document.addEventListener('mouseup', () => { dragState = null; });
+
+/* ==========================================
+   CLOCK
+   ========================================== */
+
+function updateClock() {
+  const el = document.getElementById('status-clock');
+  if (!el) return;
+  const now  = new Date();
+  const h    = now.getHours();
+  const m    = String(now.getMinutes()).padStart(2, '0');
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  el.textContent = `${(h % 12) || 12}:${m} ${ampm}`;
 }
 
-
-if (themeToggleBtn) {
-    themeToggleBtn.addEventListener('click', toggleTheme);
-}
-
-// back to top button
-backToTopBtn.addEventListener('click', () => {
-  window.scrollTo({top: 0, behavior: 'smooth'});
-})
+updateClock();
+setInterval(updateClock, 1000);

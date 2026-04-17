@@ -1,152 +1,237 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <title>Trish | Portfolio</title>
+    <title>Trish Nguyen</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap" 
-    rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-    <!-- script runs before the body renders, no white flash -->
-    <script>
-      if (localStorage.getItem('theme') === 'light') {
-        document.documentElement.classList.remove('dark');
-      } 
-    </script>
+    <script type="module" src="/src/main.js"></script>
   </head>
 
-  <body class="bg-page-bg text-page-text transition-colors duration-300">
-  <!-- nagivation bar -->
-    <nav class="relative flex flex-col p-5 md:justify-center">
-      <div class="relative flex justify-between w-full">
-        <div class="flex items-center">
-          <p class="text-lg font-bold font-mono tracking-widest">Trish Nguyen( ) { </p>
-          <ul class="hidden md:flex gap-5 p-2">
-            <li><a href="#about" class="text-lg font-medium font-bold font-mono hover:text-gray-400 hover:underline">About;</a></li>
-            <li><a href="#experience" class="text-lg font-medium font-bold font-mono hover:text-gray-400 hover:underline">Experience;</a></li>
-            <li><a href="#projects" class="text-lg font-medium font-bold font-mono hover:text-gray-400 hover:underline">Projects;</a></li>
-            <li><a href="#skills" class="text-lg font-medium font-bold font-mono hover:text-gray-400 hover:underline">Skills;</a></li>
-          </ul>
-          <p class="text-lg font-bold font-mono tracking-widest"> }</p>  
-        </div>
+  <body>
 
-        <div class="flex gap-2">
-          <!-- theme toggle button -->
-           <button id="theme-toggle" class="p-2 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer" aria-label="Toggle Theme">
-  
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 block dark:hidden lucide lucide-sun-icon lucide-sun"><circle cx="12" cy="12" r="4"/>
-              <path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
-            </svg>
+    <!-- ===== POPUP WINDOW ===== -->
+    <div id="popup">
 
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden dark:block lucide lucide-moon-icon lucide-moon">
-              <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/>
-            </svg>
-            
-          </button>
-        
-          <!-- menu button (mobile)-->
-          <button id="menu-btn" class="md:hidden bg-page-bg/80 ml-auto px-4 py-3 rounded dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">menu</button> 
+      <div id="popup-titlebar" data-drag="popup">
+        <div id="popup-title">
+          <span id="popup-icon">◈</span>
+          <span id="popup-title-text">TRISH_NGUYEN.EXE</span>
         </div>
-        <!-- dropdown menu (mobile) (still in nav bar btw)-->
-        <div id="mobile-menu" class="absolute z-50 right-0 top-full flex flex-col items-end gap-4 bg-red-500 font-mono p-4 mt-2 min-w-[150px] 
-                                     transition-all duration-200 ease-out origin-top-right
-                                     invisible opacity-0 scale-95">
-          <a href="#about" class="text-neon-green hover:text-gray-500">About;</a>
-          <a href="#experience" class="text-neon-green hover:text-gray-500">Experience;</a>
-          <a href="#projects" class="text-neon-green hover:text-gray-500">Projects;</a>
-          <a href="#skills" class="text-neon-green hover:text-gray-500">Skills;</a>
+        <div id="popup-controls">
+          <button class="ctrl-btn" id="btn-minimize" title="Minimize">─</button>
+          <button class="ctrl-btn" id="btn-maximize" title="Maximize">□</button>
+          <button class="ctrl-btn" id="btn-close"    title="Close">✕</button>
         </div>
       </div>
-      
-      <h1 class="font-heading text-neon-green glow text-3xl tracking-widest">Montserrat Heading</h1>
-      <p class="font-mono text-neon-green">JetBrains Mono body text</p>
-      
-    </nav>
 
-    <div class="p-6 bg-page-bg text-green-400 font-mono">
-      Tailwind working text
+      <div id="popup-menubar">
+        <span>File</span>
+        <span>Edit</span>
+        <span>View</span>
+        <span>Favorites</span>
+        <span>Help</span>
+      </div>
+
+      <div id="popup-body">
+
+        <!-- HOME / NAV SCREEN -->
+        <div id="screen-home" class="screen active">
+          <div class="home-header">
+            <h1 class="glitch" data-text="TRISH NGUYEN">TRISH NGUYEN</h1>
+            <p class="subtitle">// SOFTWARE DEVELOPER</p>
+            <div class="h-divider"></div>
+          </div>
+          <nav id="main-nav">
+            <button class="nav-tile" data-section="about">
+              <span class="tile-num">01</span>
+              <span class="tile-label">ABOUT</span>
+            </button>
+            <button class="nav-tile" data-section="experience">
+              <span class="tile-num">02</span>
+              <span class="tile-label">EXPERIENCE</span>
+            </button>
+            <button class="nav-tile" data-section="projects">
+              <span class="tile-num">03</span>
+              <span class="tile-label">PROJECTS</span>
+            </button>
+            <button class="nav-tile" data-section="skills">
+              <span class="tile-num">04</span>
+              <span class="tile-label">SKILLS</span>
+            </button>
+            <button class="nav-tile" data-section="contact">
+              <span class="tile-num">05</span>
+              <span class="tile-label">CONTACT</span>
+            </button>
+          </nav>
+        </div>
+
+        <!-- ABOUT -->
+        <div id="screen-about" class="screen">
+          <div class="section-header">
+            <button class="back-btn">← BACK</button>
+            <h2 class="section-title">ABOUT<span class="cursor-blink">_</span></h2>
+          </div>
+          <div class="section-body">
+            <div class="profile-row">
+              <div class="avatar">TN</div>
+              <div>
+                <p class="profile-name">Trish Nguyen</p>
+                <p class="profile-role">Software Developer</p>
+              </div>
+            </div>
+            <div class="h-divider"></div>
+            <p class="body-text">Your bio goes here. Tell the world who you are, what you love building, and what makes you you.</p>
+          </div>
+        </div>
+
+        <!-- EXPERIENCE -->
+        <div id="screen-experience" class="screen">
+          <div class="section-header">
+            <button class="back-btn">← BACK</button>
+            <h2 class="section-title">EXPERIENCE<span class="cursor-blink">_</span></h2>
+          </div>
+          <div class="section-body">
+            <div class="exp-item">
+              <div class="exp-meta">
+                <span class="exp-company">Company Name</span>
+                <span class="exp-date">2023 — Present</span>
+              </div>
+              <p class="exp-role">Job Title</p>
+              <p class="exp-desc">Description of your responsibilities and what you built here.</p>
+            </div>
+            <div class="exp-item">
+              <div class="exp-meta">
+                <span class="exp-company">Previous Company</span>
+                <span class="exp-date">2021 — 2023</span>
+              </div>
+              <p class="exp-role">Job Title</p>
+              <p class="exp-desc">Description of your responsibilities and what you built here.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- PROJECTS -->
+        <div id="screen-projects" class="screen">
+          <div class="section-header">
+            <button class="back-btn">← BACK</button>
+            <h2 class="section-title">PROJECTS<span class="cursor-blink">_</span></h2>
+          </div>
+          <div class="section-body">
+            <div class="project-card">
+              <div class="project-header">
+                <span class="project-name">Project One</span>
+                <a href="#" class="project-link" target="_blank">↗ VISIT</a>
+              </div>
+              <p class="project-desc">A short description of what this project does and why it's cool.</p>
+              <div class="tag-row">
+                <span class="tag">React</span>
+                <span class="tag">Node.js</span>
+                <span class="tag">PostgreSQL</span>
+              </div>
+            </div>
+            <div class="project-card">
+              <div class="project-header">
+                <span class="project-name">Project Two</span>
+                <a href="#" class="project-link" target="_blank">↗ VISIT</a>
+              </div>
+              <p class="project-desc">A short description of what this project does and why it's cool.</p>
+              <div class="tag-row">
+                <span class="tag">Python</span>
+                <span class="tag">Flask</span>
+              </div>
+            </div>
+            <div class="project-card">
+              <div class="project-header">
+                <span class="project-name">Project Three</span>
+                <a href="#" class="project-link" target="_blank">↗ VISIT</a>
+              </div>
+              <p class="project-desc">A short description of what this project does and why it's cool.</p>
+              <div class="tag-row">
+                <span class="tag">TypeScript</span>
+                <span class="tag">Vue</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SKILLS -->
+        <div id="screen-skills" class="screen">
+          <div class="section-header">
+            <button class="back-btn">← BACK</button>
+            <h2 class="section-title">SKILLS<span class="cursor-blink">_</span></h2>
+          </div>
+          <div class="section-body">
+            <div class="skill-category">
+              <p class="skill-cat-label">LANGUAGES</p>
+              <div class="skill-grid">
+                <span class="skill-chip">JavaScript</span>
+                <span class="skill-chip">TypeScript</span>
+                <span class="skill-chip">Python</span>
+                <span class="skill-chip">HTML / CSS</span>
+              </div>
+            </div>
+            <div class="skill-category">
+              <p class="skill-cat-label">FRAMEWORKS</p>
+              <div class="skill-grid">
+                <span class="skill-chip">React</span>
+                <span class="skill-chip">Node.js</span>
+                <span class="skill-chip">Express</span>
+                <span class="skill-chip">Tailwind</span>
+              </div>
+            </div>
+            <div class="skill-category">
+              <p class="skill-cat-label">TOOLS</p>
+              <div class="skill-grid">
+                <span class="skill-chip">Git</span>
+                <span class="skill-chip">Docker</span>
+                <span class="skill-chip">PostgreSQL</span>
+                <span class="skill-chip">Figma</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CONTACT -->
+        <div id="screen-contact" class="screen">
+          <div class="section-header">
+            <button class="back-btn">← BACK</button>
+            <h2 class="section-title">CONTACT<span class="cursor-blink">_</span></h2>
+          </div>
+          <div class="section-body">
+            <p class="body-text" style="margin-bottom: 1.5rem;">Let's connect. Find me here:</p>
+            <div class="contact-links">
+              <a href="mailto:hello@example.com" class="contact-link">
+                <span class="contact-icon">✉</span>hello@example.com
+              </a>
+              <a href="https://github.com/trish222" target="_blank" class="contact-link">
+                <span class="contact-icon">⌥</span>github.com/trish222
+              </a>
+              <a href="#" target="_blank" class="contact-link">
+                <span class="contact-icon">◈</span>linkedin.com/in/trish
+              </a>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /#popup-body -->
+
+      <div id="popup-statusbar">
+        <span id="status-text">SYSTEM READY ●</span>
+        <span id="status-clock"></span>
+      </div>
+
+    </div><!-- /#popup -->
+
+    <!-- Shown when popup is closed -->
+    <div id="popup-closed">
+      <p>CONNECTION TERMINATED</p>
+      <button id="reopen-btn">[ RECONNECT ]</button>
     </div>
 
-    <section id="hero" class="flex items-center justify-center h-screen">
-      <div class="neon-sign">
-        <h1 class="text-8xl font-heading">
-          <span class="neon-letter" style="--delay: 0s; --duration: 5.5s">h</span>
-          <span class="neon-letter" style="--delay: 0.5s; --duration: 6.5s">e</span>
-          <span class="neon-letter" style="--delay: 1s; --duration: 5s">l</span>
-          <span class="neon-letter" style="--delay: 1.5s; --duration: 6s">l</span>
-          <span class="neon-letter" style="--delay: 2s; --duration: 5.8s">o</span>
-          <span class="neon-letter" style="--delay: 2.5s; --duration: 5.2s"> </span>
-          <span class="neon-letter" style="--delay: 3s; --duration: 6.8s">w</span>
-          <span class="neon-letter" style="--delay: 3.5s; --duration: 5.3s">o</span>
-          <span class="neon-letter" style="--delay: 4s; --duration: 6.2s">r</span>
-          <span class="neon-letter" style="--delay: 4.5s; --duration: 4.8s">l</span>
-          <span class="neon-letter" style="--delay: 5s; --duration: 6s">d</span>
-        </h1>
-      </div>
-    </section>
-
-    <section id="about" class="folder-container">
-      <div class="folder-tab">
-        <span class="block skew-x-12 font-mono text-sm font-bold uppercase tracking-[0.2em] text-cyan-500 dark:text-fuchsia-400">
-          about
-        </span>
-      </div>
-      <div class="folder-body">
-        <div class="folder-content">
-          <h2 class="font-heading text-4xl mb-6 text-page-text">About Me</h2>
-          <p class="font-mono text-slate-400">Your bio content goes here...</p>
-        </div>
-      </div>
-    </section>
-
-    <section id="experience" class="folder-container">
-      <div class="folder-tab">
-        <span class="block skew-x-12 font-mono text-sm font-bold uppercase tracking-[0.2em] text-cyan-500 dark:text-fuchsia-400">
-          experience
-        </span>
-      </div>
-      <div class="folder-body">
-        <div class="folder-content">
-          <h2 class="font-heading text-4xl mb-6 text-page-text">Experience</h2>
-        </div>
-      </div>
-    </section>
-
-    <section id="projects" class="folder-container">
-      <div class="folder-tab">
-        <span class="block skew-x-12 font-mono text-sm font-bold uppercase tracking-[0.2em] text-cyan-500 dark:text-fuchsia-400">
-          projects
-        </span>
-      </div>
-      <div class="folder-body">        
-        <div class="folder-content">
-          <h2 class="font-heading text-4xl mb-6">Selected Work</h2>
-          <p class="font-mono text-slate-400">
-            // List of projects goes here...
-          </p>
-        </div>
-      </div>
-    </section>
-
-    <section id="skills" class="folder-container">
-      <div class="folder-tab">
-        <span class="block skew-x-12 font-mono text-sm font-bold uppercase tracking-[0.2em] text-cyan-500 dark:text-fuchsia-400">
-          skills
-        </span>
-      </div>
-      <div class="folder-body">
-        <div class="folder-content">
-          <h2 class="font-heading text-4xl mb-6">Skills</h2>
-        </div>
-      </div>
-    </section>
-
-    <button id="back-to-top" class="fixed bottom-4 right-4 bg-page-bg/80 px-4 py-2 rounded dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">↑</button>
-
-    <script type="module" src="./src/main.js" defer></script>
   </body>
 </html>
