@@ -131,94 +131,30 @@ if (bubbleField) {
 }
 
 // ============================================================================
-// BUBBLE NAVIGATION
+// BUBBLE NAVIGATION (pre-positioned in HTML)
 // ============================================================================
 
-class BubbleNav {
-  constructor(container, sections) {
-    this.container = container;
-    this.sections = sections;
-    this.isMobile = isMobile();
-    this.bubbles = [];
+if (bubbleNavContainer) {
+  const navBubbles = bubbleNavContainer.querySelectorAll('[data-section]');
 
-    this.init();
-  }
-
-  init() {
-    this.render();
-    this.setupEventListeners();
-  }
-
-  render() {
-    this.container.innerHTML = '';
-
-    this.sections.forEach((section, index) => {
-      const bubble = document.createElement('button');
-      bubble.className = 'nav-bubble';
-      bubble.setAttribute('aria-label', `Navigate to ${section.label}`);
-      bubble.style.animationDelay = `${0.6 + index * 0.1}s`;
-
-      bubble.innerHTML = `
-        <div class="nav-bubble-label">${section.label}</div>
-        <div class="nav-bubble-preview">${section.emoji}</div>
-      `;
-
-      if (this.isMobile) {
-        bubble.style.position = 'static';
-        bubble.style.margin = '0.75rem';
-        bubble.style.animation = 'none';
-        bubble.style.opacity = '1';
-      } else {
-        this.positionBubbleCircle(bubble, index);
+  navBubbles.forEach((bubble) => {
+    bubble.addEventListener('click', () => {
+      const sectionId = bubble.getAttribute('data-section');
+      const targetSection = document.getElementById(sectionId);
+      if (targetSection) {
+        targetSection.scrollIntoView({ behavior: 'smooth' });
       }
+    });
 
-      bubble.addEventListener('click', () => {
-        const targetSection = document.getElementById(section.id);
+    bubble.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        const sectionId = bubble.getAttribute('data-section');
+        const targetSection = document.getElementById(sectionId);
         if (targetSection) {
           targetSection.scrollIntoView({ behavior: 'smooth' });
         }
-      });
-
-      bubble.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          const targetSection = document.getElementById(section.id);
-          if (targetSection) {
-            targetSection.scrollIntoView({ behavior: 'smooth' });
-          }
-        }
-      });
-
-      this.container.appendChild(bubble);
-      this.bubbles.push({ element: bubble, section, index });
-    });
-  }
-
-  positionBubbleCircle(bubble, index) {
-    const total = this.sections.length;
-    const angle = (index / total) * Math.PI * 2 - Math.PI / 2;
-    const radius = 150;
-
-    const x = Math.cos(angle) * radius;
-    const y = Math.sin(angle) * radius;
-
-    bubble.style.left = `calc(50% + ${x}px)`;
-    bubble.style.top = `calc(50% + ${y}px)`;
-    bubble.style.transform = 'translate(-50%, -50%)';
-  }
-
-  setupEventListeners() {
-    window.addEventListener('resize', () => {
-      const wasMobile = this.isMobile;
-      this.isMobile = isMobile();
-
-      if (wasMobile !== this.isMobile) {
-        this.render();
       }
     });
-  }
-}
-
-if (bubbleNavContainer) {
-  new BubbleNav(bubbleNavContainer, sectionData);
+  });
 }

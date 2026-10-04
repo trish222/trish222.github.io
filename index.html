@@ -8,8 +8,10 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Comfortaa:wght@400;700&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400;1,600&display=swap"
+    <link href="https://fonts.googleapis.com/css2?family=Modak&family=Baloo+2:wght@700;800&family=Comfortaa:wght@400;700&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400;1,600&display=swap"
     rel="stylesheet">
+
+    <link rel="preload" as="image" href="/src/assets/name90.webp">
 
     <!-- script runs before the body renders, no white flash -->
     <script>
@@ -50,7 +52,7 @@
 
         <div id="mobile-menu" class="absolute top-full left-0 right-0 bg-sky-100/50 backdrop-blur border-b border-sky-200/40 md:hidden
                                      transition-all duration-200 ease-out
-                                     invisible opacity-0 max-h-0">
+                                     invisible opacity-0 max-h-0 z-50">
           <div class="flex flex-col gap-2 p-4">
             <a href="#about" class="px-4 py-2 hover:bg-sky-200/40 rounded transition-colors text-slate-700">About</a>
             <a href="#experience" class="px-4 py-2 hover:bg-sky-200/40 rounded transition-colors text-slate-700">Experience</a>
@@ -66,16 +68,48 @@
       <div id="bubble-field"></div>
 
       <!-- Hero Content -->
-      <div class="hero-wrapper px-4 sm:px-6">
-        <!-- Name -->
-        <h1 class="hero-name">TRISH</h1>
+      <div class="hero-wrapper">
+        <!-- Visually hidden heading for accessibility -->
+        <h1 class="sr-only">Trish</h1>
+
+        <!-- Hero name image -->
+        <div class="hero-name">
+          <img src="/src/assets/name90.webp" alt="" class="hero-name-image" />
+        </div>
 
         <!-- Tagline -->
         <p class="hero-tagline">Computer Science Student & Software Engineer</p>
 
-        <!-- Bubble Navigation -->
+        <!-- Scattered Bubble Navigation -->
         <div class="bubble-nav-container">
-          <!-- Bubbles inserted by JavaScript -->
+          <button class="nav-bubble bubble-projects" data-section="projects" aria-label="Projects">
+            <div class="nav-bubble-label">Projects</div>
+            <div class="nav-bubble-preview">💼</div>
+          </button>
+          <button class="nav-bubble bubble-about" data-section="about" aria-label="About">
+            <div class="nav-bubble-label">About</div>
+            <div class="nav-bubble-preview">👋</div>
+          </button>
+          <button class="nav-bubble bubble-experience" data-section="experience" aria-label="Experience">
+            <div class="nav-bubble-label">Experience</div>
+            <div class="nav-bubble-preview">🚀</div>
+          </button>
+          <button class="nav-bubble bubble-skills" data-section="skills" aria-label="Skills">
+            <div class="nav-bubble-label">Skills</div>
+            <div class="nav-bubble-preview">⚡</div>
+          </button>
+          <button class="nav-bubble bubble-contact" data-section="contact" aria-label="Contact">
+            <div class="nav-bubble-label">Contact</div>
+            <div class="nav-bubble-preview">✉️</div>
+          </button>
+        </div>
+
+        <!-- Decorative bubbles -->
+        <div class="decorative-bubbles">
+          <div class="bubble-decor bubble-decor-1"></div>
+          <div class="bubble-decor bubble-decor-2"></div>
+          <div class="bubble-decor bubble-decor-3"></div>
+          <div class="bubble-decor bubble-decor-4"></div>
         </div>
 
         <!-- Scroll indicator -->
