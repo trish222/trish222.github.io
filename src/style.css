@@ -1,211 +1,395 @@
 @import "tailwindcss";
 
 @theme {
-    /* BASE = LIGHT */
-    --color-page-bg: #ffffff;
-    --color-page-text: #0f172a;
-    --color-neon-green: #00ff9c;
-    --color-neon-cyan: #22d3ee;
-    --color-neon-fuchsia: #d946ef;
+    /* Colors - Vivid Frutiger Aero */
+    --color-sky-bright: #1e90ff;
+    --color-sky-light: #6ec6ff;
+    --color-grass-vivid: #2ecc40;
+    --color-grass-dark: #27ae60;
+    --color-white: #ffffff;
+    --color-white-opaque: rgba(255, 255, 255, 0.9);
+    --color-highlight: #ffffff;
+    --color-shadow-blue: rgba(30, 144, 255, 0.4);
 
-    --font-heading: "Montserrat", sans-serif;
-    --font-mono: "JetBrains Mono", monospace;
+    --font-display: "Audiowide", cursive;
+    --font-body: "Comfortaa", sans-serif;
+    --font-mono: "IBM Plex Mono", monospace;
 }
 
 @variant dark (&:where(.dark, .dark *));
 
-.dark {
-    --color-page-bg: #121321; /* Deep slate */
-    --color-page-text: #f8fafc; /* Off white */
+/* ============================================================================
+   ANIMATIONS
+   ============================================================================ */
+
+@keyframes bubble-float-up {
+    0% {
+        transform: translateY(0) translateX(0);
+        opacity: 0;
+    }
+    10% {
+        opacity: 1;
+    }
+    90% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-150vh) translateX(50px);
+        opacity: 0;
+    }
 }
 
-/* 1. THE PULSE ANIMATION */
-@keyframes neon-pulse {
-  0%, 100% {
-    filter: drop-shadow(0 0 2px var(--glow-color)) brightness(1);
-    opacity: 1;
-  }
-  50% {
-    filter: drop-shadow(0 0 15px var(--glow-color)) brightness(1.2);
-    opacity: 0.9;
-  }
+@keyframes bubble-float-gentle {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    50% {
+        transform: translateX(15px);
+    }
+}
+
+@keyframes shine-pulse {
+    0%, 100% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+@keyframes float-in {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes glow-pulse {
+    0%, 100% {
+        filter: drop-shadow(0 0 20px rgba(30, 144, 255, 0.4));
+    }
+    50% {
+        filter: drop-shadow(0 0 30px rgba(30, 144, 255, 0.6));
+    }
+}
+
+/* ============================================================================
+   HERO SECTION
+   ============================================================================ */
+
+#hero {
+    background: url('/src/assets/frutiger_aero_landscape_3840x1280.webp') center / cover no-repeat;
+    background-attachment: fixed;
+    min-height: 100vh;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Overlay for text readability */
+#hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 50%, rgba(100, 200, 100, 0.1) 100%);
+    pointer-events: none;
+}
+
+/* Animated background bubbles */
+.bubble-bg {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.bubble-bg::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.8), rgba(100, 200, 255, 0.4) 50%, rgba(30, 144, 255, 0.2));
+    box-shadow: inset -2px -2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.bubble-bg::after {
+    content: '';
+    position: absolute;
+    top: 8%;
+    left: 8%;
+    width: 35%;
+    height: 35%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.9), transparent 70%);
+    border-radius: 50%;
+}
+
+/* Hero content */
+.hero-wrapper {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    animation: float-in 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.hero-name {
+    font-family: var(--font-display);
+    font-size: 7rem;
+    font-weight: bold;
+    letter-spacing: 0.1em;
+    line-height: 1;
+    text-transform: uppercase;
+    margin: 0;
+    padding: 20px 0;
+
+    /* Glossy 3D water bubble effect */
+    background: linear-gradient(180deg, #4da6ff 0%, #1e90ff 50%, #0d47a1 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+
+    /* White specular highlight on top */
+    filter: drop-shadow(0 8px 20px rgba(30, 144, 255, 0.5))
+            drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+
+    position: relative;
+}
+
+.hero-name::before {
+    content: 'TRISH';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    z-index: -1;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 30%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: blur(0.5px);
+}
+
+.hero-tagline {
+    font-family: var(--font-body);
+    font-size: 1.3rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.95);
+    margin-top: 1rem;
+    animation: float-in 1s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s both;
+    text-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.5),
+        0 0 20px rgba(30, 144, 255, 0.3);
+}
+
+/* Bubble nav container */
+.bubble-nav-container {
+    position: relative;
+    margin-top: 60px;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: float-in 1s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both;
+}
+
+/* Glossy navigation bubbles */
+.nav-bubble {
+    position: absolute;
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    animation: float-in 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+
+    /* Glossy gradient - bright highlight on top */
+    background: linear-gradient(180deg, rgba(200, 235, 255, 0.8) 0%, rgba(150, 200, 255, 0.5) 50%, rgba(100, 180, 255, 0.3) 100%);
+    box-shadow:
+        0 10px 30px rgba(30, 144, 255, 0.35),
+        inset 0 2px 10px rgba(255, 255, 255, 0.7),
+        inset -15px -15px 30px rgba(0, 60, 120, 0.2);
+    backdrop-filter: blur(12px);
+}
+
+.nav-bubble:hover {
+    transform: scale(1.18) translateY(-8px);
+    box-shadow:
+        0 15px 40px rgba(30, 144, 255, 0.5),
+        inset 0 3px 12px rgba(255, 255, 255, 0.8),
+        inset -15px -15px 30px rgba(0, 60, 120, 0.15);
+    background: linear-gradient(180deg, rgba(220, 245, 255, 0.9) 0%, rgba(170, 215, 255, 0.6) 50%, rgba(120, 190, 255, 0.35) 100%);
+}
+
+.nav-bubble:focus {
+    outline: 3px solid rgba(30, 144, 255, 0.9);
+    outline-offset: 4px;
+}
+
+.nav-bubble-label {
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(0, 80, 150, 0.95);
+    margin-bottom: 6px;
+}
+
+.nav-bubble-preview {
+    font-size: 2rem;
+    opacity: 0.95;
+}
+
+/* Scroll indicator */
+.scroll-indicator {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    animation: bounce 2s infinite;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+@keyframes bounce {
+    0%, 100% {
+        transform: translateX(-50%) translateY(0);
+    }
+    50% {
+        transform: translateX(-50%) translateY(-10px);
+    }
+}
+
+/* ============================================================================
+   NAVIGATION BAR
+   ============================================================================ */
+
+nav {
+    background: rgba(100, 200, 255, 0.4);
+    backdrop-filter: blur(12px);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 4px 12px rgba(30, 144, 255, 0.2);
+    font-family: var(--font-body);
+}
+
+nav a {
+    color: rgba(0, 80, 150, 0.9);
+    font-weight: 600;
+}
+
+nav a:hover {
+    color: #0d47a1;
+}
+
+/* ============================================================================
+   UTILITIES & UTILITIES
+   ============================================================================ */
+
+@layer utilities {
+    .animate-bubble-float {
+        animation: bubble-float-up linear infinite;
+    }
+
+    .text-glow {
+        filter: drop-shadow(0 0 20px rgba(30, 144, 255, 0.5));
+    }
+
+    .glossy-button {
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(150, 200, 255, 0.4) 100%);
+        border: 2px solid rgba(255, 255, 255, 0.9);
+        box-shadow:
+            0 8px 20px rgba(30, 144, 255, 0.3),
+            inset 0 1px 4px rgba(255, 255, 255, 0.8),
+            inset -10px -10px 20px rgba(0, 60, 120, 0.15);
+        border-radius: 50px;
+        font-family: var(--font-body);
+        font-weight: 600;
+        color: rgba(0, 80, 150, 0.95);
+        padding: 12px 28px;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .glossy-button:hover {
+        transform: translateY(-3px);
+        box-shadow:
+            0 12px 30px rgba(30, 144, 255, 0.4),
+            inset 0 2px 6px rgba(255, 255, 255, 0.9),
+            inset -10px -10px 20px rgba(0, 60, 120, 0.1);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(170, 215, 255, 0.5) 100%);
+    }
 }
 
 @layer base {
-  html, body {
-    /* Only transition colors, not layout things like width or height */
-    @apply transition-colors duration-300 ease-in-out;
-  }
-  
-  /* You can also target specific elements if you want them to fade too */
-  a, button, div {
-     @apply transition-colors duration-300 ease-in-out;
-  }
+    html, body {
+        font-family: var(--font-body);
+    }
+
+    ::-webkit-scrollbar {
+        width: 12px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: rgba(200, 235, 255, 0.2);
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, #1e90ff, #6ec6ff);
+        border-radius: 6px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(180deg, #0d47a1, #1e90ff);
+    }
 }
 
 @layer components {
-  .folder-container {
-  --glow-color: var(--color-neon-cyan); /* add this */
-  @apply relative mx-auto mt-40 mb-24 max-w-4xl px-6;
-  
+    .section-card {
+        background: rgba(240, 248, 255, 0.95);
+        border-top: 3px solid #1e90ff;
+        padding: 60px 20px;
+    }
 
-
-  opacity: 0.25;
-  animation: none;
-  filter: none;
-  transition: opacity 400ms ease, filter 400ms ease;
-  }
-
-  /* OFF state: kill neon glow on inner parts */
-  .folder-container:not(.is-active) .folder-body {
-    box-shadow: none;
-  }
-
-  .folder-container:not(.is-active) .folder-tab {
-    text-shadow: none;
-  }
-
-  /* Optional: dim borders when off */
-  .folder-container:not(.is-active) .folder-body,
-  .folder-container:not(.is-active) .folder-tab {
-    border-color: color-mix(in srgb, var(--glow-color), transparent 70%);
-  }
-
-
-  .dark .folder-container {
-    --glow-color: var(--color-neon-fuchsia);
-  }
-
-
-  /* active: glow turns on */
-  .folder-container.is-active {
-    /* on when in view */
-    opacity: 1;
-    animation: neon-pulse 4s infinite ease-in-out;
-    filter: drop-shadow(0 0 6px var(--glow-color));
-  }
-
-  .folder-tab {
-    /* 1. Changed -top-[4px] to top-[2px] to sink it into the 6px border */
-    /* 2. Increased rounding slightly to match the body better */
-    @apply absolute top-[7px] left-10 -translate-y-full translate-x-[23px] md:left-16 px-10 py-3 -skew-x-12 z-20;
-    @apply border-[6px] rounded-t-[2.5rem] bg-page-bg;
-    
-    /* Neon Colors + Bottom border matching bg to hide the seam */
-    @apply border-[var(--glow-color)] border-b-page-bg;
-    
-    text-shadow: 0 0 10px var(--glow-color);
-  }
-
-  .folder-body {
-    /* Rounding ALL corners [2.5rem], 6px thick */
-    @apply relative p-10 md:p-14 -skew-x-12 border-[6px] bg-page-bg rounded-[2.5rem] transition-all duration-300 z-10;
-    @apply border-[var(--glow-color)];
-    
-    /* Dynamic Shadow using the variable */
-    box-shadow: 0 0 20px color-mix(in srgb, var(--glow-color), transparent 50%),
-                0 0 40px color-mix(in srgb, var(--glow-color), transparent 80%);
-  }
-
-  .folder-content {
-    @apply skew-x-12;
-  }
-
-  /* Apply glow to headings inside folders automatically */
-  .folder-content h2 {
-    @apply font-heading;
-    text-shadow: 0 0 15px var(--glow-color);
-  }
+    .section-title {
+        font-family: var(--font-display);
+        font-size: 3rem;
+        color: #0d47a1;
+        margin-bottom: 40px;
+    }
 }
 
-/* 2. FIXING THE GENERAL GLOW UTILITY */
-@layer utilities { 
-  .glow {
-    text-shadow: 0 0 8px currentColor,
-                 0 0 20px color-mix(in srgb, currentColor, transparent 30%);
-  }
-}
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation: none !important;
+        transition: none !important;
+    }
 
-/* Neon Flicker Animation */
-@keyframes neon-flicker {
-  0%, 18%, 22%, 25%, 53%, 57%, 100% {
-    opacity: 1;
-  }
-  20%, 24%, 55% {
-    opacity: 0.3;
-    filter: brightness(0.5);
-  }
-}
+    .bubble-nav-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        justify-content: center;
+        height: auto;
+        min-height: auto;
+    }
 
-.animate-flicker {
-  animation: neon-pulse 4s infinite ease-in-out, neon-flicker 1.5s ease-out infinite;
+    .nav-bubble {
+        position: static;
+        animation: none;
+    }
 }
-
-/* Hero neon sign animation */
-@keyframes hero-neon-flicker {
-  0%, 18%, 22%, 25%, 54%, 56%, 100% {
-    text-shadow:
-      0 0 10px rgba(0, 255, 255, 1),
-      0 0 20px rgba(0, 255, 255, 0.9),
-      0 0 30px rgba(0, 255, 255, 0.8),
-      0 0 40px rgba(0, 255, 255, 0.7),
-      0 0 50px rgba(0, 255, 255, 0.6),
-      0 0 60px rgba(0, 255, 255, 0.5),
-      inset 0 0 20px rgba(0, 255, 255, 0.3);
-    color: rgba(0, 255, 255, 1);
-  }
-  20%, 24%, 55% {
-    text-shadow:
-      0 0 5px rgba(0, 255, 255, 0.6),
-      0 0 15px rgba(0, 255, 255, 0.4),
-      0 0 25px rgba(0, 255, 255, 0.2);
-    color: rgba(0, 255, 255, 0.6);
-  }
-}
-
-@keyframes hero-neon-light-up {
-  0% {
-    text-shadow:
-      0 0 2px rgba(0, 255, 255, 0.2),
-      0 0 4px rgba(0, 255, 255, 0.1);
-    color: rgba(0, 255, 255, 0.3);
-    opacity: 0.3;
-  }
-  50% {
-    text-shadow:
-      0 0 10px rgba(0, 255, 255, 1),
-      0 0 20px rgba(0, 255, 255, 0.9),
-      0 0 30px rgba(0, 255, 255, 0.8),
-      0 0 40px rgba(0, 255, 255, 0.7),
-      0 0 50px rgba(0, 255, 255, 0.6),
-      0 0 60px rgba(0, 255, 255, 0.5),
-      inset 0 0 20px rgba(0, 255, 255, 0.3);
-    color: rgba(0, 255, 255, 1);
-    opacity: 1;
-  }
-  100% {
-    text-shadow:
-      0 0 10px rgba(0, 255, 255, 1),
-      0 0 20px rgba(0, 255, 255, 0.9),
-      0 0 30px rgba(0, 255, 255, 0.8),
-      0 0 40px rgba(0, 255, 255, 0.7),
-      0 0 50px rgba(0, 255, 255, 0.6),
-      0 0 60px rgba(0, 255, 255, 0.5),
-      inset 0 0 20px rgba(0, 255, 255, 0.3);
-    color: rgba(0, 255, 255, 1);
-    opacity: 1;
-  }
-}
-
-.neon-sign {
-  perspective: 1000px;
-  font-size: 0;
-}
-
-.neon-letter {
-  display: inline-block;
-  font-size: 1em;
-  animation: hero-neon-light-up var(--duration) ease-in-out var(--delay) forwards,
-             hero-neon-flicker 0.5s ease-in-out calc(var(--delay) + var(--duration)) infinite;
-}
-
