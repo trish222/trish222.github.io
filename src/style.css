@@ -605,19 +605,19 @@
    ============================================================================ */
 
 nav {
-    background: rgba(240, 248, 255, 0.5);
-    backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(30, 144, 255, 0.2);
-    box-shadow: 0 2px 8px rgba(30, 144, 255, 0.1);
+    background: transparent;
+    backdrop-filter: none;
+    border-bottom: none;
+    box-shadow: none;
     font-family: var(--font-body);
     position: relative;
     z-index: 200;
 }
 
 .dark nav {
-    background: rgba(15, 35, 55, 0.4);
-    border-bottom-color: rgba(110, 198, 255, 0.15);
-    box-shadow: 0 2px 8px rgba(30, 144, 255, 0.05);
+    background: transparent;
+    border-bottom-color: transparent;
+    box-shadow: none;
 }
 
 nav ul {
