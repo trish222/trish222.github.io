@@ -116,7 +116,7 @@ class AnimatedBubbleField {
       const bubble = document.createElement('div');
       bubble.className = 'bubble-bg';
       bubble.style.width = size + 'px';
-      bubble.style.height = size + 'px';
+      bubble.style.height = Math.round(size * 0.88) + 'px';  // squashed droplet
       bubble.style.left = xPos + '%';
       bubble.style.bottom = '-120px';
       bubble.style.animation = `bubble-float-up ${duration}s linear ${delay}s infinite`;
@@ -166,3 +166,17 @@ if (bubbleNavContainer) {
 
 const cloudCanvas = document.getElementById('cloud-bg');
 if (cloudCanvas) initDitherClouds(cloudCanvas);
+
+// ============================================================================
+// HERO HEIGHT
+// The nav occupies normal flow, so the hero must subtract its height or the
+// bottom of the hero (and the bubble row with it) falls below the fold.
+// ============================================================================
+
+const navEl = document.querySelector('nav');
+if (navEl) {
+  const syncNavHeight = () =>
+    html.style.setProperty('--nav-h', `${Math.round(navEl.offsetHeight)}px`);
+  syncNavHeight();
+  new ResizeObserver(syncNavHeight).observe(navEl);
+}

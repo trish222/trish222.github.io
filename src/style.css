@@ -153,7 +153,11 @@
 #hero {
     /* fallback paper colour if WebGL is unavailable; the canvas paints over it */
     background: #ffffff;
-    height: 100svh;
+    /* The nav sits in normal flow (style.css sets nav{position:relative},
+       which beats Tailwind's .fixed because unlayered CSS outranks
+       @layer utilities). So a flat 100svh would hang the bottom of the hero
+       below the fold and clip the bubble row. --nav-h is measured in main.js. */
+    height: calc(100svh - var(--nav-h, 0px));
     overflow: hidden;
     position: relative;
     display: flex;
@@ -186,35 +190,103 @@
     pointer-events: none;
 }
 
-/* Animated background bubbles */
+/* ============================================================================
+   GLASS BUBBLES
+   Real refractive glass rather than Web-2.0 orbs: the background shows
+   THROUGH the body (backdrop-filter), the silhouette is a squashed droplet
+   rather than a circle, and the light is a broad soft specular plus a
+   bright refracted rim along the lower edge.
+   ============================================================================ */
+
+.bubble-bg,
+.bubble-decor,
+.nav-bubble {
+    /* squashed, faintly irregular droplet — never a perfect circle */
+    border-radius: 49% 51% 46% 54% / 55% 45% 55% 45%;
+
+    /* glass body: bright crown, clear middle, blue mass low, bright rim.
+       The blue is what gives it presence over a pale background. */
+    background:
+        radial-gradient(118% 100% at 50% 10%,
+            rgba(255, 255, 255, 0.88) 0%,
+            rgba(255, 255, 255, 0.38) 25%,
+            rgba(203, 227, 248, 0.22) 46%,
+            rgba(116, 166, 217, 0.38) 83%,
+            rgba(255, 255, 255, 0.55) 100%);
+
+    /* the dither stays visible through the body — this is the glass cue.
+       Saturate rather than brighten: brightening bleaches the highlight. */
+    backdrop-filter: blur(1.5px) saturate(1.25) contrast(1.04);
+    -webkit-backdrop-filter: blur(1.5px) saturate(1.25) contrast(1.04);
+
+    box-shadow:
+        /* contact shadow below */
+        0 12px 26px -12px rgba(40, 90, 150, 0.5),
+        /* crisp outline so the silhouette reads against any background */
+        0 0 0 1px rgba(146, 186, 226, 0.38),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.6),
+        /* bright refracted crescent hugging the bottom edge */
+        inset 0 -15px 22px -13px rgba(255, 255, 255, 1),
+        inset 0 -3px 4px -2px rgba(255, 255, 255, 0.95),
+        /* shaded crown */
+        inset 0 10px 18px -10px rgba(45, 92, 148, 0.4),
+        /* faint iridescence at opposing edges */
+        inset -9px 7px 22px -16px rgba(255, 180, 220, 0.5),
+        inset 9px -7px 22px -16px rgba(150, 230, 255, 0.5);
+}
+
+/* broad elongated specular — the big soft catchlight across the crown */
+.bubble-bg::before,
+.bubble-decor::before,
+.nav-bubble::before {
+    content: '';
+    position: absolute;
+    left: 15%;
+    top: 8%;
+    width: 60%;
+    height: 40%;
+    border-radius: 50%;
+    /* defined edge, not a wash: holds near-opaque to 40%, then falls off */
+    background: radial-gradient(ellipse at 50% 46%,
+        rgba(255, 255, 255, 1) 0%,
+        rgba(255, 255, 255, 0.88) 40%,
+        rgba(255, 255, 255, 0.22) 68%,
+        rgba(255, 255, 255, 0) 80%);
+    transform: rotate(-16deg);
+    filter: blur(1.5px);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* secondary bounce light, lower-right and much dimmer */
+.bubble-bg::after,
+.bubble-decor::after,
+.nav-bubble::after {
+    content: '';
+    position: absolute;
+    right: 15%;
+    bottom: 13%;
+    width: 27%;
+    height: 17%;
+    border-radius: 50%;
+    background: radial-gradient(ellipse,
+        rgba(255, 255, 255, 0.78) 0%,
+        rgba(255, 255, 255, 0) 70%);
+    filter: blur(2.5px);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* vary the silhouette so a cluster doesn't look stamped */
+.bubble-bg:nth-child(3n),
+.bubble-decor:nth-child(3n) { border-radius: 53% 47% 52% 48% / 46% 56% 44% 54%; }
+.bubble-bg:nth-child(3n + 1),
+.bubble-decor:nth-child(3n + 1) { border-radius: 46% 54% 49% 51% / 57% 43% 57% 43%; }
+
 .bubble-bg {
     position: absolute;
-    border-radius: 50%;
     pointer-events: none;
-    opacity: 0.7;
-}
-
-.bubble-bg::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.8), rgba(100, 200, 255, 0.4) 50%, rgba(30, 144, 255, 0.2));
-    box-shadow: inset -2px -2px 10px rgba(0, 0, 0, 0.2);
-}
-
-.bubble-bg::after {
-    content: '';
-    position: absolute;
-    top: 8%;
-    left: 8%;
-    width: 35%;
-    height: 35%;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.9), transparent 70%);
-    border-radius: 50%;
+    opacity: 0.92;
 }
 
 /* Hero content */
@@ -313,45 +385,93 @@
         0 0 20px rgba(30, 144, 255, 0.3);
 }
 
-/* Bubble nav container - scattered positioning */
+/* Bubble nav cluster.
+   In normal flow and centred, so it can never fall outside the hero.
+   `margin-top: auto` parks it at the bottom of the flex column; sizes and
+   gaps are all clamp()ed, so one rule set covers every screen. */
 .bubble-nav-container {
-    position: absolute;
-    width: 100%;
-    height: 300px;
-    bottom: 50px;
-    left: 0;
-    animation: float-in 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s both;
+    position: relative;
     z-index: 3;
+    width: 100%;
+    max-width: min(1080px, 94vw);
+    margin: auto auto clamp(12px, 4vh, 52px);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(6px, 1.1vw, 18px);
+    padding-inline: clamp(8px, 2vw, 24px);
+    animation: float-in 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s both;
 }
 
 /* Glossy navigation bubbles */
 .nav-bubble {
     position: absolute;
-    border-radius: 50%;
     cursor: pointer;
-    border: 2px solid rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.55);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 
-    /* Glossy gradient - bright highlight on top */
-    background: linear-gradient(180deg, rgba(200, 235, 255, 0.8) 0%, rgba(150, 200, 255, 0.5) 50%, rgba(100, 180, 255, 0.3) 100%);
+    /* Denser glass than the decorative bubbles. At 3-4x the diameter the
+       shared mix spreads too thin and reads as soap film, so the blue mass
+       is heavier and the backdrop is pushed harder. */
+    background:
+        radial-gradient(112% 98% at 50% 6%,
+            rgba(255, 255, 255, 0.95) 0%,
+            rgba(255, 255, 255, 0.46) 14%,
+            rgba(176, 210, 240, 0.44) 32%,
+            rgba(108, 160, 214, 0.56) 58%,
+            rgba(74, 132, 196, 0.60) 86%,
+            rgba(205, 233, 255, 0.82) 100%);
+
+    backdrop-filter: blur(2px) saturate(1.55) contrast(1.1);
+    -webkit-backdrop-filter: blur(2px) saturate(1.55) contrast(1.1);
+
     box-shadow:
-        0 10px 30px rgba(30, 144, 255, 0.35),
-        inset 0 2px 10px rgba(255, 255, 255, 0.7),
-        inset -15px -15px 30px rgba(0, 60, 120, 0.2);
-    backdrop-filter: blur(12px);
+        0 14px 30px -12px rgba(30, 75, 135, 0.55),
+        0 0 0 1px rgba(120, 166, 214, 0.5),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.7),
+        /* deeper refracted crescent along the bottom */
+        inset 0 -20px 28px -16px rgba(255, 255, 255, 1),
+        inset 0 -4px 5px -2px rgba(255, 255, 255, 1),
+        inset 0 13px 22px -12px rgba(38, 84, 142, 0.5),
+        inset -11px 9px 26px -18px rgba(255, 180, 220, 0.55),
+        inset 11px -9px 26px -18px rgba(150, 230, 255, 0.55);
+}
+
+/* tighter, harder catchlight — a big soft one just hazes a large bubble */
+.nav-bubble::before {
+    left: 21%;
+    top: 9%;
+    width: 47%;
+    height: 29%;
+    background: radial-gradient(ellipse at 50% 45%,
+        rgba(255, 255, 255, 1) 0%,
+        rgba(255, 255, 255, 0.95) 34%,
+        rgba(255, 255, 255, 0.26) 66%,
+        rgba(255, 255, 255, 0) 80%);
+    filter: blur(1.2px);
+}
+
+.nav-bubble::after {
+    right: 18%;
+    bottom: 16%;
+    width: 22%;
+    height: 13%;
 }
 
 .nav-bubble:hover {
-    transform: scale(1.2);
+    transform: scale(1.12);
     box-shadow:
-        0 15px 40px rgba(30, 144, 255, 0.5),
-        inset 0 3px 12px rgba(255, 255, 255, 0.8),
-        inset -15px -15px 30px rgba(0, 60, 120, 0.15);
-    background: linear-gradient(180deg, rgba(220, 245, 255, 0.9) 0%, rgba(170, 215, 255, 0.6) 50%, rgba(120, 190, 255, 0.35) 100%);
+        0 16px 34px -12px rgba(40, 90, 150, 0.55),
+        inset 0 -14px 24px -12px rgba(255, 255, 255, 1),
+        inset 0 -2px 3px -1px rgba(255, 255, 255, 0.95),
+        inset 0 7px 15px -9px rgba(40, 80, 130, 0.3),
+        inset -9px 7px 22px -16px rgba(255, 180, 220, 0.6),
+        inset 9px -7px 22px -16px rgba(150, 230, 255, 0.6);
 }
 
 .nav-bubble:focus {
@@ -360,65 +480,74 @@
 }
 
 .nav-bubble-label {
+    position: relative;
+    z-index: 1;
     font-family: var(--font-body);
     font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: rgba(0, 80, 150, 0.95);
+    color: rgba(0, 54, 105, 0.98);
+    text-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.9),
+        0 0 10px rgba(255, 255, 255, 0.75);
     margin-bottom: 3px;
 }
 
 .nav-bubble-preview {
+    position: relative;
+    z-index: 1;
     font-size: 1.8rem;
     opacity: 0.95;
+    filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.8));
 }
 
-/* Scattered bubble positions - desktop */
-.bubble-projects {
-    width: 140px;
-    height: 140px;
-    top: 0;
-    left: 8%;
+/* Nav bubbles.
+   Flow items, never absolutely placed. Size scales with the viewport and
+   the vertical stagger uses the `translate` property — independent of
+   `transform`, so it composes with the bob keyframes instead of fighting
+   them. */
+.nav-bubble {
+    position: relative;
+    flex: 0 0 auto;
+    aspect-ratio: 1 / 0.92;        /* same squashed droplet as the others */
+    height: auto;
     opacity: 1;
-    animation: bob-1 6s ease-in-out infinite, float-in 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.bubble-projects {
+    width: clamp(88px, 13.4vw, 190px);
+    translate: 0 clamp(-26px, -2.2vh, 0px);
+    animation: bob-1 6s ease-in-out infinite,
+               float-in 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 
 .bubble-about {
-    width: 100px;
-    height: 100px;
-    top: 180px;
-    right: 12%;
-    opacity: 1;
-    animation: bob-2 7s ease-in-out infinite, float-in 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.05s both;
+    width: clamp(78px, 11.9vw, 168px);
+    translate: 0 clamp(0px, 2.4vh, 30px);
+    animation: bob-2 7s ease-in-out infinite,
+               float-in 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.05s both;
 }
 
 .bubble-experience {
-    width: 120px;
-    height: 120px;
-    top: 60px;
-    left: 50%;
-    transform: translateX(-50%);
-    opacity: 1;
-    animation: bob-3 6.5s ease-in-out infinite, float-in 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.1s both;
+    width: clamp(84px, 12.7vw, 180px);
+    translate: 0 clamp(-18px, -1.4vh, 0px);
+    animation: bob-3 6.5s ease-in-out infinite,
+               float-in 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.1s both;
 }
 
 .bubble-skills {
-    width: 85px;
-    height: 85px;
-    top: 180px;
-    left: 28%;
-    opacity: 1;
-    animation: bob-4 7.5s ease-in-out infinite, float-in 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.15s both;
+    width: clamp(74px, 11.1vw, 156px);
+    translate: 0 clamp(0px, 1.8vh, 24px);
+    animation: bob-4 7.5s ease-in-out infinite,
+               float-in 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.15s both;
 }
 
 .bubble-contact {
-    width: 95px;
-    height: 95px;
-    top: 190px;
-    right: 28%;
-    opacity: 1;
-    animation: bob-5 6.8s ease-in-out infinite, float-in 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s both;
+    width: clamp(78px, 11.7vw, 164px);
+    translate: 0 clamp(-14px, -1.1vh, 0px);
+    animation: bob-5 6.8s ease-in-out infinite,
+               float-in 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s both;
 }
 
 /* Decorative background bubbles */
@@ -434,20 +563,7 @@
 
 .bubble-decor {
     position: absolute;
-    border-radius: 50%;
-    background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.6), rgba(100, 200, 255, 0.2) 50%, rgba(30, 144, 255, 0.1));
-    box-shadow: inset -2px -2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.bubble-decor::after {
-    content: '';
-    position: absolute;
-    top: 5%;
-    left: 5%;
-    width: 30%;
-    height: 30%;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.8), transparent 70%);
-    border-radius: 50%;
+    opacity: 0.85;
 }
 
 .bubble-decor-1 {
@@ -520,54 +636,14 @@
     }
 
     .bubble-nav-container {
-        height: auto;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 20px;
-        justify-content: center;
-        margin-top: 50px;
-        position: relative;
-        width: 100%;
-        bottom: auto;
-        left: auto;
-        padding: 0;
-        flex-shrink: 0;
+        gap: clamp(5px, 1.8vw, 12px);
+        margin-bottom: clamp(8px, 2vh, 20px);
     }
 
+    /* no stagger on narrow screens: it only wastes vertical room */
     .nav-bubble {
-        position: static !important;
+        translate: none !important;
         animation: none !important;
-        flex: 0 0 auto;
-    }
-
-    .bubble-projects {
-        width: 120px;
-        height: 120px;
-        order: 1;
-    }
-
-    .bubble-experience {
-        width: 100px;
-        height: 100px;
-        order: 2;
-    }
-
-    .bubble-about {
-        width: 90px;
-        height: 90px;
-        order: 3;
-    }
-
-    .bubble-skills {
-        width: 75px;
-        height: 75px;
-        order: 4;
-    }
-
-    .bubble-contact {
-        width: 80px;
-        height: 80px;
-        order: 5;
     }
 
     .nav-bubble-label {
@@ -632,10 +708,16 @@ nav {
     box-shadow: none;
 }
 
-nav ul {
-    display: flex;
-    gap: 8px;
-    align-items: center;
+/* Scoped to >=md so it cannot override Tailwind's `hidden` on small screens.
+   (Unlayered CSS outranks @layer utilities, so an unscoped `display: flex`
+   here keeps the desktop link list visible on phones and scrolls the page
+   sideways.) */
+@media (min-width: 768px) {
+    nav ul {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
 }
 
 nav a {
