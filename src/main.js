@@ -1,4 +1,5 @@
 import './style.css';
+import { initDitherClouds } from './dither-clouds.js';
 
 const html = document.documentElement;
 const heroSection = document.getElementById('hero');
@@ -158,3 +159,10 @@ if (bubbleNavContainer) {
     });
   });
 }
+
+// ============================================================================
+// DITHERED CLOUD BACKGROUND
+// ============================================================================
+
+const cloudCanvas = document.getElementById('cloud-bg');
+if (cloudCanvas) initDitherClouds(cloudCanvas);
