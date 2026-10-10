@@ -1,194 +1,300 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#eceef0" />
 
-    <title>Trish | Portfolio</title>
+    <title>Trish Nguyen — Software Engineer</title>
+    <meta name="description" content="Trish Nguyen — Computer Science at NC State, software engineering intern at SAS Institute, student web developer at NCSU Engineering IT." />
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Modak&family=Baloo+2:wght@700;800&family=Comfortaa:wght@400;700&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400;1,600&display=swap"
-    rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,75..125,300..900;1,75..125,300..900&family=Martian+Mono:wght@300..700&display=swap" />
 
-    <link rel="preload" as="image" href="/src/assets/name90.webp">
-
-    <!-- script runs before the body renders, no white flash -->
-    <script>
-      if (localStorage.getItem('theme') === 'light') {
-        document.documentElement.classList.remove('dark');
-      } 
-    </script>
+    <!-- If the module never runs, the plates must still be readable: the class
+         that holds them out of register is only ever added by script. -->
+    <script>document.documentElement.classList.add('booting');</script>
   </head>
 
-  <body class="bg-page-bg text-page-text transition-colors duration-300">
-  <!-- navigation bar -->
-    <nav class="fixed top-0 left-0 right-0 z-40 bg-sky-100/30 backdrop-blur-md border-b border-sky-200/40 transition-colors duration-300 text-slate-700">
-      <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-        <a href="#" class="text-lg font-bold tracking-tight">Trish</a>
+  <body>
+    <a class="skip" href="#about">Skip to content</a>
 
-        <ul class="hidden md:flex gap-8">
-          <li><a href="#about" class="text-sm font-medium hover:text-sky-600 transition-colors">About</a></li>
-          <li><a href="#experience" class="text-sm font-medium hover:text-sky-600 transition-colors">Experience</a></li>
-          <li><a href="#projects" class="text-sm font-medium hover:text-sky-600 transition-colors">Projects</a></li>
-          <li><a href="#skills" class="text-sm font-medium hover:text-sky-600 transition-colors">Skills</a></li>
-        </ul>
+    <!-- ══ TOP RAIL ══════════════════════════════════════════════════════ -->
+    <header class="rail" id="rail">
+      <div class="rail-in">
+        <a class="rail-mark" href="#top">
+          <span class="rail-mark-name">Trish&nbsp;Nguyen</span>
+          <span class="rail-mark-role">Software&nbsp;Engineer</span>
+        </a>
 
-        <div class="flex gap-4 items-center">
-          <button id="theme-toggle" class="p-2 hover:bg-sky-200/40 rounded-lg transition-colors" aria-label="Toggle Theme">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="block dark:hidden">
-              <circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
-            </svg>
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden dark:block">
-              <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/>
-            </svg>
-          </button>
-          <button id="menu-btn" class="md:hidden p-2 hover:bg-sky-200/40 rounded-lg transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/>
-            </svg>
-          </button>
-        </div>
+        <nav class="rail-nav" aria-label="Sections">
+          <a href="#about">About</a>
+          <a href="#experience">Experience</a>
+          <a href="#projects">Projects</a>
+          <a href="#stack">Stack</a>
+          <a href="#contact">Contact</a>
+        </nav>
 
-        <div id="mobile-menu" class="absolute top-full left-0 right-0 bg-sky-50/50 backdrop-blur border-b border-sky-200/30 md:hidden
-                                     transition-all duration-200 ease-out
-                                     invisible opacity-0 max-h-0 z-50">
-          <div class="flex flex-col gap-2 p-4">
-            <a href="#about" class="mobile-menu-link px-4 py-2 rounded transition-all text-slate-700">About</a>
-            <a href="#experience" class="mobile-menu-link px-4 py-2 rounded transition-all text-slate-700">Experience</a>
-            <a href="#projects" class="mobile-menu-link px-4 py-2 rounded transition-all text-slate-700">Projects</a>
-            <a href="#skills" class="mobile-menu-link px-4 py-2 rounded transition-all text-slate-700">Skills</a>
+        <button class="rail-menu" id="menu-btn" aria-expanded="false" aria-controls="sheet">
+          <span class="rail-menu-word">Index</span>
+          <svg width="16" height="10" viewBox="0 0 16 10" aria-hidden="true" focusable="false">
+            <path d="M0 1h16M0 9h16" stroke="currentColor" stroke-width="1.25" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- full-bleed menu sheet, phones only -->
+    <div class="sheet" id="sheet" hidden>
+      <nav class="sheet-nav" aria-label="Sections">
+        <a href="#about">About</a>
+        <a href="#experience">Experience</a>
+        <a href="#projects">Projects</a>
+        <a href="#stack">Stack</a>
+        <a href="#contact">Contact</a>
+      </nav>
+      <p class="sheet-foot mono">trishnguyen955@gmail.com</p>
+    </div>
+
+    <!-- ══ HERO ══════════════════════════════════════════════════════════ -->
+    <main>
+      <section id="top" class="hero">
+        <canvas id="ink-field" aria-hidden="true"></canvas>
+        <span class="crop crop-tl" aria-hidden="true"></span>
+        <span class="crop crop-tr" aria-hidden="true"></span>
+        <span class="crop crop-bl" aria-hidden="true"></span>
+        <span class="crop crop-br" aria-hidden="true"></span>
+
+        <div class="hero-in">
+          <h1 class="name" id="name">
+            <span class="name-line">
+              <span class="plate plate-haze" aria-hidden="true">trish</span>
+              <span class="plate plate-blue" aria-hidden="true">trish</span>
+              <span class="plate plate-ink">trish</span>
+            </span>
+            <span class="name-line">
+              <span class="plate plate-haze" aria-hidden="true">nguyen</span>
+              <span class="plate plate-blue" aria-hidden="true">nguyen</span>
+              <span class="plate plate-ink">nguyen</span>
+            </span>
+          </h1>
+
+          <p class="hero-role">
+            I build web interfaces — currently at <strong>SAS Institute</strong>, on the
+            Customer&nbsp;Intelligence&nbsp;360 web &amp; mobile team.
+          </p>
+
+          <dl class="specs mono">
+            <div><dt>Discipline</dt><dd>Software&nbsp;Engineering</dd></div>
+            <div><dt>Study</dt><dd>B.S.&nbsp;Computer&nbsp;Science</dd></div>
+            <div><dt>Institution</dt><dd>NC&nbsp;State&nbsp;University</dd></div>
+            <div><dt>Contact</dt><dd>trishnguyen955@gmail.com</dd></div>
+          </dl>
+
+          <div class="hero-foot">
+            <div class="acts">
+              <a class="act act-primary" href="mailto:trishnguyen955@gmail.com">Write to me <span aria-hidden="true">→</span></a>
+              <a class="act" href="https://github.com/trish222" target="_blank" rel="noreferrer noopener">GitHub <span aria-hidden="true">↗</span></a>
+              <a class="act" href="https://linkedin.com/in/trishnguyen" target="_blank" rel="noreferrer noopener">LinkedIn <span aria-hidden="true">↗</span></a>
+            </div>
+            <p class="readout mono" id="readout" aria-hidden="true">
+              <span>plate drift</span><span id="readout-t">0.0000</span><span>reg</span><span id="readout-s">+0.000</span>
+            </p>
           </div>
         </div>
-      </div>
-    </nav>
+      </section>
 
-    <section id="hero">
-      <!-- Dithered drifting clouds (WebGL); falls back to flat paper -->
-      <canvas id="cloud-bg" aria-hidden="true"></canvas>
-
-      <!-- Animated background bubbles -->
-      <div id="bubble-field"></div>
-
-      <!-- Hero Content -->
-      <div class="hero-wrapper">
-        <!-- Visually hidden heading for accessibility -->
-        <h1 class="sr-only">Trish</h1>
-
-        <!-- Hero name image -->
-        <div class="hero-name">
-          <img src="/src/assets/name90.webp" alt="Trish" class="hero-name-image" />
+      <!-- ══ ABOUT ═══════════════════════════════════════════════════════ -->
+      <section id="about" class="band">
+        <div class="band-in">
+          <div class="rule" aria-hidden="true"><span class="mono">About</span><span class="mono">Raleigh, North Carolina</span></div>
+          <h2 class="head">about</h2>
+          <div class="two-col">
+            <p class="lede">
+              I'm a Computer Science student at NC State with a bias toward the front of the
+              stack — the part people actually touch. I like problems where engineering
+              constraints and design intent have to be solved at the same time, and I'd
+              rather build the thing than describe it.
+            </p>
+            <ul class="facts">
+              <li>
+                <span class="mono">Now</span>
+                <p>Software engineering intern at SAS Institute, building and maintaining web and mobile components for Customer Intelligence&nbsp;360.</p>
+              </li>
+              <li>
+                <span class="mono">Also</span>
+                <p>Student web developer at NCSU Engineering IT, shipping and maintaining sites for the College of Engineering.</p>
+              </li>
+              <li>
+                <span class="mono">Care about</span>
+                <p>Accessible, fast interfaces. Performance you can feel. Code someone else can read six months from now.</p>
+              </li>
+            </ul>
+          </div>
         </div>
+      </section>
 
-        <!-- Tagline -->
-        <p class="hero-tagline">Computer Science Student & Software Engineer</p>
+      <!-- ══ EXPERIENCE ══════════════════════════════════════════════════ -->
+      <section id="experience" class="band">
+        <div class="band-in">
+          <div class="rule" aria-hidden="true"><span class="mono">Experience</span><span class="mono">Three entries</span></div>
+          <h2 class="head">experience</h2>
 
-        <!-- Scattered Bubble Navigation -->
-        <div class="bubble-nav-container">
-          <button class="nav-bubble bubble-projects" data-section="projects" aria-label="Projects">
-            <div class="nav-bubble-label">Projects</div>
-            <div class="nav-bubble-preview">💼</div>
-          </button>
-          <button class="nav-bubble bubble-about" data-section="about" aria-label="About">
-            <div class="nav-bubble-label">About</div>
-            <div class="nav-bubble-preview">👋</div>
-          </button>
-          <button class="nav-bubble bubble-experience" data-section="experience" aria-label="Experience">
-            <div class="nav-bubble-label">Experience</div>
-            <div class="nav-bubble-preview">🚀</div>
-          </button>
-          <button class="nav-bubble bubble-skills" data-section="skills" aria-label="Skills">
-            <div class="nav-bubble-label">Skills</div>
-            <div class="nav-bubble-preview">⚡</div>
-          </button>
-          <button class="nav-bubble bubble-contact" data-section="contact" aria-label="Contact">
-            <div class="nav-bubble-label">Contact</div>
-            <div class="nav-bubble-preview">✉️</div>
-          </button>
+          <ol class="ledger">
+            <li class="entry">
+              <p class="entry-when mono"><time datetime="2024">2024</time> — present</p>
+              <div class="entry-body">
+                <h3 class="entry-title">
+                  <span class="plate plate-blue" aria-hidden="true">Software Engineering Intern</span>
+                  <span class="plate plate-ink">Software Engineering Intern</span>
+                </h3>
+                <p class="entry-org">SAS Institute <span aria-hidden="true">·</span> Customer Intelligence 360, Web &amp; Mobile</p>
+                <p class="entry-note">Developing and maintaining web and mobile components for SAS's customer intelligence platform. Working with cross-functional teams on performance optimization and user experience improvements.</p>
+              </div>
+            </li>
+
+            <li class="entry">
+              <p class="entry-when mono"><time datetime="2023">2023</time> — present</p>
+              <div class="entry-body">
+                <h3 class="entry-title">
+                  <span class="plate plate-blue" aria-hidden="true">Student Web Developer</span>
+                  <span class="plate plate-ink">Student Web Developer</span>
+                </h3>
+                <p class="entry-org">NCSU Engineering IT</p>
+                <p class="entry-note">Building and maintaining web applications for the NC State College of Engineering. Responsive design, accessibility standards, and modern front-end practice.</p>
+              </div>
+            </li>
+
+            <li class="entry">
+              <p class="entry-when mono"><time datetime="2021">2021</time> — 2025</p>
+              <div class="entry-body">
+                <h3 class="entry-title">
+                  <span class="plate plate-blue" aria-hidden="true">B.S. Computer Science</span>
+                  <span class="plate plate-ink">B.S. Computer Science</span>
+                </h3>
+                <p class="entry-org">NC State University <span aria-hidden="true">·</span> College of Engineering</p>
+                <p class="entry-note">Coursework in algorithms, systems design, full-stack development, and software engineering practice.</p>
+              </div>
+            </li>
+          </ol>
         </div>
+      </section>
 
-        <!-- Decorative bubbles -->
-        <div class="decorative-bubbles">
-          <div class="bubble-decor bubble-decor-1"></div>
-          <div class="bubble-decor bubble-decor-2"></div>
-          <div class="bubble-decor bubble-decor-3"></div>
-          <div class="bubble-decor bubble-decor-4"></div>
+      <!-- ══ PROJECTS ════════════════════════════════════════════════════ -->
+      <section id="projects" class="band band-work">
+        <div class="band-in">
+          <div class="rule" aria-hidden="true"><span class="mono">Projects</span><span class="mono">Three plates, unexposed</span></div>
+          <h2 class="head">projects</h2>
+          <p class="lede lede-tight">
+            Case studies are still being written. Below is the structure they land in —
+            each plate gets the work, the part I owned, and what it was built with.
+          </p>
+
+          <div class="plates">
+            <article class="work">
+              <span class="work-swatch" aria-hidden="true"></span>
+              <p class="work-state mono">Plate one <span aria-hidden="true">·</span> not yet exposed</p>
+              <h3 class="work-title">Project title</h3>
+              <dl class="work-fields mono">
+                <div><dt>Role</dt><dd>—</dd></div>
+                <div><dt>Built with</dt><dd>—</dd></div>
+                <div><dt>Link</dt><dd>—</dd></div>
+              </dl>
+            </article>
+
+            <article class="work">
+              <span class="work-swatch" aria-hidden="true"></span>
+              <p class="work-state mono">Plate two <span aria-hidden="true">·</span> not yet exposed</p>
+              <h3 class="work-title">Project title</h3>
+              <dl class="work-fields mono">
+                <div><dt>Role</dt><dd>—</dd></div>
+                <div><dt>Built with</dt><dd>—</dd></div>
+                <div><dt>Link</dt><dd>—</dd></div>
+              </dl>
+            </article>
+
+            <article class="work">
+              <span class="work-swatch" aria-hidden="true"></span>
+              <p class="work-state mono">Plate three <span aria-hidden="true">·</span> not yet exposed</p>
+              <h3 class="work-title">Project title</h3>
+              <dl class="work-fields mono">
+                <div><dt>Role</dt><dd>—</dd></div>
+                <div><dt>Built with</dt><dd>—</dd></div>
+                <div><dt>Link</dt><dd>—</dd></div>
+              </dl>
+            </article>
+          </div>
+
+          <p class="work-aside mono">
+            Meanwhile, the source for this page is on
+            <a href="https://github.com/trish222/trish222.github.io" target="_blank" rel="noreferrer noopener">GitHub ↗</a>
+          </p>
         </div>
+      </section>
 
-        <!-- Scroll indicator -->
-        <div class="scroll-indicator">
-          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="m7 13 5 5 5-5M7 6l5 5 5-5"/>
-          </svg>
+      <!-- ══ STACK ═══════════════════════════════════════════════════════ -->
+      <section id="stack" class="band band-ink">
+        <div class="band-in">
+          <div class="rule" aria-hidden="true"><span class="mono">Stack</span><span class="mono">Four groups</span></div>
+          <h2 class="head head-invert">stack</h2>
+
+          <dl class="matrix">
+            <div class="matrix-row">
+              <dt class="mono">Frontend</dt>
+              <dd>React <i aria-hidden="true">/</i> TypeScript <i aria-hidden="true">/</i> Tailwind CSS <i aria-hidden="true">/</i> HTML &amp; CSS <i aria-hidden="true">/</i> JavaScript</dd>
+            </div>
+            <div class="matrix-row">
+              <dt class="mono">Backend</dt>
+              <dd>Node.js <i aria-hidden="true">/</i> Express <i aria-hidden="true">/</i> Python <i aria-hidden="true">/</i> SQL <i aria-hidden="true">/</i> REST APIs</dd>
+            </div>
+            <div class="matrix-row">
+              <dt class="mono">Tools</dt>
+              <dd>Vite <i aria-hidden="true">/</i> Git <i aria-hidden="true">/</i> Figma <i aria-hidden="true">/</i> PostCSS <i aria-hidden="true">/</i> Webpack</dd>
+            </div>
+            <div class="matrix-row">
+              <dt class="mono">Practice</dt>
+              <dd>Accessibility <i aria-hidden="true">/</i> Responsive design <i aria-hidden="true">/</i> Testing <i aria-hidden="true">/</i> Performance</dd>
+            </div>
+          </dl>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <section id="about" class="section-card">
-      <h2 class="section-title">About</h2>
-      <div class="section-content">
-        <p class="text-base leading-relaxed">
-          I'm a designer and developer passionate about creating intuitive, beautiful digital experiences. With a background in both design and development, I bridge the gap between aesthetics and functionality.
+      <!-- ══ CONTACT ═════════════════════════════════════════════════════ -->
+      <section id="contact" class="band band-close">
+        <div class="band-in">
+          <div class="rule" aria-hidden="true"><span class="mono">Contact</span><span class="mono">Reply within a day or two</span></div>
+          <h2 class="head">say hello</h2>
+          <a class="mailto" href="mailto:trishnguyen955@gmail.com">
+            <span class="plate plate-haze" aria-hidden="true">trishnguyen955@gmail.com</span>
+            <span class="plate plate-blue" aria-hidden="true">trishnguyen955@gmail.com</span>
+            <span class="plate plate-ink">trishnguyen955@gmail.com</span>
+          </a>
+          <div class="elsewhere">
+            <a href="https://github.com/trish222" target="_blank" rel="noreferrer noopener">GitHub <span aria-hidden="true">↗</span></a>
+            <a href="https://linkedin.com/in/trishnguyen" target="_blank" rel="noreferrer noopener">LinkedIn <span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ══ COLOPHON ══════════════════════════════════════════════════════ -->
+    <footer class="colophon">
+      <div class="band-in">
+        <div class="rule" aria-hidden="true"><span class="mono">Colophon</span><span class="mono" id="year">2026</span></div>
+        <p>
+          Set in Archivo and Martian Mono. The field behind the title is a domain-warped
+          fBm height map drawn as interfering contour plates and quantised through an
+          ordered 8×8 Bayer matrix — one WebGL triangle, no images. Hand-built with Vite;
+          no UI framework.
         </p>
       </div>
-    </section>
+    </footer>
 
-    <section id="experience" class="section-card">
-      <h2 class="section-title">Experience</h2>
-      <div class="section-content space-y-6">
-        <div class="experience-item">
-          <div class="flex justify-between items-baseline mb-2">
-            <h3 class="font-semibold">Lead Designer</h3>
-            <span class="text-sm text-muted">2022 – Present</span>
-          </div>
-          <p class="text-accent font-medium mb-2">Acme Design Studio</p>
-          <p class="text-muted text-sm">Led design initiatives for enterprise clients, mentored junior designers.</p>
-        </div>
-        <div class="experience-item">
-          <div class="flex justify-between items-baseline mb-2">
-            <h3 class="font-semibold">Product Designer</h3>
-            <span class="text-sm text-muted">2020 – 2022</span>
-          </div>
-          <p class="text-accent font-medium mb-2">Tech Startup Inc</p>
-          <p class="text-muted text-sm">Designed user interfaces and experiences for mobile and web applications.</p>
-        </div>
-      </div>
-    </section>
+    <a class="totop mono" href="#top" id="totop">Top <span aria-hidden="true">↑</span></a>
 
-    <section id="projects" class="section-card">
-      <h2 class="section-title">Projects</h2>
-      <div class="section-content space-y-6">
-        <div class="project-item">
-          <h3 class="font-semibold mb-2">Project Name</h3>
-          <p class="text-muted text-sm mb-3">A brief description of the project and your role.</p>
-          <div class="flex gap-2 flex-wrap">
-            <span class="px-2 py-1 text-xs bg-accent/10 text-accent rounded">Design</span>
-            <span class="px-2 py-1 text-xs bg-accent/10 text-accent rounded">Development</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="skills" class="section-card">
-      <h2 class="section-title">Skills</h2>
-      <div class="section-content">
-        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <div class="skill-tag">Design</div>
-          <div class="skill-tag">Frontend</div>
-          <div class="skill-tag">React</div>
-          <div class="skill-tag">Figma</div>
-          <div class="skill-tag">CSS</div>
-          <div class="skill-tag">JavaScript</div>
-        </div>
-      </div>
-    </section>
-
-    <button id="back-to-top" class="fixed bottom-6 right-6 p-3 bg-accent text-accent-foreground rounded-full hover:bg-accent/90 transition-colors shadow-lg hover:shadow-xl" aria-label="Back to top">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 19V5M5 12l7-7 7 7"/>
-      </svg>
-    </button>
-
-    <script type="module" src="./src/main.js" defer></script>
+    <script type="module" src="./src/main.js"></script>
   </body>
 </html>

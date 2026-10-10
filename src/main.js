@@ -1,182 +1,149 @@
 import './style.css';
-import { initDitherClouds } from './dither-clouds.js';
+import { initInkField } from './ink-field.js';
 
-const html = document.documentElement;
-const heroSection = document.getElementById('hero');
-const bubbleNavContainer = document.querySelector('.bubble-nav-container');
-const bubbleField = document.getElementById('bubble-field');
+const root = document.documentElement;
+const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+const fine = matchMedia('(hover: hover) and (pointer: fine)');
 
-const sectionData = [
-  { id: 'about', label: 'About', emoji: '👋' },
-  { id: 'projects', label: 'Projects', emoji: '💼' },
-  { id: 'skills', label: 'Skills', emoji: '⚡' },
-  { id: 'experience', label: 'Experience', emoji: '🚀' },
-  { id: 'contact', label: 'Contact', emoji: '✉️' },
-];
+/* ===========================================================================
+   THE INK FIELD
+   =========================================================================== */
 
-const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const isMobile = () => window.innerWidth < 768;
+const field = initInkField(document.getElementById('ink-field'));
 
-// ============================================================================
-// THEME TOGGLE
-// ============================================================================
+/* ===========================================================================
+   REGISTRATION
+   The one authored gesture: three ink plates land out of register, converge,
+   and from then on drift with the pointer. Everything that moves on this page
+   is this same idea at a different amplitude.
+   =========================================================================== */
 
-const themeToggleBtn = document.getElementById('theme-toggle');
-const setThemeClassFromStorage = () => {
-  const stored = localStorage.getItem('theme');
-  if (stored === 'light') html.classList.remove('dark');
-  if (stored === 'dark') html.classList.add('dark');
-};
+const BOOT_MS = 1100;
 
-const toggleTheme = () => {
-  html.classList.toggle('dark');
-  const isDark = html.classList.contains('dark');
-  localStorage.setItem('theme', isDark ? 'dark' : 'light');
-};
+requestAnimationFrame(() => {
+  requestAnimationFrame(() => {
+    root.classList.remove('booting');
+    setTimeout(() => root.style.setProperty('--reg-dur', '420ms'), BOOT_MS);
+  });
+});
 
-if (themeToggleBtn) {
-  themeToggleBtn.addEventListener('click', toggleTheme);
+if (fine.matches && !reduced.matches) {
+  let rx = 0, ry = 0, queued = false;
+
+  const commit = () => {
+    queued = false;
+    root.style.setProperty('--reg-x', `${rx.toFixed(2)}px`);
+    root.style.setProperty('--reg-y', `${ry.toFixed(2)}px`);
+    field?.setRegistration(rx / 16);
+  };
+
+  addEventListener('pointermove', (e) => {
+    // -1..1 from the centre of the viewport, scaled to a plate's worth of slip
+    rx = ((e.clientX / innerWidth) * 2 - 1) * 16;
+    ry = ((e.clientY / innerHeight) * 2 - 1) * 9;
+    if (!queued) { queued = true; requestAnimationFrame(commit); }
+  }, { passive: true });
 }
 
-setThemeClassFromStorage();
+/* ===========================================================================
+   FIELD READOUT
+   Proof that the background is computed. Throttled to 6/sec so it reads as an
+   instrument rather than a flicker.
+   =========================================================================== */
 
-// ============================================================================
-// MOBILE MENU
-// ============================================================================
+const outT = document.getElementById('readout-t');
+const outS = document.getElementById('readout-s');
+
+if (field && outT && outS && !reduced.matches) {
+  const tick = () => {
+    const { t, sep } = field.read();
+    outT.textContent = t.toFixed(4);
+    outS.textContent = (sep >= 0 ? '+' : '−') + Math.abs(sep).toFixed(3);
+  };
+  tick();
+  setInterval(() => { if (!document.hidden) tick(); }, 166);
+} else if (outT && outS) {
+  outT.textContent = '0.0000';
+  outS.textContent = '+0.000';
+}
+
+/* ===========================================================================
+   PHONE SHEET
+   =========================================================================== */
 
 const menuBtn = document.getElementById('menu-btn');
-const mobileMenu = document.getElementById('mobile-menu');
+const sheet = document.getElementById('sheet');
 
-const toggleMobileMenu = () => {
-  if (!mobileMenu) return;
-  const isOpen = mobileMenu.classList.contains('visible');
-  if (isOpen) {
-    mobileMenu.classList.add('invisible', 'opacity-0', 'max-h-0');
-    mobileMenu.classList.remove('visible', 'opacity-100', 'max-h-96');
-  } else {
-    mobileMenu.classList.remove('invisible', 'opacity-0', 'max-h-0');
-    mobileMenu.classList.add('visible', 'opacity-100', 'max-h-96');
-  }
-};
+if (menuBtn && sheet) {
+  const setSheet = (open) => {
+    sheet.hidden = !open;
+    menuBtn.setAttribute('aria-expanded', String(open));
+    menuBtn.querySelector('.rail-menu-word').textContent = open ? 'Close' : 'Index';
+    document.body.style.overflow = open ? 'hidden' : '';
+  };
 
-if (menuBtn && mobileMenu) {
-  menuBtn.addEventListener('click', toggleMobileMenu);
-  document.addEventListener('click', (e) => {
-    const isOpen = mobileMenu.classList.contains('visible');
-    if (isOpen && !mobileMenu.contains(e.target) && !menuBtn.contains(e.target)) {
-      toggleMobileMenu();
-    }
-  });
-  mobileMenu.querySelectorAll('a').forEach(link => {
-    link.addEventListener('click', toggleMobileMenu);
-  });
+  menuBtn.addEventListener('click', () => setSheet(sheet.hidden));
+  sheet.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => setSheet(false)));
+  addEventListener('keydown', (e) => { if (e.key === 'Escape' && !sheet.hidden) setSheet(false); });
+  matchMedia('(min-width: 761px)').addEventListener('change', (e) => { if (e.matches) setSheet(false); });
 }
 
-// ============================================================================
-// BACK TO TOP
-// ============================================================================
+/* ===========================================================================
+   SECTION ARRIVAL + CURRENT SECTION
+   =========================================================================== */
 
-const backToTopBtn = document.getElementById('back-to-top');
-if (backToTopBtn) {
-  backToTopBtn.addEventListener('click', () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
-  window.addEventListener('scroll', () => {
-    if (window.scrollY > 400) {
-      backToTopBtn.classList.remove('opacity-0', 'pointer-events-none');
-      backToTopBtn.classList.add('opacity-100');
-    } else {
-      backToTopBtn.classList.add('opacity-0', 'pointer-events-none');
-      backToTopBtn.classList.remove('opacity-100');
-    }
-  });
-}
+const revealTargets = document.querySelectorAll(
+  '.band .rule, .band .head, .band .lede, .two-col, .ledger, .plates, .matrix, .mailto, .elsewhere, .work-aside'
+);
+revealTargets.forEach((el) => el.classList.add('reveal'));
 
-// ============================================================================
-// ANIMATED BACKGROUND BUBBLES
-// ============================================================================
-
-class AnimatedBubbleField {
-  constructor(container) {
-    this.container = container;
-    this.bubbles = [];
-    this.init();
-  }
-
-  init() {
-    // Create floating bubbles with varied sizes and animation delays
-    const bubbleCount = prefersReducedMotion ? 0 : 8;
-
-    for (let i = 0; i < bubbleCount; i++) {
-      const size = Math.random() * 80 + 30; // 30-110px
-      const delay = Math.random() * 5; // 0-5s stagger
-      const xPos = Math.random() * 100; // Random horizontal start
-      const duration = Math.random() * 8 + 12; // 12-20s duration
-
-      const bubble = document.createElement('div');
-      bubble.className = 'bubble-bg';
-      bubble.style.width = size + 'px';
-      bubble.style.height = Math.round(size * 0.88) + 'px';  // squashed droplet
-      bubble.style.left = xPos + '%';
-      bubble.style.bottom = '-120px';
-      bubble.style.animation = `bubble-float-up ${duration}s linear ${delay}s infinite`;
-
-      this.container.appendChild(bubble);
-      this.bubbles.push(bubble);
-    }
-  }
-}
-
-if (bubbleField) {
-  new AnimatedBubbleField(bubbleField);
-}
-
-// ============================================================================
-// BUBBLE NAVIGATION (pre-positioned in HTML)
-// ============================================================================
-
-if (bubbleNavContainer) {
-  const navBubbles = bubbleNavContainer.querySelectorAll('[data-section]');
-
-  navBubbles.forEach((bubble) => {
-    bubble.addEventListener('click', () => {
-      const sectionId = bubble.getAttribute('data-section');
-      const targetSection = document.getElementById(sectionId);
-      if (targetSection) {
-        targetSection.scrollIntoView({ behavior: 'smooth' });
-      }
+if (!reduced.matches && 'IntersectionObserver' in window) {
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add('is-in');
+      io.unobserve(entry.target);
     });
+  }, { rootMargin: '0px 0px -12% 0px', threshold: 0.08 });
+  revealTargets.forEach((el) => io.observe(el));
+} else {
+  revealTargets.forEach((el) => el.classList.add('is-in'));
+}
 
-    bubble.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        const sectionId = bubble.getAttribute('data-section');
-        const targetSection = document.getElementById(sectionId);
-        if (targetSection) {
-          targetSection.scrollIntoView({ behavior: 'smooth' });
-        }
-      }
+const railLinks = [...document.querySelectorAll('.rail-nav a')];
+const sections = railLinks
+  .map((a) => document.querySelector(a.getAttribute('href')))
+  .filter(Boolean);
+
+if (sections.length) {
+  const spy = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      const i = sections.indexOf(entry.target);
+      railLinks.forEach((a, n) =>
+        n === i ? a.setAttribute('aria-current', 'true') : a.removeAttribute('aria-current'));
     });
-  });
+  }, { rootMargin: '-45% 0px -50% 0px' });
+  sections.forEach((s) => spy.observe(s));
 }
 
-// ============================================================================
-// DITHERED CLOUD BACKGROUND
-// ============================================================================
+/* ===========================================================================
+   BACK TO TOP
+   =========================================================================== */
 
-const cloudCanvas = document.getElementById('cloud-bg');
-if (cloudCanvas) initDitherClouds(cloudCanvas);
-
-// ============================================================================
-// HERO HEIGHT
-// The nav occupies normal flow, so the hero must subtract its height or the
-// bottom of the hero (and the bubble row with it) falls below the fold.
-// ============================================================================
-
-const navEl = document.querySelector('nav');
-if (navEl) {
-  const syncNavHeight = () =>
-    html.style.setProperty('--nav-h', `${Math.round(navEl.offsetHeight)}px`);
-  syncNavHeight();
-  new ResizeObserver(syncNavHeight).observe(navEl);
+const toTop = document.getElementById('totop');
+if (toTop) {
+  const hero = document.getElementById('top');
+  const io = new IntersectionObserver(
+    ([e]) => toTop.classList.toggle('is-on', !e.isIntersecting),
+    { threshold: 0 }
+  );
+  if (hero) io.observe(hero);
 }
+
+/* ===========================================================================
+   COLOPHON YEAR
+   =========================================================================== */
+
+const year = document.getElementById('year');
+if (year) year.textContent = String(new Date().getFullYear());
