@@ -1,211 +1,135 @@
 @import "tailwindcss";
 
 @theme {
-    /* BASE = LIGHT */
-    --color-page-bg: #ffffff;
-    --color-page-text: #0f172a;
-    --color-neon-green: #00ff9c;
-    --color-neon-cyan: #22d3ee;
-    --color-neon-fuchsia: #d946ef;
+  /* BASE = LIGHT (paper) */
+  --color-page-bg: #f3f1ec;
+  --color-page-text: #14130f;
+  --color-page-muted: #6d6a62;
+  --color-page-rule: #d2cec4;
 
-    --font-heading: "Montserrat", sans-serif;
-    --font-mono: "JetBrains Mono", monospace;
+  /* Helvetica Neue first — it is on every Mac/iOS. Inter Tight is the
+     web stand-in with the same tight grotesque proportions. */
+  --font-display: "Helvetica Neue", "HelveticaNeue", "Inter Tight", Helvetica, Arial, sans-serif;
+  --font-sans: "Inter Tight", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
 @variant dark (&:where(.dark, .dark *));
 
 .dark {
-    --color-page-bg: #121321; /* Deep slate */
-    --color-page-text: #f8fafc; /* Off white */
-}
-
-/* 1. THE PULSE ANIMATION */
-@keyframes neon-pulse {
-  0%, 100% {
-    filter: drop-shadow(0 0 2px var(--glow-color)) brightness(1);
-    opacity: 1;
-  }
-  50% {
-    filter: drop-shadow(0 0 15px var(--glow-color)) brightness(1.2);
-    opacity: 0.9;
-  }
+  --color-page-bg: #0d0c0a;
+  --color-page-text: #f3f1ec;
+  --color-page-muted: #8d8a81;
+  --color-page-rule: #2a2825;
 }
 
 @layer base {
-  html, body {
-    /* Only transition colors, not layout things like width or height */
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    font-family: var(--font-sans);
     @apply transition-colors duration-300 ease-in-out;
   }
-  
-  /* You can also target specific elements if you want them to fade too */
-  a, button, div {
-     @apply transition-colors duration-300 ease-in-out;
+
+  :focus-visible {
+    outline: 2px solid var(--color-page-text);
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
 @layer components {
-  .folder-container {
-  --glow-color: var(--color-neon-cyan); /* add this */
-  @apply relative mx-auto mt-40 mb-24 max-w-4xl px-6;
-  
-
-
-  opacity: 0.25;
-  animation: none;
-  filter: none;
-  transition: opacity 400ms ease, filter 400ms ease;
+  /* ---------- editorial furniture ---------- */
+  .label {
+    @apply font-mono text-[0.68rem] font-medium uppercase tracking-[0.18em];
   }
 
-  /* OFF state: kill neon glow on inner parts */
-  .folder-container:not(.is-active) .folder-body {
-    box-shadow: none;
+  .text-muted { color: var(--color-page-muted); }
+
+  .link {
+    @apply transition-colors duration-200;
+    text-decoration: none;
+  }
+  .link:hover { color: var(--color-page-muted); }
+
+  .rule-t { border-top: 1px solid var(--color-page-rule); }
+  .rule-b { border-bottom: 1px solid var(--color-page-rule); }
+
+  .icon-btn {
+    @apply inline-flex items-center justify-center gap-2 px-3 py-2 transition-colors duration-200;
+    border: 1px solid var(--color-page-rule);
+    border-radius: 2px;
+  }
+  .icon-btn:hover { border-color: var(--color-page-text); }
+
+  /* ---------- the wordmark ---------- */
+  .wordmark {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(3.4rem, 15vw, 12rem);
+    line-height: 0.86;
+    letter-spacing: -0.048em;
+    /* Helvetica's own bold, not a synthesised one, when the real face is there */
+    font-synthesis-weight: none;
   }
 
-  .folder-container:not(.is-active) .folder-tab {
-    text-shadow: none;
+  /* Ink bleed: the filter carries its own edge, so the glyph underneath
+     stays a plain solid fill. */
+  .ink {
+    display: inline-block;
+    filter: url(#ink-bleed-sm);
   }
 
-  /* Optional: dim borders when off */
-  .folder-container:not(.is-active) .folder-body,
-  .folder-container:not(.is-active) .folder-tab {
-    border-color: color-mix(in srgb, var(--glow-color), transparent 70%);
+  /* The dilate stage fattens every stem, which mushes the r into the i
+     in "Trish". Hand that one pair back a hair of tracking — more on
+     desktop, where the filter spreads further. */
+  .kern-ri { letter-spacing: -0.03em; }
+
+  @media (min-width: 48rem) {
+    .ink { filter: url(#ink-bleed); }
+    .kern-ri { letter-spacing: -0.004em; }
   }
 
-
-  .dark .folder-container {
-    --glow-color: var(--color-neon-fuchsia);
+  /* ---------- sections ---------- */
+  .spread {
+    @apply mx-auto grid max-w-[78rem] gap-6 px-5 py-14 md:grid-cols-[14rem_1fr] md:gap-12 md:px-10 md:py-20;
+    border-top: 1px solid var(--color-page-rule);
   }
 
-
-  /* active: glow turns on */
-  .folder-container.is-active {
-    /* on when in view */
-    opacity: 1;
-    animation: neon-pulse 4s infinite ease-in-out;
-    filter: drop-shadow(0 0 6px var(--glow-color));
+  .spread-head {
+    @apply flex items-baseline gap-4 md:flex-col md:gap-2;
   }
 
-  .folder-tab {
-    /* 1. Changed -top-[4px] to top-[2px] to sink it into the 6px border */
-    /* 2. Increased rounding slightly to match the body better */
-    @apply absolute top-[7px] left-10 -translate-y-full translate-x-[23px] md:left-16 px-10 py-3 -skew-x-12 z-20;
-    @apply border-[6px] rounded-t-[2.5rem] bg-page-bg;
-    
-    /* Neon Colors + Bottom border matching bg to hide the seam */
-    @apply border-[var(--glow-color)] border-b-page-bg;
-    
-    text-shadow: 0 0 10px var(--glow-color);
+  .spread-body { @apply max-w-[46rem]; }
+
+  .lede {
+    @apply text-[1.05rem] leading-relaxed;
   }
 
-  .folder-body {
-    /* Rounding ALL corners [2.5rem], 6px thick */
-    @apply relative p-10 md:p-14 -skew-x-12 border-[6px] bg-page-bg rounded-[2.5rem] transition-all duration-300 z-10;
-    @apply border-[var(--glow-color)];
-    
-    /* Dynamic Shadow using the variable */
-    box-shadow: 0 0 20px color-mix(in srgb, var(--glow-color), transparent 50%),
-                0 0 40px color-mix(in srgb, var(--glow-color), transparent 80%);
+  .entry {
+    @apply py-4;
+    border-bottom: 1px solid var(--color-page-rule);
+  }
+  .entry:last-child { border-bottom: 0; }
+
+  .entry-role {
+    font-family: var(--font-display);
+    @apply text-[1.35rem] font-bold tracking-[-0.025em];
   }
 
-  .folder-content {
-    @apply skew-x-12;
-  }
-
-  /* Apply glow to headings inside folders automatically */
-  .folder-content h2 {
-    @apply font-heading;
-    text-shadow: 0 0 15px var(--glow-color);
-  }
-}
-
-/* 2. FIXING THE GENERAL GLOW UTILITY */
-@layer utilities { 
-  .glow {
-    text-shadow: 0 0 8px currentColor,
-                 0 0 20px color-mix(in srgb, currentColor, transparent 30%);
-  }
-}
-
-/* Neon Flicker Animation */
-@keyframes neon-flicker {
-  0%, 18%, 22%, 25%, 53%, 57%, 100% {
-    opacity: 1;
-  }
-  20%, 24%, 55% {
-    opacity: 0.3;
-    filter: brightness(0.5);
+  .entry-org {
+    color: var(--color-page-muted);
+    @apply mt-1 text-[0.95rem];
   }
 }
-
-.animate-flicker {
-  animation: neon-pulse 4s infinite ease-in-out, neon-flicker 1.5s ease-out infinite;
-}
-
-/* Hero neon sign animation */
-@keyframes hero-neon-flicker {
-  0%, 18%, 22%, 25%, 54%, 56%, 100% {
-    text-shadow:
-      0 0 10px rgba(0, 255, 255, 1),
-      0 0 20px rgba(0, 255, 255, 0.9),
-      0 0 30px rgba(0, 255, 255, 0.8),
-      0 0 40px rgba(0, 255, 255, 0.7),
-      0 0 50px rgba(0, 255, 255, 0.6),
-      0 0 60px rgba(0, 255, 255, 0.5),
-      inset 0 0 20px rgba(0, 255, 255, 0.3);
-    color: rgba(0, 255, 255, 1);
-  }
-  20%, 24%, 55% {
-    text-shadow:
-      0 0 5px rgba(0, 255, 255, 0.6),
-      0 0 15px rgba(0, 255, 255, 0.4),
-      0 0 25px rgba(0, 255, 255, 0.2);
-    color: rgba(0, 255, 255, 0.6);
-  }
-}
-
-@keyframes hero-neon-light-up {
-  0% {
-    text-shadow:
-      0 0 2px rgba(0, 255, 255, 0.2),
-      0 0 4px rgba(0, 255, 255, 0.1);
-    color: rgba(0, 255, 255, 0.3);
-    opacity: 0.3;
-  }
-  50% {
-    text-shadow:
-      0 0 10px rgba(0, 255, 255, 1),
-      0 0 20px rgba(0, 255, 255, 0.9),
-      0 0 30px rgba(0, 255, 255, 0.8),
-      0 0 40px rgba(0, 255, 255, 0.7),
-      0 0 50px rgba(0, 255, 255, 0.6),
-      0 0 60px rgba(0, 255, 255, 0.5),
-      inset 0 0 20px rgba(0, 255, 255, 0.3);
-    color: rgba(0, 255, 255, 1);
-    opacity: 1;
-  }
-  100% {
-    text-shadow:
-      0 0 10px rgba(0, 255, 255, 1),
-      0 0 20px rgba(0, 255, 255, 0.9),
-      0 0 30px rgba(0, 255, 255, 0.8),
-      0 0 40px rgba(0, 255, 255, 0.7),
-      0 0 50px rgba(0, 255, 255, 0.6),
-      0 0 60px rgba(0, 255, 255, 0.5),
-      inset 0 0 20px rgba(0, 255, 255, 0.3);
-    color: rgba(0, 255, 255, 1);
-    opacity: 1;
-  }
-}
-
-.neon-sign {
-  perspective: 1000px;
-  font-size: 0;
-}
-
-.neon-letter {
-  display: inline-block;
-  font-size: 1em;
-  animation: hero-neon-light-up var(--duration) ease-in-out var(--delay) forwards,
-             hero-neon-flicker 0.5s ease-in-out calc(var(--delay) + var(--duration)) infinite;
-}
-

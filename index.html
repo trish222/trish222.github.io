@@ -4,148 +4,175 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <title>Trish | Portfolio</title>
+    <title>Trish Nguyen</title>
+    <meta name="description" content="Trish Nguyen — Computer Science student and software engineer." />
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap" 
-    rel="stylesheet">
+    <!-- Inter Tight is the web stand-in for Helvetica Neue Bold; local Helvetica wins when present. -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-    <!-- script runs before the body renders, no white flash -->
+    <!-- runs before the body renders, no white flash -->
     <script>
       if (localStorage.getItem('theme') === 'light') {
         document.documentElement.classList.remove('dark');
-      } 
+      }
     </script>
   </head>
 
-  <body class="bg-page-bg text-page-text transition-colors duration-300">
-  <!-- nagivation bar -->
-    <nav class="relative flex flex-col p-5 md:justify-center">
-      <div class="relative flex justify-between w-full">
-        <div class="flex items-center">
-          <p class="text-lg font-bold font-mono tracking-widest">Trish Nguyen( ) { </p>
-          <ul class="hidden md:flex gap-5 p-2">
-            <li><a href="#about" class="text-lg font-medium font-bold font-mono hover:text-gray-400 hover:underline">About;</a></li>
-            <li><a href="#experience" class="text-lg font-medium font-bold font-mono hover:text-gray-400 hover:underline">Experience;</a></li>
-            <li><a href="#projects" class="text-lg font-medium font-bold font-mono hover:text-gray-400 hover:underline">Projects;</a></li>
-            <li><a href="#skills" class="text-lg font-medium font-bold font-mono hover:text-gray-400 hover:underline">Skills;</a></li>
-          </ul>
-          <p class="text-lg font-bold font-mono tracking-widest"> }</p>  
-        </div>
+  <body class="bg-page-bg text-page-text">
 
-        <div class="flex gap-2">
-          <!-- theme toggle button -->
-           <button id="theme-toggle" class="p-2 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer" aria-label="Toggle Theme">
-  
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 block dark:hidden lucide lucide-sun-icon lucide-sun"><circle cx="12" cy="12" r="4"/>
-              <path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
-            </svg>
+    <!-- ============================================================
+         Ink filters. Two stages: displace the outline so it wavers,
+         then blur + crush the alpha so the edge re-hardens as ink
+         rather than staying a blur. -sm runs smaller offsets for
+         small type, where the desktop scale would eat the letters.
+         ============================================================ -->
+    <svg class="absolute h-0 w-0 overflow-hidden" aria-hidden="true" focusable="false">
+      <defs>
+        <filter id="ink-bleed" x="-12%" y="-20%" width="124%" height="140%" color-interpolation-filters="sRGB">
+          <!-- 1. coarse wobble: the outline wavers like a stamp pressed by hand -->
+          <feTurbulence type="fractalNoise" baseFrequency="0.011 0.017" numOctaves="2" seed="11" result="wobble"/>
+          <feDisplacementMap in="SourceGraphic" in2="wobble" scale="6" xChannelSelector="R" yChannelSelector="G" result="wavy"/>
+          <!-- 2. fine grain: chews the edge into fibres -->
+          <feTurbulence type="fractalNoise" baseFrequency="0.5" numOctaves="4" seed="3" result="grain"/>
+          <feDisplacementMap in="wavy" in2="grain" scale="3.2" xChannelSelector="R" yChannelSelector="G" result="rough"/>
+          <!-- 3. bleed: spread the ink, then crush the alpha so the edge
+               re-hardens fat and rounded instead of staying a blur -->
+          <feMorphology in="rough" operator="dilate" radius="1.6" result="spread"/>
+          <feGaussianBlur in="spread" stdDeviation="2.4" result="soft"/>
+          <feColorMatrix in="soft" type="matrix"
+            values="1 0 0 0 0
+                    0 1 0 0 0
+                    0 0 1 0 0
+                    0 0 0 32 -11"/>
+        </filter>
 
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden dark:block lucide lucide-moon-icon lucide-moon">
-              <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/>
-            </svg>
-            
+        <filter id="ink-bleed-sm" x="-14%" y="-22%" width="128%" height="144%" color-interpolation-filters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.028 0.042" numOctaves="2" seed="11" result="wobble"/>
+          <feDisplacementMap in="SourceGraphic" in2="wobble" scale="2.4" xChannelSelector="R" yChannelSelector="G" result="wavy"/>
+          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" seed="3" result="grain"/>
+          <feDisplacementMap in="wavy" in2="grain" scale="1.3" xChannelSelector="R" yChannelSelector="G" result="rough"/>
+          <feMorphology in="rough" operator="dilate" radius="0.6" result="spread"/>
+          <feGaussianBlur in="spread" stdDeviation="0.9" result="soft"/>
+          <feColorMatrix in="soft" type="matrix"
+            values="1 0 0 0 0
+                    0 1 0 0 0
+                    0 0 1 0 0
+                    0 0 0 32 -11"/>
+        </filter>
+      </defs>
+    </svg>
+
+    <!-- ========================= masthead ========================= -->
+    <header class="rule-b sticky top-0 z-40 bg-page-bg/92 backdrop-blur">
+      <nav class="mx-auto flex max-w-[78rem] items-center justify-between gap-6 px-5 py-4 md:px-10">
+        <a href="#top" class="label">Trish&nbsp;Nguyen</a>
+
+        <ul class="hidden gap-7 md:flex">
+          <li><a href="#about" class="label link">About</a></li>
+          <li><a href="#experience" class="label link">Experience</a></li>
+          <li><a href="#projects" class="label link">Projects</a></li>
+          <li><a href="#skills" class="label link">Skills</a></li>
+          <li><a href="mailto:trishnguyen955@gmail.com" class="label link">Contact</a></li>
+        </ul>
+
+        <div class="flex items-center gap-2">
+          <button id="theme-toggle" class="icon-btn" aria-label="Toggle theme">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="block dark:hidden" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="hidden dark:block" aria-hidden="true"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
           </button>
-        
-          <!-- menu button (mobile)-->
-          <button id="menu-btn" class="md:hidden bg-page-bg/80 ml-auto px-4 py-3 rounded dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">menu</button> 
+
+          <button id="menu-btn" class="icon-btn label md:hidden" aria-expanded="false" aria-controls="mobile-menu">Menu</button>
         </div>
-        <!-- dropdown menu (mobile) (still in nav bar btw)-->
-        <div id="mobile-menu" class="absolute z-50 right-0 top-full flex flex-col items-end gap-4 bg-red-500 font-mono p-4 mt-2 min-w-[150px] 
-                                     transition-all duration-200 ease-out origin-top-right
-                                     invisible opacity-0 scale-95">
-          <a href="#about" class="text-neon-green hover:text-gray-500">About;</a>
-          <a href="#experience" class="text-neon-green hover:text-gray-500">Experience;</a>
-          <a href="#projects" class="text-neon-green hover:text-gray-500">Projects;</a>
-          <a href="#skills" class="text-neon-green hover:text-gray-500">Skills;</a>
-        </div>
+      </nav>
+
+      <div id="mobile-menu" class="rule-t invisible absolute inset-x-0 top-full origin-top scale-95 flex-col gap-1 bg-page-bg px-5 py-4 opacity-0 transition-all duration-200 ease-out md:hidden">
+        <a href="#about" class="label link py-2">About</a>
+        <a href="#experience" class="label link py-2">Experience</a>
+        <a href="#projects" class="label link py-2">Projects</a>
+        <a href="#skills" class="label link py-2">Skills</a>
+        <a href="mailto:trishnguyen955@gmail.com" class="label link py-2">Contact</a>
       </div>
-      
-      <h1 class="font-heading text-neon-green glow text-3xl tracking-widest">Montserrat Heading</h1>
-      <p class="font-mono text-neon-green">JetBrains Mono body text</p>
-      
-    </nav>
+    </header>
 
-    <div class="p-6 bg-page-bg text-green-400 font-mono">
-      Tailwind working text
-    </div>
+    <!-- ========================= hero ========================= -->
+    <main id="top">
+      <section id="hero" class="mx-auto flex min-h-[78svh] max-w-[78rem] flex-col items-center justify-center px-5 py-24 text-center md:px-10">
+        <p class="label text-muted mb-7">Computer Science · NC State</p>
 
-    <section id="hero" class="flex items-center justify-center h-screen">
-      <div class="neon-sign">
-        <h1 class="text-8xl font-heading">
-          <span class="neon-letter" style="--delay: 0s; --duration: 5.5s">h</span>
-          <span class="neon-letter" style="--delay: 0.5s; --duration: 6.5s">e</span>
-          <span class="neon-letter" style="--delay: 1s; --duration: 5s">l</span>
-          <span class="neon-letter" style="--delay: 1.5s; --duration: 6s">l</span>
-          <span class="neon-letter" style="--delay: 2s; --duration: 5.8s">o</span>
-          <span class="neon-letter" style="--delay: 2.5s; --duration: 5.2s"> </span>
-          <span class="neon-letter" style="--delay: 3s; --duration: 6.8s">w</span>
-          <span class="neon-letter" style="--delay: 3.5s; --duration: 5.3s">o</span>
-          <span class="neon-letter" style="--delay: 4s; --duration: 6.2s">r</span>
-          <span class="neon-letter" style="--delay: 4.5s; --duration: 4.8s">l</span>
-          <span class="neon-letter" style="--delay: 5s; --duration: 6s">d</span>
+        <h1 class="wordmark">
+          <span class="ink">T<span class="kern-ri">r</span>ish Nguyen</span>
         </h1>
-      </div>
-    </section>
 
-    <section id="about" class="folder-container">
-      <div class="folder-tab">
-        <span class="block skew-x-12 font-mono text-sm font-bold uppercase tracking-[0.2em] text-cyan-500 dark:text-fuchsia-400">
-          about
-        </span>
-      </div>
-      <div class="folder-body">
-        <div class="folder-content">
-          <h2 class="font-heading text-4xl mb-6 text-page-text">About Me</h2>
-          <p class="font-mono text-slate-400">Your bio content goes here...</p>
+        <p class="text-muted mt-8 max-w-[34rem] text-balance text-[0.95rem] leading-relaxed">
+          Software engineer. I build the thing rather than assemble it — this page included.
+        </p>
+      </section>
+
+      <!-- ========================= sections ========================= -->
+      <section id="about" class="spread">
+        <div class="spread-head">
+          <span class="label text-muted">01</span>
+          <h2 class="label">About</h2>
         </div>
-      </div>
-    </section>
-
-    <section id="experience" class="folder-container">
-      <div class="folder-tab">
-        <span class="block skew-x-12 font-mono text-sm font-bold uppercase tracking-[0.2em] text-cyan-500 dark:text-fuchsia-400">
-          experience
-        </span>
-      </div>
-      <div class="folder-body">
-        <div class="folder-content">
-          <h2 class="font-heading text-4xl mb-6 text-page-text">Experience</h2>
+        <div class="spread-body">
+          <p class="lede">Bio goes here.</p>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <section id="projects" class="folder-container">
-      <div class="folder-tab">
-        <span class="block skew-x-12 font-mono text-sm font-bold uppercase tracking-[0.2em] text-cyan-500 dark:text-fuchsia-400">
-          projects
-        </span>
-      </div>
-      <div class="folder-body">        
-        <div class="folder-content">
-          <h2 class="font-heading text-4xl mb-6">Selected Work</h2>
-          <p class="font-mono text-slate-400">
-            // List of projects goes here...
-          </p>
+      <section id="experience" class="spread">
+        <div class="spread-head">
+          <span class="label text-muted">02</span>
+          <h2 class="label">Experience</h2>
         </div>
-      </div>
-    </section>
-
-    <section id="skills" class="folder-container">
-      <div class="folder-tab">
-        <span class="block skew-x-12 font-mono text-sm font-bold uppercase tracking-[0.2em] text-cyan-500 dark:text-fuchsia-400">
-          skills
-        </span>
-      </div>
-      <div class="folder-body">
-        <div class="folder-content">
-          <h2 class="font-heading text-4xl mb-6">Skills</h2>
+        <div class="spread-body">
+          <article class="entry">
+            <h3 class="entry-role">Software Engineering Intern</h3>
+            <p class="entry-org">SAS Institute — Customer Intelligence 360, Web &amp; Mobile</p>
+          </article>
+          <article class="entry">
+            <h3 class="entry-role">Student Web Developer</h3>
+            <p class="entry-org">NC State Engineering IT</p>
+          </article>
+          <article class="entry">
+            <h3 class="entry-role">B.S. Computer Science</h3>
+            <p class="entry-org">NC State University, College of Engineering</p>
+          </article>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <button id="back-to-top" class="fixed bottom-4 right-4 bg-page-bg/80 px-4 py-2 rounded dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">↑</button>
+      <section id="projects" class="spread">
+        <div class="spread-head">
+          <span class="label text-muted">03</span>
+          <h2 class="label">Projects</h2>
+        </div>
+        <div class="spread-body">
+          <p class="lede text-muted">Placeholder — projects to be added.</p>
+        </div>
+      </section>
+
+      <section id="skills" class="spread">
+        <div class="spread-head">
+          <span class="label text-muted">04</span>
+          <h2 class="label">Skills</h2>
+        </div>
+        <div class="spread-body">
+          <p class="lede text-muted">Placeholder — skills to be added.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="rule-t mx-auto mt-16 flex max-w-[78rem] flex-wrap items-center justify-between gap-4 px-5 py-8 md:px-10">
+      <p class="label text-muted">© 2026 Trish Nguyen</p>
+      <div class="flex gap-6">
+        <a href="mailto:trishnguyen955@gmail.com" class="label link">Email</a>
+        <a href="https://github.com/trish222" class="label link">GitHub</a>
+        <a href="https://linkedin.com/in/trishnguyen" class="label link">LinkedIn</a>
+      </div>
+    </footer>
+
+    <button id="back-to-top" class="icon-btn label fixed bottom-5 right-5 z-40 bg-page-bg">↑ Top</button>
 
     <script type="module" src="./src/main.js" defer></script>
   </body>
