@@ -1,43 +1,99 @@
 @import "tailwindcss";
 
-@theme {
-  /* BASE = LIGHT (paper) */
-  --color-page-bg: #f3f1ec;
-  --color-page-text: #14130f;
-  --color-page-muted: #6d6a62;
-  --color-page-rule: #d2cec4;
+/* ==========================================================
+   A botanical plate run on a press that was never cleaned.
+   Four inks, their own rotated screens, a register grid that
+   never comes off, and a name set too large for the sheet.
+   ========================================================== */
 
-  /* Helvetica Neue first — it is on every Mac/iOS. Inter Tight is the
-     web stand-in with the same tight grotesque proportions. */
-  --font-display: "Helvetica Neue", "HelveticaNeue", "Inter Tight", Helvetica, Arial, sans-serif;
-  --font-sans: "Inter Tight", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+@theme {
+  /* --- the four inks. These own regions, they are not accents. --- */
+  --color-ink-magenta: #ff2e93;
+  --color-ink-rose:    #c0186b;
+  --color-ink-amber:   #f79824;
+  --color-ink-cyan:    #1fbde3;
+
+  /* --- BASE = the plate pulled on paper --- */
+  --color-page-bg:    #efebe1;
+  --color-page-text:  #0c0b09;
+  --color-page-muted: #5c574e;
+  --color-page-rule:  #0c0b09;
+
+  --font-display: "Bodoni Moda", "Didot", "Bodoni 72", Georgia, serif;
+  --font-sans:    "Archivo", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-script:  "Mrs Saint Delafield", "Snell Roundhand", cursive;
 }
 
 @variant dark (&:where(.dark, .dark *));
 
+:root {
+  --field-ground: #efebe1;
+  --rule-a:  0.18;   /* hairline rule opacity   */
+  --grid-a:  0.085;  /* register grid opacity   */
+  --sheet-a: 0.955;  /* record ground over field */
+  --reg: clamp(46px, 8.3333vw, 108px);
+}
+
 .dark {
-  --color-page-bg: #0d0c0a;
-  --color-page-text: #f3f1ec;
-  --color-page-muted: #8d8a81;
-  --color-page-rule: #2a2825;
+  --color-page-bg:    #07070a;
+  --color-page-text:  #f4f1ea;
+  --color-page-muted: #948f86;
+  --color-page-rule:  #f4f1ea;
+
+  --field-ground: #07070a;
+  --rule-a:  0.2;
+  --grid-a:  0.075;
+  --sheet-a: 0.91;
+}
+
+/* The wordmark settles out of over-stretch on load. Registering the
+   custom property is what lets it animate at all. */
+@property --settle {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1;
 }
 
 @layer base {
   html {
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
+    scrollbar-color: color-mix(in srgb, var(--color-page-text) 35%, transparent) transparent;
+    scrollbar-width: thin;
   }
 
   body {
     font-family: var(--font-sans);
-    @apply transition-colors duration-300 ease-in-out;
+    background-color: var(--color-page-bg);
+    color: var(--color-page-text);
+    caret-color: var(--color-ink-magenta);
+    font-synthesis-weight: none;
+  }
+
+  /* Browser surfaces carry the press too. */
+  ::selection {
+    background: var(--color-ink-magenta);
+    color: #07070a;
+  }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--color-page-text) 28%, transparent);
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-ink-magenta);
+    background-clip: content-box;
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-page-text);
+    outline: 2px solid var(--color-ink-magenta);
     outline-offset: 3px;
   }
+
+  /* Tabular figures wherever a reader compares numbers. */
+  time, .tnum { font-variant-numeric: tabular-nums; }
 
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
@@ -50,86 +106,234 @@
 }
 
 @layer components {
-  /* ---------- editorial furniture ---------- */
-  .label {
-    @apply font-mono text-[0.68rem] font-medium uppercase tracking-[0.18em];
+
+  /* ---------- the field and its register ---------- */
+
+  .field {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    /* Shows before the screen paints, and stays if canvas is gone. */
+    background:
+      radial-gradient(34% 30% at 50% 44%, color-mix(in srgb, var(--color-ink-magenta) 62%, transparent), transparent 72%),
+      radial-gradient(26% 24% at 30% 62%, color-mix(in srgb, var(--color-ink-rose) 50%, transparent), transparent 74%),
+      radial-gradient(24% 22% at 70% 36%, color-mix(in srgb, var(--color-ink-amber) 34%, transparent), transparent 72%),
+      var(--field-ground);
+  }
+
+  /* The press's own guides. Not decoration: the whole page is set
+     against these columns, including the margin annotations. */
+  .register {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background-image:
+      repeating-linear-gradient(to right,
+        color-mix(in srgb, var(--color-page-rule) calc(var(--grid-a) * 100%), transparent) 0 1px,
+        transparent 1px var(--reg)),
+      repeating-linear-gradient(to bottom,
+        color-mix(in srgb, var(--color-page-rule) calc(var(--grid-a) * 100%), transparent) 0 1px,
+        transparent 1px var(--reg));
+  }
+
+  .page { position: relative; z-index: 2; }
+
+  /* ---------- furniture ---------- */
+
+  .note {
+    font-size: 0.625rem;
+    line-height: 1.45;
+    letter-spacing: 0.01em;
+    font-weight: 500;
+  }
+
+  .mark {
+    font-size: 0.625rem;
+    line-height: 1;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.17em;
   }
 
   .text-muted { color: var(--color-page-muted); }
 
+  /* A label pasted onto the proof. The plate runs bright under these,
+     so the notes carry their own ground rather than hoping. */
+  .paste {
+    padding: 0.72rem 0.9rem;
+    background: color-mix(in srgb, var(--color-page-bg) 90%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-page-rule) calc(var(--rule-a) * 100%), transparent);
+  }
+
+  .rule-t { border-top: 1px solid color-mix(in srgb, var(--color-page-rule) calc(var(--rule-a) * 100%), transparent); }
+  .rule-b { border-bottom: 1px solid color-mix(in srgb, var(--color-page-rule) calc(var(--rule-a) * 100%), transparent); }
+
   .link {
-    @apply transition-colors duration-200;
     text-decoration: none;
+    background-image: linear-gradient(var(--color-ink-magenta), var(--color-ink-magenta));
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    background-size: 0% 1px;
+    transition: background-size 320ms cubic-bezier(0.16, 1, 0.3, 1), color 200ms;
   }
-  .link:hover { color: var(--color-page-muted); }
+  .link:hover,
+  .link:focus-visible { background-size: 100% 1px; }
 
-  .rule-t { border-top: 1px solid var(--color-page-rule); }
-  .rule-b { border-bottom: 1px solid var(--color-page-rule); }
-
-  .icon-btn {
-    @apply inline-flex items-center justify-center gap-2 px-3 py-2 transition-colors duration-200;
-    border: 1px solid var(--color-page-rule);
-    border-radius: 2px;
+  /* Current section, set by the scroll spy. */
+  .link[aria-current="true"] {
+    background-size: 100% 1px;
+    color: var(--color-ink-magenta);
   }
-  .icon-btn:hover { border-color: var(--color-page-text); }
+
+  .boxed {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.62rem 0.95rem;
+    border: 1px solid color-mix(in srgb, var(--color-page-rule) 45%, transparent);
+    background: color-mix(in srgb, var(--color-page-bg) 90%, transparent);
+    transition: background-color 220ms, border-color 220ms, color 220ms;
+  }
+  .boxed:hover,
+  .boxed:focus-visible {
+    background: var(--color-ink-magenta);
+    border-color: var(--color-ink-magenta);
+    color: #07070a;
+  }
+  .boxed:hover .arrow { transform: translateX(3px); }
+  .arrow { transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1); }
+
+  .script {
+    font-family: var(--font-script);
+    font-weight: 400;
+    line-height: 0.9;
+  }
 
   /* ---------- the wordmark ---------- */
-  .wordmark {
+
+  .wm-bleed {
+    width: 100%;
+    overflow-x: clip;
+    overflow-y: visible;
+  }
+
+  .wm-line {
+    display: flex;
+    justify-content: center;
     font-family: var(--font-display);
-    font-weight: 700;
-    font-size: clamp(3.4rem, 15vw, 12rem);
-    line-height: 0.86;
-    letter-spacing: -0.048em;
-    /* Helvetica's own bold, not a synthesised one, when the real face is there */
-    font-synthesis-weight: none;
+    font-weight: 900;
+    font-size: clamp(4.4rem, 19vw, 17rem);
+    line-height: 0.84;
+    letter-spacing: 0;
+    color: #fff;
+  }
+  :root:not(.dark) .wm-line { color: var(--color-page-text); }
+
+  .wm-line > span {
+    flex: 0 0 auto;
+    display: block;
+    text-align: center;
+    /* --sxf is written by the fitter once the face has loaded: it is
+       --sx renormalised so the line bleeds past both margins at any
+       viewport. The span's width is set to match, so wide letters
+       reserve the room they need instead of crowding their neighbours. */
+    transform: scaleX(calc(var(--sxf, var(--sx, 1)) * var(--settle))) scaleY(var(--sy, 1.10));
+    transform-origin: 50% 100%;
+    animation: wm-settle 1150ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
-  /* Ink bleed: the filter carries its own edge, so the glyph underneath
-     stays a plain solid fill. */
-  .ink {
-    display: inline-block;
-    filter: url(#ink-bleed-sm);
+  @keyframes wm-settle {
+    from { --settle: 1.85; opacity: 0.25; }
+    to   { --settle: 1;    opacity: 1; }
   }
 
-  /* The dilate stage fattens every stem, which mushes the r into the i
-     in "Trish". Hand that one pair back a hair of tracking — more on
-     desktop, where the filter spreads further. */
-  .kern-ri { letter-spacing: -0.03em; }
+  /* Hand-set widths. The word swells and pinches across the measure
+     the way a hand-cut poster does; these are authored, not random. */
+  .wm-line[data-line="a"] > span:nth-child(1) { --sx: 1.46; --sy: 1.13; }
+  .wm-line[data-line="a"] > span:nth-child(2) { --sx: 0.76; --sy: 1.08; animation-delay: 55ms; }
+  .wm-line[data-line="a"] > span:nth-child(3) { --sx: 1.34; --sy: 1.16; animation-delay: 110ms; }
+  .wm-line[data-line="a"] > span:nth-child(4) { --sx: 0.88; --sy: 1.06; animation-delay: 165ms; }
+  .wm-line[data-line="a"] > span:nth-child(5) { --sx: 1.52; --sy: 1.08; animation-delay: 220ms; }
 
-  @media (min-width: 48rem) {
-    .ink { filter: url(#ink-bleed); }
-    .kern-ri { letter-spacing: -0.004em; }
+  .wm-line[data-line="b"] > span:nth-child(1) { --sx: 0.82; --sy: 1.09; animation-delay: 130ms; }
+  .wm-line[data-line="b"] > span:nth-child(2) { --sx: 1.44; --sy: 1.15; animation-delay: 185ms; }
+  .wm-line[data-line="b"] > span:nth-child(3) { --sx: 0.92; --sy: 1.06; animation-delay: 240ms; }
+  .wm-line[data-line="b"] > span:nth-child(4) { --sx: 1.30; --sy: 1.09; animation-delay: 295ms; }
+  .wm-line[data-line="b"] > span:nth-child(5) { --sx: 0.74; --sy: 1.08; animation-delay: 350ms; }
+  .wm-line[data-line="b"] > span:nth-child(6) { --sx: 1.38; --sy: 1.08; animation-delay: 405ms; }
+
+  /* ---------- the record ---------- */
+
+  /* Everything below the plate sits on a sheet, so the dots stay
+     visible at the edges without ever costing the text its contrast. */
+  .sheet {
+    background: color-mix(in srgb, var(--color-page-bg) calc(var(--sheet-a) * 100%), transparent);
   }
 
-  /* ---------- sections ---------- */
+  .measure { max-width: 68ch; }
+
   .spread {
-    @apply mx-auto grid max-w-[78rem] gap-6 px-5 py-14 md:grid-cols-[14rem_1fr] md:gap-12 md:px-10 md:py-20;
-    border-top: 1px solid var(--color-page-rule);
+    @apply mx-auto grid max-w-[78rem] gap-7 px-5 py-14 md:grid-cols-[13rem_1fr] md:gap-14 md:px-10 md:py-20;
+    border-top: 1px solid color-mix(in srgb, var(--color-page-rule) calc(var(--rule-a) * 100%), transparent);
   }
 
-  .spread-head {
-    @apply flex items-baseline gap-4 md:flex-col md:gap-2;
-  }
+  .spread-head { @apply flex flex-col gap-2; }
 
-  .spread-body { @apply max-w-[46rem]; }
-
-  .lede {
-    @apply text-[1.05rem] leading-relaxed;
+  .spread-title {
+    font-family: var(--font-display);
+    @apply text-[2.05rem] font-semibold leading-none tracking-[-0.022em] md:text-[2.3rem];
   }
 
   .entry {
-    @apply py-4;
-    border-bottom: 1px solid var(--color-page-rule);
+    @apply grid gap-1 py-5 md:grid-cols-[1fr_auto] md:items-baseline md:gap-8;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-page-rule) calc(var(--rule-a) * 100%), transparent);
   }
   .entry:last-child { border-bottom: 0; }
 
   .entry-role {
     font-family: var(--font-display);
-    @apply text-[1.35rem] font-bold tracking-[-0.025em];
+    @apply text-[1.3rem] font-semibold leading-tight tracking-[-0.018em] md:text-[1.4rem];
   }
 
-  .entry-org {
-    color: var(--color-page-muted);
-    @apply mt-1 text-[0.95rem];
+  .entry-org { color: var(--color-page-muted); @apply text-[0.9rem]; }
+
+  /* Placeholder slots. These are marked as empty on purpose — there is
+     no real project or skill material to show yet. */
+  .slot {
+    @apply flex min-h-[9.5rem] flex-col justify-between gap-6 p-5;
+    border: 1px solid color-mix(in srgb, var(--color-page-rule) calc(var(--rule-a) * 100%), transparent);
+    background: repeating-linear-gradient(
+      -45deg,
+      color-mix(in srgb, var(--color-page-rule) 5%, transparent) 0 1px,
+      transparent 1px 9px
+    );
+  }
+
+  /* The close runs as a solid spot colour: one region the ink owns
+     outright, the way a press lays down a flat panel at the end of a
+     signature. */
+  .plate-solid {
+    background: var(--color-ink-magenta);
+    color: #07070a;
+    --color-page-muted: #2d0a1c;
+    --color-page-rule: #07070a;
+    --rule-a: 0.3;
+  }
+  /* On the solid panel the ink is the ground, so the rules that mark a
+     link have to swap to the dark. */
+  .plate-solid .link { background-image: linear-gradient(#07070a, #07070a); }
+  .plate-solid .link:hover,
+  .plate-solid .link[aria-current="true"] { color: #07070a; }
+
+  .slot-tag {
+    display: inline-block;
+    align-self: flex-start;
+    padding: 0.2rem 0.45rem;
+    border: 1px solid color-mix(in srgb, var(--color-ink-magenta) 70%, transparent);
+    color: var(--color-ink-magenta);
   }
 }
