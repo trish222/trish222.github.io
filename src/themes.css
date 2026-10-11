@@ -1,0 +1,259 @@
+/* ===========================================================================
+   PALETTE TRIALS
+   Every theme is the same four inks the press already knows about:
+
+     --paper   the ground
+     --ink     the darkest plate, and the colour type takes on the ground
+     --blue    the accent plate — also a full-bleed band in #stack
+     --haze    the soft third plate
+
+   Two invariants hold across every theme, light-ground or dark:
+     · --ink contrasts with --paper (type on the sheet, and the sheet on
+       the inverted bands, are the same pair read both ways)
+     · --blue contrasts with --paper, because --paper is the lift used for
+       type on a --blue ground (see --on-dark in style.css)
+
+   So a dark-ground theme is a light one with the lightness of --paper and
+   --ink swapped and --blue pushed bright. Nothing else has to move.
+
+   Dark grounds also flip the mailto plates: `screen` needs a dark ground to
+   lift against, so on a light --ink band it becomes `multiply` instead.
+   =========================================================================== */
+
+/* ---- 01 · press — the original proof ------------------------------------ */
+[data-theme="press"] {
+    --paper:      #eceef0;
+    --paper-deep: #e4e7ea;
+    --ink:        #0b0d11;
+    --blue:       #1b35d6;
+    --blue-deep:  #101f8f;
+    --haze:       #aac6e6;
+}
+
+/* ---- 02 · riso — warm newsprint, fluorescent red ----------------------- */
+[data-theme="riso"] {
+    --paper:      #f4efe4;
+    --paper-deep: #ebe4d5;
+    --ink:        #17120d;
+    --blue:       #e8402a;
+    --blue-deep:  #a82a1a;
+    --haze:       #f7bda2;
+}
+
+/* ---- 03 · oxide — bone stock, burnt orange ----------------------------- */
+[data-theme="oxide"] {
+    --paper:      #f5f1ec;
+    --paper-deep: #ebe5dd;
+    --ink:        #1a1512;
+    --blue:       #b3401a;
+    --blue-deep:  #7d2a0e;
+    --haze:       #ddb495;
+}
+
+/* ---- 04 · ledger — cold green, accountant's pad ------------------------ */
+[data-theme="ledger"] {
+    --paper:      #e8f0ec;
+    --paper-deep: #dde8e2;
+    --ink:        #0b1512;
+    --blue:       #0d7a58;
+    --blue-deep:  #075239;
+    --haze:       #a3d3bf;
+}
+
+/* ---- 05 · amber — warm sheet, signal yellow ---------------------------- */
+[data-theme="amber"] {
+    --paper:      #faf4e2;
+    --paper-deep: #f2ead3;
+    --ink:        #181205;
+    --blue:       #c47800;
+    --blue-deep:  #8a5200;
+    --haze:       #f0cd85;
+}
+
+/* ---- 06 · graphite — no colour at all ---------------------------------- */
+[data-theme="graphite"] {
+    --paper:      #e9e9e9;
+    --paper-deep: #e0e0e0;
+    --ink:        #0a0a0a;
+    --blue:       #4a4a4a;
+    --blue-deep:  #2b2b2b;
+    --haze:       #bcbcbc;
+}
+
+/* ---- 07 · plum — pale lilac stock, deep magenta ------------------------ */
+[data-theme="plum"] {
+    --paper:      #efeaf2;
+    --paper-deep: #e6dfeb;
+    --ink:        #130d18;
+    --blue:       #8c1f7a;
+    --blue-deep:  #5f1253;
+    --haze:       #d3aedd;
+}
+
+/* ═══ dark grounds ═══════════════════════════════════════════════════════ */
+
+[data-theme="noir"],
+[data-theme="blueprint"],
+[data-theme="phosphor"],
+[data-theme="violet"],
+[data-theme="ember"] {
+    color-scheme: dark;
+    --mail-lift:  color-mix(in srgb, var(--blue) 62%, #000);
+    --mail-halo:  color-mix(in srgb, var(--blue) 34%, #fff);
+    --mail-blend: multiply;
+}
+
+/* ---- 08 · noir — the black/blue page ----------------------------------- */
+[data-theme="noir"] {
+    --paper:      #090b10;
+    --paper-deep: #0e1118;
+    --ink:        #e8ecf2;
+    --blue:       #5b7cff;
+    --blue-deep:  #8ca4ff;
+    --haze:       #243a7a;
+}
+
+/* ---- 09 · blueprint — cyanotype ground --------------------------------- */
+[data-theme="blueprint"] {
+    --paper:      #0b2140;
+    --paper-deep: #0f2a4f;
+    --ink:        #e6eefc;
+    --blue:       #5fd3ff;
+    --blue-deep:  #9ae4ff;
+    --haze:       #1f5584;
+}
+
+/* ---- 10 · phosphor — terminal green ------------------------------------ */
+[data-theme="phosphor"] {
+    --paper:      #060a07;
+    --paper-deep: #0a1009;
+    --ink:        #d9f7e4;
+    --blue:       #3ef08f;
+    --blue-deep:  #7df7b5;
+    --haze:       #164d32;
+}
+
+/* ---- 11 · violet — ultraviolet ----------------------------------------- */
+[data-theme="violet"] {
+    --paper:      #0b0814;
+    --paper-deep: #110c1e;
+    --ink:        #ece8f7;
+    --blue:       #a78bff;
+    --blue-deep:  #c4b2ff;
+    --haze:       #3a2770;
+}
+
+/* ---- 12 · ember — charcoal and hot coal -------------------------------- */
+[data-theme="ember"] {
+    --paper:      #100c0a;
+    --paper-deep: #171210;
+    --ink:        #f3e9e2;
+    --blue:       #ff7a45;
+    --blue-deep:  #ffa37a;
+    --haze:       #6b2d18;
+}
+
+/* ===========================================================================
+   THE STRIP
+   A trial rig, not furniture: a thin band of swatches pinned under the rail.
+
+   Each swatch carries its own data-theme, so the palette blocks above land on
+   the button itself and the swatch paints with var(--paper/--haze/--blue/--ink)
+   — the proof is literally the theme, and no hex is written twice. The strip's
+   own chrome reads from --ui-*, captured off :root before the buttons shadow
+   those names.
+   =========================================================================== */
+
+.has-probe { --probe-h: 38px; }
+
+.probe {
+    /* substituted here, so the buttons inherit the ROOT theme's values even
+       though they redefine --paper/--ink for themselves */
+    --ui-paper: var(--paper);
+    --ui-ink:   var(--ink);
+    --ui-line:  var(--line);
+    --ui-dim:   var(--ink-52);
+
+    position: fixed;
+    top: var(--rail-h);
+    inset-inline: 0;
+    z-index: 99;
+    height: var(--probe-h);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding-inline: var(--gutter);
+    background: color-mix(in srgb, var(--paper) 86%, transparent);
+    backdrop-filter: blur(14px) saturate(1.3);
+    -webkit-backdrop-filter: blur(14px) saturate(1.3);
+    border-bottom: 1px solid var(--line);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+}
+.probe::-webkit-scrollbar { display: none; }
+
+.probe-label { flex: none; color: var(--ui-dim); white-space: nowrap; }
+.probe-set   { flex: none; display: flex; align-items: center; gap: 7px; }
+
+/* one swatch = the four inks in press order */
+.swatch {
+    position: relative;
+    width: 30px;
+    height: 20px;
+    padding: 0;
+    flex: none;
+    border: 1px solid var(--ui-line);
+    background: linear-gradient(to bottom,
+        var(--paper) 0 46%,
+        var(--haze)  46% 68%,
+        var(--blue)  68% 86%,
+        var(--ink)   86% 100%);
+    transition: transform 160ms var(--ease), box-shadow 160ms var(--ease);
+}
+.swatch:hover { transform: translateY(-2px); z-index: 1; }
+.swatch[aria-pressed="true"] {
+    box-shadow: 0 0 0 1.5px var(--ui-paper), 0 0 0 3px var(--ui-ink);
+}
+
+/* the name rides under the swatch on hover rather than taking a row of its own */
+.swatch::after {
+    content: attr(data-name);
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 4px 7px;
+    background: var(--ui-ink);
+    color: var(--ui-paper);
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 140ms ease;
+}
+.swatch:hover::after,
+.swatch:focus-visible::after { opacity: 1; }
+
+.probe-hint {
+    flex: none;
+    margin-left: auto;
+    padding-left: 18px;
+    color: var(--ui-dim);
+    white-space: nowrap;
+}
+.probe-hint kbd {
+    font: inherit;
+    padding: 2px 5px;
+    border: 1px solid var(--ui-line);
+    color: var(--ui-ink);
+}
+
+@media (max-width: 760px) {
+    .has-probe { --probe-h: 34px; }
+    .probe { gap: 10px; padding-inline: 14px; }
+    .probe-label, .probe-hint { display: none; }
+}

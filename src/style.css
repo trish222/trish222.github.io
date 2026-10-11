@@ -19,11 +19,17 @@
     --line:   color-mix(in srgb, var(--ink) 20%, var(--paper));
     --line-soft: color-mix(in srgb, var(--ink) 11%, var(--paper));
 
-    /* on dark grounds */
-    --on-dark:    #eceef0;
-    --on-dark-72: color-mix(in srgb, #eceef0 76%, var(--ink));
-    --on-blue-72: color-mix(in srgb, #eceef0 80%, var(--blue));
-    --line-dark:  color-mix(in srgb, #eceef0 26%, transparent);
+    /* on dark grounds — the ground IS --ink or --blue, so the lift is --paper */
+    --on-dark:    var(--paper);
+    --on-dark-72: color-mix(in srgb, var(--paper) 76%, var(--ink));
+    --on-blue-72: color-mix(in srgb, var(--paper) 80%, var(--blue));
+    --line-dark:  color-mix(in srgb, var(--paper) 26%, transparent);
+
+    /* the mailto's two loose plates: a blended lift and a solid halo.
+       Themes with a light --ink ground flip these (see themes.css). */
+    --mail-lift:  color-mix(in srgb, var(--blue) 66%, #fff);
+    --mail-halo:  color-mix(in srgb, var(--blue) 45%, #000);
+    --mail-blend: screen;
 
     /* ---- type ----------------------------------------------------------- */
     --sans: "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -33,6 +39,7 @@
     --gutter: clamp(20px, 4.4vw, 72px);
     --page:   1460px;
     --rail-h: 54px;
+    --probe-h: 0px;     /* theme strip; set by .has-probe */
 
     /* plate registration, driven from main.js */
     --reg-x: 0px;
@@ -51,7 +58,7 @@
 html {
     -webkit-text-size-adjust: 100%;
     scroll-behavior: smooth;
-    scroll-padding-top: calc(var(--rail-h) + 16px);
+    scroll-padding-top: calc(var(--rail-h) + var(--probe-h) + 16px);
 }
 
 body {
@@ -296,8 +303,8 @@ html { scrollbar-color: var(--ink) var(--paper-deep); scrollbar-width: thin; }
     opacity: 0.55;
     pointer-events: none;
 }
-.crop-tl { top: calc(var(--rail-h) + 18px); left: calc(var(--gutter) - 14px); border-top-width: 1px; border-left-width: 1px; }
-.crop-tr { top: calc(var(--rail-h) + 18px); right: calc(var(--gutter) - 14px); border-top-width: 1px; border-right-width: 1px; }
+.crop-tl { top: calc(var(--rail-h) + var(--probe-h) + 18px); left: calc(var(--gutter) - 14px); border-top-width: 1px; border-left-width: 1px; }
+.crop-tr { top: calc(var(--rail-h) + var(--probe-h) + 18px); right: calc(var(--gutter) - 14px); border-top-width: 1px; border-right-width: 1px; }
 .crop-bl { bottom: 18px; left: calc(var(--gutter) - 14px); border-bottom-width: 1px; border-left-width: 1px; }
 .crop-br { bottom: 18px; right: calc(var(--gutter) - 14px); border-bottom-width: 1px; border-right-width: 1px; }
 
@@ -306,7 +313,7 @@ html { scrollbar-color: var(--ink) var(--paper-deep); scrollbar-width: thin; }
     z-index: 3;
     width: min(100% - 2 * var(--gutter), var(--page));
     margin-inline: auto;
-    padding-top: calc(var(--rail-h) + clamp(44px, 9vh, 104px));
+    padding-top: calc(var(--rail-h) + var(--probe-h) + clamp(44px, 9vh, 104px));
     padding-bottom: clamp(26px, 5vh, 52px);
     display: flex;
     flex-direction: column;
@@ -616,8 +623,8 @@ html { scrollbar-color: var(--ink) var(--paper-deep); scrollbar-width: thin; }
     overflow-wrap: anywhere;
 }
 .mailto .plate-ink  { color: var(--on-dark); }
-.mailto .plate-blue { color: #5f78ff; mix-blend-mode: screen; --ox: -0.035em; --oy: -0.02em; filter: blur(0.014em); }
-.mailto .plate-haze { color: #1b2a63; --ox: 0.06em; --oy: 0.04em; filter: blur(0.045em); }
+.mailto .plate-blue { color: var(--mail-lift); mix-blend-mode: var(--mail-blend); --ox: -0.035em; --oy: -0.02em; filter: blur(0.014em); }
+.mailto .plate-haze { color: var(--mail-halo); --ox: 0.06em; --oy: 0.04em; filter: blur(0.045em); }
 .mailto:hover .plate-blue { --ox: -0.1em; --oy: -0.06em; filter: blur(0.028em); }
 .mailto:hover .plate-haze { --ox: 0.15em; --oy: 0.09em; filter: blur(0.08em); }
 
@@ -703,7 +710,7 @@ html { scrollbar-color: var(--ink) var(--paper-deep); scrollbar-width: thin; }
     .rail-menu { display: inline-flex; }
     .rail-mark-role { display: none; }
 
-    .hero-in { padding-top: calc(var(--rail-h) + 40px); gap: 24px; }
+    .hero-in { padding-top: calc(var(--rail-h) + var(--probe-h) + 40px); gap: 24px; }
     .name { font-size: clamp(3.1rem, 21vw, 7rem); line-height: 0.84; }
     .hero-role { max-width: none; font-size: 1.02rem; }
 
