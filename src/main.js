@@ -219,11 +219,6 @@ setupScrollSpy();
 initField(document.getElementById('field')).then((f) => {
   field = f;
   setupReadout();
-  if (f && !f.sourceIsPhoto) {
-    // No `public/bloom.jpg` yet: the painted stand-in is running through
-    // the same screen. Dropping the photograph in replaces it, no code change.
-    console.info('[field] bloom.jpg not found — running the painted stand-in through the same screen.');
-  }
 });
 
 /* ==========================================

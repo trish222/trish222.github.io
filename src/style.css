@@ -7,7 +7,10 @@
    ========================================================== */
 
 @theme {
-  /* --- the four inks. These own regions, they are not accents. --- */
+  /* --- the four inks, as the INTERFACE uses them: links, focus rings,
+         rules, the buttons. Full strength on purpose — these have to
+         hold contrast against the page at 1px and at 12px. The plate
+         below runs its own, softer set. --- */
   --color-ink-magenta: #ff2e93;
   --color-ink-rose:    #c0186b;
   --color-ink-amber:   #f79824;
@@ -27,7 +30,29 @@
 @variant dark (&:where(.dark, .dark *));
 
 :root {
-  --field-ground: #efebe1;
+  /* --- the aura ---
+     Four grounds the field drifts between. Not accents and not the
+     inks: this is the paper's own colour, clouded. On the sheet they
+     stay close in value so the record set over them keeps its
+     contrast, and far apart in hue so the drift reads. */
+  --aura-1: #f5edd9;   /* cream   */
+  --aura-2: #aecb93;   /* sage    */
+  --aura-3: #f2c97a;   /* gold    */
+  --aura-4: #cdb4d8;   /* lilac   */
+
+  /* --- the plate's own inks ---
+     Separate from the interface set above, because the two are asked
+     for opposite things. A link needs a saturated ink that survives
+     being 1px wide; a flower printed in that same ink goes crimson,
+     because a full-strength magenta multiplied against paper takes
+     nearly all the green out of it. These are let down and shifted
+     off red, and the amber off orange, so the bloom reads pink. */
+  --plate-magenta: #e87aab;
+  --plate-rose:    #bb6090;   /* the key plate. Browner than this and
+                                 the shaded half of a petal goes khaki. */
+  --plate-amber:   #dcab8c;
+  --plate-cyan:    #7bb3c4;
+
   --rule-a:  0.18;   /* hairline rule opacity   */
   --grid-a:  0.085;  /* register grid opacity   */
   --sheet-a: 0.955;  /* record ground over field */
@@ -40,7 +65,20 @@
   --color-page-muted: #948f86;
   --color-page-rule:  #f4f1ea;
 
-  --field-ground: #07070a;
+  --aura-1: #182a4e;   /* ink blue   */
+  --aura-2: #1e5e44;   /* deep green */
+  --aura-3: #6e4714;   /* bronze     */
+  --aura-4: #541a5e;   /* plum       */
+
+  /* On black the inks add light rather than take it away, so these can
+     sit a little brighter than the paper set and still read as the
+     same colour. */
+  --plate-magenta: #ea6fa5;   /* adding light, so a shade deeper than
+                                 the paper set or the lit petals blow out */
+  --plate-rose:    #a8487f;
+  --plate-amber:   #cc9a72;
+  --plate-cyan:    #6aa8c2;
+
   --rule-a:  0.2;
   --grid-a:  0.075;
   --sheet-a: 0.91;
@@ -116,12 +154,15 @@
     width: 100%;
     height: 100%;
     display: block;
-    /* Shows before the screen paints, and stays if canvas is gone. */
+    /* Shows before the screen paints, and stays if canvas is gone.
+       The same four grounds the shader drifts between, so the swap
+       when the field lands is a change of texture, not of colour. */
     background:
-      radial-gradient(34% 30% at 50% 44%, color-mix(in srgb, var(--color-ink-magenta) 62%, transparent), transparent 72%),
-      radial-gradient(26% 24% at 30% 62%, color-mix(in srgb, var(--color-ink-rose) 50%, transparent), transparent 74%),
-      radial-gradient(24% 22% at 70% 36%, color-mix(in srgb, var(--color-ink-amber) 34%, transparent), transparent 72%),
-      var(--field-ground);
+      radial-gradient(58% 48% at 22% 18%, var(--aura-2), transparent 70%),
+      radial-gradient(62% 52% at 82% 30%, var(--aura-3), transparent 72%),
+      radial-gradient(54% 46% at 68% 88%, var(--aura-4), transparent 70%),
+      radial-gradient(70% 60% at 30% 76%, var(--aura-2), transparent 74%),
+      var(--aura-1);
   }
 
   /* The press's own guides. Not decoration: the whole page is set
