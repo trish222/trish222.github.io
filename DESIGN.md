@@ -64,9 +64,14 @@ sits on `.sheet` — the page colour at 0.91–0.955 — or carries its own `.pa
 
 ## Type
 
-- **Display — Bodoni Moda**, 600–900. The wordmark and every section title and
-  entry role. Extreme thick/thin is the point; it is also why nothing in the
-  wordmark is ever compressed (see below).
+- **Wordmark — Canobis Demo** (Craft Supply Co), self-hosted from
+  `public/fonts/`, one use only: the name across the plate. A psychedelic
+  display face with uppercase and lowercase and nothing else — no figures, no
+  punctuation, not even a space — which is exactly as much as the wordmark
+  needs, since every glyph there is its own span. Free for personal use; the
+  commercial licence is at craftsupply.co.
+- **Display — Bodoni Moda**, 600–900. Every section title and entry role.
+  Extreme thick/thin is the point.
 - **Structural — Archivo**, 400–700. All body copy, margin notes, the rail.
 - **Signature — Mrs Saint Delafield**, one use only: the name at the close.
 
@@ -105,24 +110,45 @@ No cards, no radii above 2px, no shadows. Elevation is declared once, always as 
 
 ## The wordmark
 
-`src/main.js` → `fitWordmark()`. Three rules make it work:
+`src/main.js` → `fitWordmark()`. Two words of very different length, both asked
+to run the full measure. Four rules make it work:
 
-1. CSS transforms do not reserve layout space, so each span's `width` is set to
+1. **The two lines share a stretch, not a point size.** Canobis carries about
+   0.45em of advance per cap, so TRISH — three caps shorter than NGUYEN — needs
+   a third more of either stretch or size to reach the same margin. Sharing the
+   size is what makes the stack look like two different fonts: one line lands
+   at 1.6x and the one under it at 1.1x, and a stretched stem is a heavier
+   stem. So the fitter bisects for the single stretch both lines can afford
+   within the height budget, then sets each line at whatever size brings it to
+   the margin there. The shorter word is simply set larger, the way a line of
+   wood type gets justified.
+2. CSS transforms do not reserve layout space, so each span's `width` is set to
    the width its stretched glyph actually occupies. Without this, wide letters
    simply overlap their neighbours.
-2. **Nothing narrows below its drawn width** (`MIN_STRETCH`). Squeezing a Didone
-   thins its hairlines until an `N` reads as a diagonal. Letters only ever
-   stretch; width the floor costs is taken back off the letters still free.
-3. When a line cannot fit even at the floor, the line's font-size drops. This is
-   what keeps the name inside a phone.
+3. **Nothing narrows below its drawn width** (`MIN_STRETCH`), and nothing
+   exceeds `MAX_STRETCH` = 1.75, past which Canobis's bowls flatten into
+   lozenges and the line reads as a smear. Width the floor costs is taken back
+   off the letters still free.
+4. The face is drawn with 0.03em sidebearings — set for words, not for a
+   wordmark pulled to the width of a sheet — so `--wm-gap` adds real space
+   between letters and the fitter subtracts it from the measure before
+   dividing.
 
-Per-letter `--sx` / `--sy` in CSS are authored proportions, not random; the
-fitter renormalises them to the measure (`--sxf`, capped at `MAX_STRETCH`) and
-overruns the sheet by a fixed `BLEED`. Because every advance comes from the
-display face, the fit is redone on `fonts.ready`, an explicit `fonts.load()` of
-Bodoni Moda, `loadingdone`, and `window.load` — and a sanity check rejects
-advances that are implausibly narrow for the point size, which is what a
-fallback-metrics fit looks like.
+The `font-size` on `.wm-line` is a **height budget, not a size**: the fitter
+conserves the two lines' total and trades size between them. Its three terms
+each guard the height — `28vw` sets the scale, `26rem` stops it running away on
+a large monitor, `38svh` keeps the margin notes and the button on the same
+screen as the name on a short laptop. `.wm-bleed` caps at `100rem` for the same
+reason: past that, a wider measure only buys stretch.
+
+Per-letter `--sx` in CSS is an authored ripple — which letters carry a little
+more of the line than their neighbours — held much closer than the Didone took,
+since Canobis draws its own rhythm. The fitter renormalises it to the measure
+(`--sxf`) and overruns the sheet by a fixed `BLEED`. Because every advance comes
+from the wordmark face, the fit is redone on `fonts.ready`, an explicit
+`fonts.load()` of Canobis Demo, `loadingdone`, and `window.load` — and a sanity
+check rejects advances that are implausibly narrow for the point size, which is
+what a fallback-metrics fit looks like.
 
 ## The field
 

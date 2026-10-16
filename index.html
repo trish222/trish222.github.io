@@ -9,10 +9,14 @@
     <meta name="theme-color" content="#07070a" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#efebe1" media="(prefers-color-scheme: light)" />
 
+    <!-- Canobis cuts the name; Bodoni Moda sets the headings; Archivo runs
+         the record and the margin notes; Mrs Saint Delafield signs it once.
+         The wordmark face is self-hosted and above the fold, so it is asked
+         for before the stylesheet that will use it. -->
+    <link rel="preload" href="/fonts/canobis-demo.woff2" as="font" type="font/woff2" crossorigin />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- Bodoni Moda sets the plate; Archivo runs the record and the margin
-         notes; Mrs Saint Delafield signs it once. -->
     <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Bodoni+Moda:opsz,wght@6..96,600..900&family=Mrs+Saint+Delafield&display=swap" rel="stylesheet" />
 
     <!-- runs before the body renders, no flash of the wrong plate -->
@@ -227,7 +231,7 @@
           </section>
 
           <footer class="rule-t mx-auto flex max-w-[78rem] flex-wrap items-center justify-between gap-4 px-5 py-7 md:px-10">
-            <p class="note text-muted">© 2026 Trish Nguyen. Set in Bodoni Moda and Archivo.</p>
+            <p class="note text-muted">© 2026 Trish Nguyen. Name cut in Canobis; set in Bodoni Moda and Archivo.</p>
             <div class="flex gap-6">
               <a href="https://github.com/trish222" class="mark link" rel="me">GitHub</a>
               <a href="https://linkedin.com/in/trishnguyen" class="mark link" rel="me">LinkedIn</a>

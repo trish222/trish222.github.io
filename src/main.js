@@ -55,64 +55,133 @@ const closeMenu = () => {
 const toggleMenu = () => (mobileMenu?.classList.contains('invisible') ? openMenu() : closeMenu());
 
 /* ---------- the wordmark ----------
-   CSS transforms do not reserve layout space, so a letter stretched
-   to 1.6x simply sits on top of its neighbour. The fitter measures
-   each glyph's real advance, renormalises the hand-set widths so the
-   line overruns the sheet by a fixed amount at any viewport, and
-   gives every span the width its stretched glyph actually occupies. */
+   Two words of wildly different length, both asked to run the full
+   measure. Canobis is a narrow face — about 0.45em of advance per cap
+   — so reaching that measure takes either a lot of stretch or a lot of
+   point size, and TRISH, being three caps shorter than NGUYEN, would
+   take a third more of whichever one you pick.
 
-// Just under the measure. A glyph's ink runs past its advance at this
-// scale, so the line fills the sheet without the outer letters losing
-// a stem to the edge — the name is the one thing here that has to stay
-// readable.
+   Letting them share a point size is what makes the two lines look
+   like two different fonts: one line comes out at 1.6x and the one
+   under it at 1.1x, and a stretched stem is a heavier stem. So the
+   shared quantity here is the STRETCH, not the size. Each line is set
+   at whatever point size brings it to the margin at the one stretch
+   both lines can afford, which is how a line of wood type gets
+   justified: the shorter word is simply set larger.
+
+   CSS transforms do not reserve layout space, so the fitter also hands
+   each span the width its stretched glyph actually occupies. */
+
+// Just under the measure. Canobis keeps its ink inside its advance, so
+// this is honest margin rather than overshoot allowance — the name is
+// the one thing here that has to stay readable, and it should not lose
+// a stem to the edge of the sheet.
 const BLEED = 0.972;
-const MIN_STRETCH = 1.05;
-const MAX_STRETCH = 2.6;
+
+// Nothing narrows: a squeezed Canobis bowl stops reading as this face.
+const MIN_STRETCH = 1.0;
+/* And past about 1.75 it stops reading as this face in the other
+   direction — the bowls flatten into lozenges. Between those two the
+   point size is free to move, and does. */
+const MAX_STRETCH = 1.75;
+
+const emOf = (px, fontSize) => (fontSize > 0 ? px / fontSize : 0);
 
 const fitWordmark = () => {
   const bleed = document.querySelector('.wm-bleed');
   if (!bleed) return;
 
-  const target = bleed.clientWidth * BLEED;
-  if (!target) return;
+  const measure = bleed.clientWidth * BLEED;
+  if (!measure) return;
 
-  bleed.querySelectorAll('.wm-line').forEach((line) => {
+  const lines = Array.from(bleed.querySelectorAll('.wm-line'));
+  if (!lines.length) return;
+
+  /* ---- 1. what each line costs, in ems of its own type ---- */
+
+  const plan = lines.map((line) => {
     const letters = Array.from(line.children);
-    if (!letters.length) return;
-
     line.style.fontSize = '';
     letters.forEach((el) => { el.style.width = 'auto'; });
 
+    const base = parseFloat(getComputedStyle(line).fontSize);
+    const gap = parseFloat(getComputedStyle(line).columnGap) || 0;
+    const advance = letters.reduce((sum, el) => sum + el.offsetWidth, 0);
+
+    return {
+      line,
+      letters,
+      base,
+      // The budget is the size the stylesheet asked for. Solving for a
+      // shared stretch moves the lines off it in both directions; what
+      // is conserved is their total, so the stack keeps the height the
+      // clamp was written to give it.
+      advanceEm: emOf(advance, base),
+      gapEm: emOf(gap * Math.max(letters.length - 1, 0), base),
+      loaded: advance >= base * letters.length * 0.3,
+    };
+  });
+
+  /* Canobis's narrowest cap is the I at 0.19em; everything else sits
+     near 0.45em, so a real line averages well clear of 0.3em. Anything
+     under that means the advances came from a face that has not
+     arrived yet, and fitting against those produces a line several
+     times too wide. Bail and let a later signal refit. */
+  if (plan.some((p) => !p.letters.length || !p.loaded || !p.advanceEm)) return;
+
+  /* ---- 2. the one stretch all the lines can afford ---- */
+
+  // At stretch k a line needs measure / (advanceEm * k + gapEm) of
+  // point size to reach the margin. That shrinks as k grows, so the
+  // stack's total height falls monotonically in k and bisection finds
+  // the gentlest stretch the height budget will take.
+  const budget = plan.reduce((sum, p) => sum + p.base, 0);
+  const sizesAt = (k) => plan.map((p) => measure / (p.advanceEm * k + p.gapEm));
+  const totalAt = (k) => sizesAt(k).reduce((sum, v) => sum + v, 0);
+
+  let k;
+  if (totalAt(MIN_STRETCH) <= budget) {
+    k = MIN_STRETCH;           // the measure is short enough to fill undistorted
+  } else if (totalAt(MAX_STRETCH) >= budget) {
+    /* A very wide sheet: even at the ceiling the type needed to reach
+       both margins overruns the budget. The margins win — the name
+       still bleeds, the stack is simply taller than the clamp asked. */
+    k = MAX_STRETCH;
+  } else {
+    let lo = MIN_STRETCH;
+    let hi = MAX_STRETCH;
+    for (let i = 0; i < 28; i++) {
+      const mid = (lo + hi) / 2;
+      if (totalAt(mid) > budget) lo = mid; else hi = mid;
+    }
+    k = hi;
+  }
+
+  const sizes = sizesAt(k);
+
+  /* ---- 3. set each line, then share out the hand-set ripple ---- */
+
+  plan.forEach((p, li) => {
+    const { line, letters } = p;
+    line.style.fontSize = `${sizes[li]}px`;
+
+    const gap = parseFloat(getComputedStyle(line).columnGap) || 0;
+    const target = measure - gap * Math.max(letters.length - 1, 0);
+    if (target <= 0) return;
+
+    const natural = letters.map((el) => el.offsetWidth);
     const sx = letters.map(
       (el) => parseFloat(getComputedStyle(el).getPropertyValue('--sx')) || 1
     );
-    let natural = letters.map((el) => el.offsetWidth);
-
-    /* A cap in this face is never narrower than a third of its point
-       size. Anything smaller means the advances came from a font that
-       has not arrived yet, and fitting against those produces a line
-       several times too wide. Bail and let a later signal refit. */
-    const fontSize = parseFloat(getComputedStyle(line).fontSize);
-    if (natural.reduce((a, b) => a + b, 0) < fontSize * letters.length * 0.3) return;
-
-    /* With nothing allowed to narrow, a long line can no longer be made
-       to fit by redistributing width — the whole line has to come down
-       in size. This is what keeps the name inside a phone. */
-    const floorWidth = natural.reduce((sum, w) => sum + w, 0) * MIN_STRETCH;
-    if (floorWidth > target) {
-      const size = parseFloat(getComputedStyle(line).fontSize);
-      line.style.fontSize = `${size * (target / floorWidth)}px`;
-      natural = letters.map((el) => el.offsetWidth);
-    }
 
     const total = natural.reduce((sum, w, i) => sum + w * sx[i], 0);
     if (!total) return;
 
-    /* A Didone's hairlines are the first thing to go when a glyph is
-       squeezed, and an N whose verticals have thinned out reads as a
-       diagonal. So nothing here narrows below its drawn width: letters
-       only ever stretch, and whatever width the floor costs is taken
-       back off the ones still free to widen. */
+    /* The ripple is relative: it says which letters carry a little more
+       of the line than their neighbours, not how wide any of them is.
+       Renormalising it against the measure is what turns it into real
+       widths, and nothing is allowed below its drawn width — whatever
+       the floor costs is taken back off the letters still free. */
     let f = sx.map((v) => v * (target / total));
 
     for (let pass = 0; pass < 5; pass++) {
@@ -129,7 +198,7 @@ const fitWordmark = () => {
     }
 
     letters.forEach((el, i) => {
-      const v = Math.min(f[i], MAX_STRETCH);
+      const v = Math.min(Math.max(f[i], MIN_STRETCH), MAX_STRETCH);
       el.style.setProperty('--sxf', v.toFixed(4));
       el.style.width = `${natural[i] * v}px`;
     });
@@ -139,14 +208,14 @@ const fitWordmark = () => {
 const setupWordmark = () => {
   fitWordmark();
 
-  /* Every advance the fitter measures comes from the display face, so a
+  /* Every advance the fitter measures comes from the wordmark face, so a
      fit computed against the fallback serif is simply wrong. `ready`
      alone is not enough — it can settle before the face has swapped in
      — so the exact face is requested by name and the fit is redone on
      each of the three signals. Refitting is idempotent. */
   if (document.fonts) {
     document.fonts.ready.then(fitWordmark);
-    document.fonts.load('900 100px "Bodoni Moda"').then(fitWordmark, () => {});
+    document.fonts.load('400 100px "Canobis Demo"').then(fitWordmark, () => {});
     document.fonts.addEventListener?.('loadingdone', fitWordmark);
   }
   window.addEventListener('load', fitWordmark);
