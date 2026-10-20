@@ -2,6 +2,8 @@
 
 Personal portfolio for Trish Nguyen. Static site, no framework: **Vite 5 + Tailwind CSS 4 + vanilla ES modules**.
 
+Type: **Montserrat** (display), **JetBrains Mono** (everything structural), **Ballet** (the one script signature over the hero).
+
 ```bash
 npm install
 npm run dev      # dev server, HMR
@@ -52,16 +54,31 @@ A glass pill floating over the wordmark (`.nav-dock` / `.nav-pill` in `src/style
 
 Because the page no longer scrolls, the nav links are anchors that go nowhere today. They work as-is the moment the scroll lock comes off.
 
+Under the pill sits the **palette picker** (see Theming). On mobile the dropdown sheet lands in exactly that space, so opening the menu fades the picker out (`.palette-picker.is-hidden`).
+
 ## Theming
 
-One toggle drives everything. `<html class="dark">` is the default; `src/main.js` persists the choice to `localStorage.theme`, and an inline script in `<head>` applies it before first paint so there's no flash.
+**Three custom properties are the whole palette:** `--color-page-bg`, `--color-page-text`, `--color-accent`. Everything else derives from them — the nav glass, the swatch ring, the folder glow (`--glow-color`), and the hero dot field (`--hwf-bg` / `--hwf-ink` / `--hwf-warm`). Add a color by deriving it from those with `color-mix()`, not by hard-coding a hex somewhere new.
 
-Colors are CSS custom properties, declared light-first with `.dark` overrides:
+They're declared light-first in the `src/style.css` `@theme` block with `.dark` overrides, and `@variant dark (&:where(.dark, .dark *))` makes Tailwind's `dark:` utilities follow the class.
 
-- `src/style.css` `@theme` block — `--color-page-bg`, `--color-page-text`, the neon accents, and the font families.
-- `@variant dark (&:where(.dark, .dark *))` makes Tailwind's `dark:` utilities follow the class.
+### The palette picker
 
-**The hero canvas reads its palette from CSS too** (`--hwf-bg`, `--hwf-ink`, `--hwf-warm`), so a theme change has to tell it to re-read them. `toggleTheme()` in `src/main.js` calls `halftoneHero.refresh()` for exactly that reason — if you add another thing that paints to a canvas, it needs the same treatment.
+The row of squares under the nav is the real theme control. `PALETTES` at the top of `src/main.js` is the table — one entry per swatch:
+
+```js
+{ id: 'baltic', name: 'Baltic', dark: true,
+  bg: '#33658a', text: '#ffffff', accent: '#f6ae2d',
+  strip: ['#33658a', '#86bbd8', '#f6ae2d', '#f26419'] }
+```
+
+`applyPalette()` writes `bg`/`text`/`accent` **inline onto `<html>`** — inline style beats any rule, so it overrides both the `@theme` defaults and the `.dark` block — and toggles the `dark` class from `dark:` so Tailwind's dark utilities stay honest. `strip` is only what the square itself shows, painted as hard-stop vertical bands; it doesn't have to match the three applied colors. **To add a palette, add a row to that table** — the swatch, its label, keyboard order and persistence all follow.
+
+The sun/moon button is now a shortcut between the two neutral palettes (`paper` / `noir`); every other palette carries its own light or dark side.
+
+Persistence: `localStorage.palette` holds the id, and `localStorage['palette-vars']` holds the plain hexes that the inline `<head>` script replays before first paint so a reload doesn't flash the default. That script deliberately has **no copy of the table** — it replays values. `localStorage.theme` is still written for backwards compatibility.
+
+**The hero canvas reads its colors from CSS**, so a palette change has to tell it to re-read them: `applyPalette()` calls `halftoneHero.refresh()`. Anything else that paints to a canvas needs the same treatment.
 
 ## The hero dot field
 
@@ -79,6 +96,18 @@ The name is set enormous and rasterized to an offscreen mask. Each grid cell sam
 ```
 
 The canvas is `aria-hidden`; the visually-hidden `<h1>` is the real accessible heading. **Keep it** — it's the page's only `h1`.
+
+### The signature
+
+`.hero-script` is a third layer in the hero: the same name set in **Ballet** (Google Fonts, loaded in the `<head>` with the other families), laid over the dot field and lifted so it crosses the top of the printed caps. It's `aria-hidden` — the `<h1>` already says the name — and `pointer-events: none`, so the dot field still gets every pointer event under it.
+
+The lift is a fraction of the script's own size (`translateY(-0.45em)`), so it scales with the viewport and the overlap holds. Below `720px` the wordmark stacks onto two lines and the block gets much taller, so a media query at that same breakpoint lifts the signature further (`-1.72em`). **Those two numbers are tuned by eye** — change the wordmark's size or `stackBelow` and they need re-checking.
+
+**The two names are the same width.** `WORD_FIT` at the top of `src/main.js` (default `1.02`) is the single knob: it's passed to the dot field as its `fit` option *and* used by `fitSignature()`, which measures the script's natural width and sets `--sig-stretch` to `heroWidth * WORD_FIT / naturalWidth`. The CSS applies that as a `scaleX()` after the centring transform, so the letterforms widen without the centring or the lift moving. At 1440px that's about `1.89` — a deliberately stretched script, not a bigger one.
+
+Lower `WORD_FIT` to pull *both* in off the edges (`0.9` stops the bleed and drops the stretch to ~1.67); the two stay matched either way. `fitSignature()` re-runs on resize and after `document.fonts.ready`, because the script's natural width isn't known until Ballet has actually landed.
+
+It paints in `--color-accent`, so it follows the palette.
 
 ```js
 import { initHalftoneWordmark } from './halftone-wordmark.js';
@@ -99,6 +128,7 @@ hero.destroy();  // drop every listener and observer
 | `wordmark` | `data-wordmark` attr | The word to print. |
 | `stack` | `[]` | Lines to use *instead* of `wordmark` on narrow screens. |
 | `stackBelow` | `720` | Viewport width at or under which `stack` takes over. |
+| `fit` | `1.02` | Line width as a multiple of the root's width. Over 1 bleeds off both edges. |
 | `lineGap` | `0.10` | Gap between stacked lines, as a multiple of font size. |
 | `dotGap` | `6` | Distance between dot centres in CSS px. Smaller = finer, more dots. |
 | `radius` | `90` | How far the pointer pushes, in CSS px. |

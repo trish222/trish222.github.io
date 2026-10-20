@@ -7,9 +7,13 @@
     --color-neon-green: #00ff9c;
     --color-neon-cyan: #22d3ee;
     --color-neon-fuchsia: #d946ef;
+    /* the one accent everything else keys off. The palette picker overwrites
+       this (and page-bg / page-text) inline on <html>, which beats any rule. */
+    --color-accent: #22d3ee;
 
     --font-heading: "Montserrat", sans-serif;
     --font-mono: "JetBrains Mono", monospace;
+    --font-script: "Ballet", cursive;
 }
 
 @variant dark (&:where(.dark, .dark *));
@@ -17,6 +21,7 @@
 .dark {
     --color-page-bg: #121321; /* Deep slate */
     --color-page-text: #f8fafc; /* Off white */
+    --color-accent: #d946ef;
 }
 
 /* 1. THE PULSE ANIMATION */
@@ -53,7 +58,7 @@
 
 @layer components {
   .folder-container {
-  --glow-color: var(--color-neon-cyan); /* add this */
+  --glow-color: var(--color-accent);
   @apply relative mx-auto mt-40 mb-24 max-w-4xl px-6;
   
 
@@ -77,11 +82,6 @@
   .folder-container:not(.is-active) .folder-body,
   .folder-container:not(.is-active) .folder-tab {
     border-color: color-mix(in srgb, var(--glow-color), transparent 70%);
-  }
-
-
-  .dark .folder-container {
-    --glow-color: var(--color-neon-fuchsia);
   }
 
 
@@ -161,8 +161,13 @@
     @apply fixed inset-x-0 top-0 z-50 flex flex-col items-center px-4 pt-4 md:pt-6;
   }
 
+  /* the pill's positioning context: the mobile sheet hangs off it absolutely,
+     so opening the menu floats over the swatches instead of pushing them down */
+  .nav-bar {
+    @apply relative;
+  }
+
   .nav-pill {
-    --nav-accent: var(--color-neon-cyan);
     @apply pointer-events-auto flex items-center gap-1 rounded-full py-1.5 pr-1.5 pl-2;
     /* the glass: a wash of the page color over whatever the canvas is painting */
     background: color-mix(in srgb, var(--color-page-bg), transparent 35%);
@@ -174,7 +179,6 @@
   }
 
   .dark .nav-pill {
-    --nav-accent: var(--color-neon-fuchsia);
     border-color: color-mix(in srgb, var(--color-page-text), transparent 85%);
   }
 
@@ -185,8 +189,8 @@
   }
 
   .nav-mark:hover {
-    color: var(--nav-accent);
-    text-shadow: 0 0 12px color-mix(in srgb, var(--nav-accent), transparent 40%);
+    color: var(--color-accent);
+    text-shadow: 0 0 12px color-mix(in srgb, var(--color-accent), transparent 40%);
   }
 
   .nav-rule {
@@ -219,8 +223,8 @@
     /* sized and positioned in JS; z-0 keeps it behind the link text */
     height: 100%;
     width: 0;
-    background: color-mix(in srgb, var(--nav-accent), transparent 86%);
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--nav-accent), transparent 72%) inset;
+    background: color-mix(in srgb, var(--color-accent), transparent 86%);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent), transparent 72%) inset;
     transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
                 width 320ms cubic-bezier(0.22, 1, 0.36, 1),
                 opacity 180ms ease;
@@ -243,7 +247,7 @@
 
   /* mobile dropdown: the same glass, dropped under the pill */
   .nav-sheet {
-    @apply md:hidden flex flex-col gap-1 mt-2 p-2 rounded-2xl min-w-[180px] font-mono text-sm;
+    @apply absolute right-0 top-full z-10 md:hidden flex flex-col gap-1 mt-2 p-2 rounded-2xl min-w-[180px] font-mono text-sm;
     @apply transition-all duration-200 ease-out origin-top;
     background: color-mix(in srgb, var(--color-page-bg), transparent 25%);
     border: 1px solid color-mix(in srgb, var(--color-page-text), transparent 85%);
@@ -259,17 +263,77 @@
 
   .nav-sheet a:hover {
     color: var(--color-page-text);
-    background: color-mix(in srgb, var(--nav-accent, var(--color-neon-cyan)), transparent 86%);
+    background: color-mix(in srgb, var(--color-accent), transparent 86%);
   }
 
-  .dark .nav-sheet a:hover {
-    background: color-mix(in srgb, var(--color-neon-fuchsia), transparent 86%);
-  }
+
 }
 
 @media (prefers-reduced-motion: reduce) {
   .nav-glider {
     transition: opacity 120ms ease;
+  }
+}
+
+/* ==========================================
+   PALETTE PICKER
+   One square per palette, each filled with its own colours as hard-stop bands.
+   Clicking one rewrites --color-page-bg / --color-page-text / --color-accent
+   inline on <html>; everything else on the page reads those.
+   ========================================== */
+@layer components {
+  .palette-picker {
+    @apply mt-3 flex flex-col items-center gap-1.5;
+    transition: opacity 200ms ease;
+  }
+
+  /* while the mobile menu is open, the sheet occupies this space */
+  .palette-picker.is-hidden {
+    @apply opacity-0 pointer-events-none;
+  }
+
+  .palette-row {
+    @apply flex flex-wrap items-center justify-center gap-1.5 max-w-[22rem] sm:max-w-none;
+  }
+
+  .swatch {
+    /* square on purpose - the bands read as a palette strip, not a dot */
+    @apply relative w-7 h-7 rounded-[3px] cursor-pointer;
+    /* --strip is set per button in JS */
+    background: var(--strip);
+    border: 1px solid color-mix(in srgb, var(--color-page-text), transparent 80%);
+    transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms ease;
+  }
+
+  .swatch:hover,
+  .swatch:focus-visible {
+    transform: translateY(-3px);
+    outline: none;
+  }
+
+  /* the ring sits off the square so it reads against any palette */
+  .swatch[aria-checked="true"] {
+    transform: translateY(-3px);
+    box-shadow: 0 0 0 2px var(--color-page-bg),
+                0 0 0 3px var(--color-page-text);
+  }
+
+  .palette-name {
+    @apply font-mono text-[10px] tracking-[0.2em] uppercase h-3 leading-3;
+    color: color-mix(in srgb, var(--color-page-text), transparent 45%);
+    transition: opacity 200ms ease;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swatch {
+    transition: box-shadow 200ms ease;
+  }
+
+  .swatch:hover,
+  .swatch:focus-visible,
+  .swatch[aria-checked="true"] {
+    transform: none;
   }
 }
 
@@ -280,10 +344,10 @@
    toggle drives the dot field as well as the page.
    ========================================== */
 .hwf-root {
-  /* BASE = LIGHT, to match the rest of the sheet */
-  --hwf-bg: #ffffff;
-  --hwf-ink: #0f172a;
-  --hwf-warm: #22d3ee;
+  /* the dot field paints from the page palette, so the picker drives it too */
+  --hwf-bg: var(--color-page-bg);
+  --hwf-ink: var(--color-page-text);
+  --hwf-warm: var(--color-accent);
   --hwf-display: "Montserrat", sans-serif;
 
   position: relative;
@@ -296,12 +360,6 @@
   touch-action: none;
 }
 
-.dark .hwf-root {
-  --hwf-bg: #121321;
-  --hwf-ink: #f8fafc;
-  --hwf-warm: #d946ef;
-}
-
 .hwf-root canvas {
   position: absolute;
   inset: 0;
@@ -309,6 +367,35 @@
   height: 100%;
   display: block;
   max-width: none;
+}
+
+/* The signature laid over the dot field: the same name in Ballet, sitting
+   slightly high so it crosses the top half of the printed letters. It scales
+   with the viewport, like the wordmark under it, so the overlap holds. */
+.hero-script {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 1;
+  /* centred, then lifted by a fraction of its own size onto the caps above */
+  /* --sig-stretch is set by fitSignature() in main.js: the scale that makes
+     this as wide as the dot wordmark. scaleX comes last, so it widens the
+     letterforms without disturbing the centring or the lift. */
+  transform: translate(-50%, -50%) translateY(-0.45em) scaleX(var(--sig-stretch, 1));
+  font-family: var(--font-script);
+  font-size: clamp(3.25rem, 11vw, 12rem);
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  color: var(--color-accent);
+}
+
+/* Narrow viewports stack the wordmark onto two lines (`stackBelow: 720` in
+   main.js), so the block is much taller and the signature has to clear it. */
+@media (max-width: 720px) {
+  .hero-script {
+    transform: translate(-50%, -50%) translateY(-1.72em) scaleX(var(--sig-stretch, 1));
+  }
 }
 
 /* the real <h1>, left for screen readers and search engines */

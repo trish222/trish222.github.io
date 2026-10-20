@@ -8,66 +8,91 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap" 
+    <link href="https://fonts.googleapis.com/css2?family=Ballet:opsz@16..72&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap" 
     rel="stylesheet">
 
-    <!-- script runs before the body renders, no white flash -->
+    <!-- runs before the body renders, so the stored palette never flashes.
+         It replays plain values written by applyPalette() in src/main.js
+         rather than carrying its own copy of the palette table. -->
     <script>
-      if (localStorage.getItem('theme') === 'light') {
-        document.documentElement.classList.remove('dark');
-      } 
+      (function () {
+        var el = document.documentElement;
+        try {
+          var p = JSON.parse(localStorage.getItem('palette-vars'));
+          if (p && p.bg) {
+            el.style.setProperty('--color-page-bg', p.bg);
+            el.style.setProperty('--color-page-text', p.text);
+            el.style.setProperty('--color-accent', p.accent);
+            el.classList.toggle('dark', !!p.dark);
+            return;
+          }
+        } catch (e) { /* bad or missing entry: fall through to the old key */ }
+        if (localStorage.getItem('theme') === 'light') el.classList.remove('dark');
+      })();
     </script>
   </head>
 
   <body class="bg-page-bg text-page-text transition-colors duration-300">
     <!-- navigation: a glass pill floating over the wordmark -->
     <nav id="site-nav" class="nav-dock">
-      <div class="nav-pill">
-        <a href="#hero" class="nav-mark" aria-label="Trish Nguyen, top of page">TN</a>
+      <div class="nav-bar">
+        <div class="nav-pill">
+          <a href="#hero" class="nav-mark" aria-label="Trish Nguyen, top of page">TN</a>
 
-        <span class="nav-rule" aria-hidden="true"></span>
+          <span class="nav-rule" aria-hidden="true"></span>
 
-        <ul id="nav-links" class="nav-links">
-          <!-- the highlight that slides to whichever link the pointer is on -->
-          <span id="nav-glider" class="nav-glider" aria-hidden="true"></span>
-          <li><a href="#about">about</a></li>
-          <li><a href="#experience">experience</a></li>
-          <li><a href="#projects">projects</a></li>
-          <li><a href="#skills">skills</a></li>
-        </ul>
+          <ul id="nav-links" class="nav-links">
+            <!-- the highlight that slides to whichever link the pointer is on -->
+            <span id="nav-glider" class="nav-glider" aria-hidden="true"></span>
+            <li><a href="#about">about</a></li>
+            <li><a href="#experience">experience</a></li>
+            <li><a href="#projects">projects</a></li>
+            <li><a href="#skills">skills</a></li>
+          </ul>
 
-        <span class="nav-rule nav-rule-md" aria-hidden="true"></span>
+          <span class="nav-rule nav-rule-md" aria-hidden="true"></span>
 
-        <!-- theme toggle -->
-        <button id="theme-toggle" class="nav-icon" aria-label="Toggle theme">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="block dark:hidden"><circle cx="12" cy="12" r="4"/>
-            <path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
-          </svg>
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden dark:block">
-            <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/>
-          </svg>
-        </button>
+          <!-- theme toggle -->
+          <button id="theme-toggle" class="nav-icon" aria-label="Toggle theme">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="block dark:hidden"><circle cx="12" cy="12" r="4"/>
+              <path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden dark:block">
+              <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/>
+            </svg>
+          </button>
 
-        <!-- menu button (mobile) -->
-        <button id="menu-btn" class="nav-icon md:hidden" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/>
-          </svg>
-        </button>
+          <!-- menu button (mobile) -->
+          <button id="menu-btn" class="nav-icon md:hidden" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- dropdown menu (mobile) -->
+        <div id="mobile-menu" class="nav-sheet invisible opacity-0 scale-95">
+          <a href="#about">about</a>
+          <a href="#experience">experience</a>
+          <a href="#projects">projects</a>
+          <a href="#skills">skills</a>
+        </div>
       </div>
 
-      <!-- dropdown menu (mobile) -->
-      <div id="mobile-menu" class="nav-sheet invisible opacity-0 scale-95">
-        <a href="#about">about</a>
-        <a href="#experience">experience</a>
-        <a href="#projects">projects</a>
-        <a href="#skills">skills</a>
+      <!-- colour theme picker: one square per palette, filled in by
+           setupPaletteRow() in main.js from the PALETTES table there -->
+      <div class="palette-picker">
+        <div id="palette-row" class="palette-row" role="radiogroup" aria-label="Colour theme"></div>
+        <p id="palette-name" class="palette-name" aria-live="polite"></p>
       </div>
     </nav>
 
     <!-- hero: name printed as an interactive halftone dot field -->
     <section id="hero" class="hwf-root" data-wordmark="TRISH NGUYEN">
       <canvas aria-hidden="true"></canvas>
+      <!-- the signature: the same name in Ballet, riding above the dot field.
+           aria-hidden because the <h1> below already says it. -->
+      <span class="hero-script" aria-hidden="true">Trish Nguyen</span>
       <h1 class="hwf-sr">Trish Nguyen</h1>
     </section>
 

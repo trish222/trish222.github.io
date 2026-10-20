@@ -80,6 +80,7 @@ export const initHalftoneWordmark = (root, options = {}) => {
   const o = {
     wordmark: root.dataset.wordmark || 'wordmark',
     stack: [],        // lines to use instead of `wordmark` on narrow viewports
+    fit: 1.02,        // line width as a multiple of the root's width (>1 bleeds)
     stackBelow: 720,  // viewport width at or under which `stack` takes over
     lineGap: 0.10,    // gap between stacked lines, as a multiple of font size
     dotGap: 6,        // distance between dot centres, CSS px
@@ -142,7 +143,7 @@ export const initHalftoneWordmark = (root, options = {}) => {
     const words = o.stack.length > 1 && w <= o.stackBelow ? o.stack : [o.wordmark || ' '];
     const lines = words.map((word) => {
       m.font = o.fontWeight + ' 100px ' + face;
-      const fit = hwfFitSize(m.measureText(word).width, w * 1.02);
+      const fit = hwfFitSize(m.measureText(word).width, w * o.fit);
       m.font = o.fontWeight + ' ' + fit + 'px ' + face;
       const box = m.measureText(word);
       return { word, fit, width: box.width, cap: box.actualBoundingBoxAscent || fit * 0.72 };
