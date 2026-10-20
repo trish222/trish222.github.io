@@ -20,59 +20,53 @@
   </head>
 
   <body class="bg-page-bg text-page-text transition-colors duration-300">
-  <!-- nagivation bar -->
-    <nav class="relative flex flex-col p-5 md:justify-center">
-      <div class="relative flex justify-between w-full">
-        <div class="flex items-center">
-          <p class="text-lg font-bold font-mono tracking-widest">Trish Nguyen( ) { </p>
-          <ul class="hidden md:flex gap-5 p-2">
-            <li><a href="#about" class="text-lg font-medium font-bold font-mono hover:text-gray-400 hover:underline">About;</a></li>
-            <li><a href="#experience" class="text-lg font-medium font-bold font-mono hover:text-gray-400 hover:underline">Experience;</a></li>
-            <li><a href="#projects" class="text-lg font-medium font-bold font-mono hover:text-gray-400 hover:underline">Projects;</a></li>
-            <li><a href="#skills" class="text-lg font-medium font-bold font-mono hover:text-gray-400 hover:underline">Skills;</a></li>
-          </ul>
-          <p class="text-lg font-bold font-mono tracking-widest"> }</p>  
-        </div>
+    <!-- navigation: a glass pill floating over the wordmark -->
+    <nav id="site-nav" class="nav-dock">
+      <div class="nav-pill">
+        <a href="#hero" class="nav-mark" aria-label="Trish Nguyen, top of page">TN</a>
 
-        <div class="flex gap-2">
-          <!-- theme toggle button -->
-           <button id="theme-toggle" class="p-2 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer" aria-label="Toggle Theme">
-  
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 block dark:hidden lucide lucide-sun-icon lucide-sun"><circle cx="12" cy="12" r="4"/>
-              <path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
-            </svg>
+        <span class="nav-rule" aria-hidden="true"></span>
 
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden dark:block lucide lucide-moon-icon lucide-moon">
-              <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/>
-            </svg>
-            
-          </button>
-        
-          <!-- menu button (mobile)-->
-          <button id="menu-btn" class="md:hidden bg-page-bg/80 ml-auto px-4 py-3 rounded dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">menu</button> 
-        </div>
-        <!-- dropdown menu (mobile) (still in nav bar btw)-->
-        <div id="mobile-menu" class="absolute z-50 right-0 top-full flex flex-col items-end gap-4 bg-red-500 font-mono p-4 mt-2 min-w-[150px] 
-                                     transition-all duration-200 ease-out origin-top-right
-                                     invisible opacity-0 scale-95">
-          <a href="#about" class="text-neon-green hover:text-gray-500">About;</a>
-          <a href="#experience" class="text-neon-green hover:text-gray-500">Experience;</a>
-          <a href="#projects" class="text-neon-green hover:text-gray-500">Projects;</a>
-          <a href="#skills" class="text-neon-green hover:text-gray-500">Skills;</a>
-        </div>
+        <ul id="nav-links" class="nav-links">
+          <!-- the highlight that slides to whichever link the pointer is on -->
+          <span id="nav-glider" class="nav-glider" aria-hidden="true"></span>
+          <li><a href="#about">about</a></li>
+          <li><a href="#experience">experience</a></li>
+          <li><a href="#projects">projects</a></li>
+          <li><a href="#skills">skills</a></li>
+        </ul>
+
+        <span class="nav-rule nav-rule-md" aria-hidden="true"></span>
+
+        <!-- theme toggle -->
+        <button id="theme-toggle" class="nav-icon" aria-label="Toggle theme">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="block dark:hidden"><circle cx="12" cy="12" r="4"/>
+            <path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+          </svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden dark:block">
+            <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/>
+          </svg>
+        </button>
+
+        <!-- menu button (mobile) -->
+        <button id="menu-btn" class="nav-icon md:hidden" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/>
+          </svg>
+        </button>
       </div>
-      
-      <h1 class="font-heading text-neon-green glow text-3xl tracking-widest">Montserrat Heading</h1>
-      <p class="font-mono text-neon-green">JetBrains Mono body text</p>
-      
+
+      <!-- dropdown menu (mobile) -->
+      <div id="mobile-menu" class="nav-sheet invisible opacity-0 scale-95">
+        <a href="#about">about</a>
+        <a href="#experience">experience</a>
+        <a href="#projects">projects</a>
+        <a href="#skills">skills</a>
+      </div>
     </nav>
 
-    <div class="p-6 bg-page-bg text-green-400 font-mono">
-      Tailwind working text
-    </div>
-
     <!-- hero: name printed as an interactive halftone dot field -->
-    <section id="hero" class="hwf-root" data-wordmark="trish nguyen">
+    <section id="hero" class="hwf-root" data-wordmark="TRISH NGUYEN">
       <canvas aria-hidden="true"></canvas>
       <h1 class="hwf-sr">Trish Nguyen</h1>
     </section>
@@ -133,7 +127,6 @@
       </div>
     </section>
 
-    <button id="back-to-top" class="fixed bottom-4 right-4 bg-page-bg/80 px-4 py-2 rounded dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">↑</button>
 
     <script type="module" src="./src/main.js" defer></script>
   </body>

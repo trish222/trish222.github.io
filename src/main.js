@@ -12,8 +12,8 @@ const menuBtn = document.getElementById('menu-btn');
 const mobileMenu = document.getElementById('mobile-menu');
 const themeToggleBtn = document.getElementById('theme-toggle');
 const folders = document.querySelectorAll(".folder-container");
-const backToTopBtn = document.getElementById('back-to-top');
-const nav = document.querySelector('nav'); //looks for first <nav>
+const navLinks = document.getElementById('nav-links');
+const navGlider = document.getElementById('nav-glider');
 const hero = document.getElementById('hero');
 let halftoneHero = null; // set once the hero dot field is wired up
 
@@ -41,12 +41,14 @@ const openMobileMenu = () => {
   if (!mobileMenu) return;
   mobileMenu.classList.remove("invisible", "opacity-0", "scale-95");
   mobileMenu.classList.add("visible", "opacity-100", "scale-100");
+  if (menuBtn) menuBtn.setAttribute("aria-expanded", "true");
 };
 
 const closeMobileMenu = () => {
   if (!mobileMenu) return;
   mobileMenu.classList.add("invisible", "opacity-0", "scale-95");
   mobileMenu.classList.remove("visible", "opacity-100", "scale-100");
+  if (menuBtn) menuBtn.setAttribute("aria-expanded", "false");
 };
 
 const toggleMobileMenu = () => {
@@ -80,24 +82,29 @@ const setupGlowOnScroll = () => {
   folders.forEach((el) => observer.observe(el));
 };
 
-// close menu when scrolled out of view
-const setupMenuCloseOnScroll = () => {
-  if (!nav || !mobileMenu) return;
+// The highlight behind the nav links is a single element, moved and resized to
+// whichever link the pointer is on, so it slides between them instead of
+// fading in place. Measured from live layout, so font loading can't skew it.
+const setupNavGlider = () => {
+  if (!navLinks || !navGlider) return;
 
-  const navObserver = new IntersectionObserver(
-    (entries) => {
-      const entry = entries[0];
-      if (!entry.isIntersecting) {
-        closeMobileMenu();
-      }
-    },
+  const moveTo = (link) => {
+    const parent = link.parentElement; // the <li>, which is what the row lays out
+    navGlider.style.width = parent.offsetWidth + 'px';
+    navGlider.style.transform = 'translateX(' + parent.offsetLeft + 'px)';
+    navGlider.style.opacity = '1';
+  };
 
-    { threshold: 0 }
-  );
+  const hide = () => { navGlider.style.opacity = '0'; };
 
-  navObserver.observe(nav);
+  navLinks.querySelectorAll('a').forEach((link) => {
+    link.addEventListener('pointerenter', () => moveTo(link));
+    link.addEventListener('focus', () => moveTo(link));
+    link.addEventListener('blur', hide);
+  });
 
-}
+  navLinks.addEventListener('pointerleave', hide);
+};
 
 // Size the hero to whatever is left of the first screen. Done here rather than
 // in CSS because the height of everything above it isn't a constant we can
@@ -116,7 +123,7 @@ const setupHalftoneHero = () => {
   fitHeroToFirstScreen();
   halftoneHero = initHalftoneWordmark(hero, {
     fontWeight: 900,              // Montserrat Black prints the heaviest dots
-    stack: ['trish', 'nguyen'],   // phones get the name on two lines instead
+    stack: ['TRISH', 'NGUYEN'],   // phones get the name on two lines instead
     dotGap: 6,
     radius: 110,
   });
@@ -127,7 +134,7 @@ const setupHalftoneHero = () => {
    ========================================== */
 setThemeClassFromStorage();
 setupGlowOnScroll();
-setupMenuCloseOnScroll();
+setupNavGlider();
 setupHalftoneHero();
 
 /* ==========================================
@@ -170,11 +177,4 @@ window.addEventListener('resize', fitHeroToFirstScreen);
 // the nav grows when Montserrat lands, so the hero has to be re-measured after
 if (document.fonts && document.fonts.ready) {
   document.fonts.ready.then(fitHeroToFirstScreen);
-}
-
-// back to top button
-if (backToTopBtn) {
-  backToTopBtn.addEventListener('click', () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
 }

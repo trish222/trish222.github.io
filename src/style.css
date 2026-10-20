@@ -36,6 +36,14 @@
     /* Only transition colors, not layout things like width or height */
     @apply transition-colors duration-300 ease-in-out;
   }
+
+  /* The page is deliberately one screen: the wordmark fills the viewport and
+     nothing scrolls. Sections below the hero stay in the markup, clipped. */
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
   
   /* You can also target specific elements if you want them to fade too */
   a, button, div {
@@ -142,6 +150,130 @@
 }
 
 /* ==========================================
+   NAVIGATION
+   A glass pill floating over the wordmark. The highlight behind the links is
+   one element moved by JS (see setupNavGlider in main.js) rather than a
+   background per link, so it slides between them.
+   ========================================== */
+@layer components {
+  .nav-dock {
+    /* out of flow on purpose, so the hero measures the full first screen */
+    @apply fixed inset-x-0 top-0 z-50 flex flex-col items-center px-4 pt-4 md:pt-6;
+  }
+
+  .nav-pill {
+    --nav-accent: var(--color-neon-cyan);
+    @apply pointer-events-auto flex items-center gap-1 rounded-full py-1.5 pr-1.5 pl-2;
+    /* the glass: a wash of the page color over whatever the canvas is painting */
+    background: color-mix(in srgb, var(--color-page-bg), transparent 35%);
+    border: 1px solid color-mix(in srgb, var(--color-page-text), transparent 88%);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    box-shadow: 0 1px 0 color-mix(in srgb, var(--color-page-text), transparent 93%) inset,
+                0 10px 30px -12px rgb(0 0 0 / 0.45);
+  }
+
+  .dark .nav-pill {
+    --nav-accent: var(--color-neon-fuchsia);
+    border-color: color-mix(in srgb, var(--color-page-text), transparent 85%);
+  }
+
+  .nav-mark {
+    @apply font-mono text-sm font-bold tracking-[0.18em] px-2.5 py-1.5 rounded-full;
+    color: var(--color-page-text);
+    transition: color 200ms ease, text-shadow 200ms ease;
+  }
+
+  .nav-mark:hover {
+    color: var(--nav-accent);
+    text-shadow: 0 0 12px color-mix(in srgb, var(--nav-accent), transparent 40%);
+  }
+
+  .nav-rule {
+    @apply hidden md:block w-px h-5 mx-1;
+    background: color-mix(in srgb, var(--color-page-text), transparent 85%);
+  }
+
+  /* the second divider only earns its place once the links are showing */
+  .nav-rule-md {
+    @apply hidden md:block;
+  }
+
+  .nav-links {
+    @apply relative hidden md:flex items-center gap-1;
+  }
+
+  .nav-links a {
+    @apply relative z-10 block font-mono text-sm tracking-wide px-3.5 py-1.5 rounded-full;
+    color: color-mix(in srgb, var(--color-page-text), transparent 25%);
+    transition: color 200ms ease;
+  }
+
+  .nav-links a:hover,
+  .nav-links a:focus-visible {
+    color: var(--color-page-text);
+  }
+
+  .nav-glider {
+    @apply absolute left-0 top-0 rounded-full opacity-0;
+    /* sized and positioned in JS; z-0 keeps it behind the link text */
+    height: 100%;
+    width: 0;
+    background: color-mix(in srgb, var(--nav-accent), transparent 86%);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--nav-accent), transparent 72%) inset;
+    transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+                width 320ms cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 180ms ease;
+  }
+
+  .nav-icon {
+    @apply grid place-items-center w-9 h-9 rounded-full cursor-pointer;
+    color: color-mix(in srgb, var(--color-page-text), transparent 20%);
+    transition: background-color 200ms ease, color 200ms ease;
+  }
+
+  .nav-icon svg {
+    @apply w-[18px] h-[18px];
+  }
+
+  .nav-icon:hover {
+    color: var(--color-page-text);
+    background: color-mix(in srgb, var(--color-page-text), transparent 90%);
+  }
+
+  /* mobile dropdown: the same glass, dropped under the pill */
+  .nav-sheet {
+    @apply md:hidden flex flex-col gap-1 mt-2 p-2 rounded-2xl min-w-[180px] font-mono text-sm;
+    @apply transition-all duration-200 ease-out origin-top;
+    background: color-mix(in srgb, var(--color-page-bg), transparent 25%);
+    border: 1px solid color-mix(in srgb, var(--color-page-text), transparent 85%);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    box-shadow: 0 10px 30px -12px rgb(0 0 0 / 0.45);
+  }
+
+  .nav-sheet a {
+    @apply px-3 py-2 rounded-xl;
+    color: color-mix(in srgb, var(--color-page-text), transparent 20%);
+  }
+
+  .nav-sheet a:hover {
+    color: var(--color-page-text);
+    background: color-mix(in srgb, var(--nav-accent, var(--color-neon-cyan)), transparent 86%);
+  }
+
+  .dark .nav-sheet a:hover {
+    background: color-mix(in srgb, var(--color-neon-fuchsia), transparent 86%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-glider {
+    transition: opacity 120ms ease;
+  }
+}
+
+/* ==========================================
    HALFTONE WORDMARK HERO
    Ported from 21st.dev @kedhareswer/halftone-wordmark-footer.
    The canvas reads --hwf-bg / --hwf-ink / --hwf-warm, so the theme
@@ -156,12 +288,12 @@
 
   position: relative;
   width: 100%;
-  /* fills what the nav leaves of the first screen, without collapsing on short ones */
-  height: clamp(22rem, calc(100dvh - 11rem), 44rem);
+  /* the page does not scroll, so the hero is the whole screen */
+  height: 100dvh;
   overflow: hidden;
   isolation: isolate;
   background: var(--hwf-bg);
-  touch-action: pan-y;
+  touch-action: none;
 }
 
 .dark .hwf-root {

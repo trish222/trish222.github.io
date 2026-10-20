@@ -46,6 +46,12 @@ Porting `PRODUCT.md` onto whichever branch becomes the real site is worth doing 
 
 There is **no `tailwind.config.js`** — Tailwind 4 is configured through the `@tailwindcss/vite` plugin in `vite.config.js` plus the `@theme` block at the top of `src/style.css`. Add design tokens there, not in a JS config.
 
+## Navigation
+
+A glass pill floating over the wordmark (`.nav-dock` / `.nav-pill` in `src/style.css`). It is `position: fixed` and out of flow on purpose — that is what lets the hero measure the full screen. The highlight behind the links is a **single** element (`#nav-glider`) moved and resized by `setupNavGlider()` in `src/main.js`, so it slides between links rather than fading in per link; it measures live layout, so a late web font can't skew it. Under `md` the links collapse into the hamburger and the same glass drops down as `.nav-sheet`.
+
+Because the page no longer scrolls, the nav links are anchors that go nowhere today. They work as-is the moment the scroll lock comes off.
+
 ## Theming
 
 One toggle drives everything. `<html class="dark">` is the default; `src/main.js` persists the choice to `localStorage.theme`, and an inline script in `<head>` applies it before first paint so there's no flash.
@@ -66,7 +72,7 @@ The name is set enormous and rasterized to an offscreen mask. Each grid cell sam
 ### Usage
 
 ```html
-<section id="hero" class="hwf-root" data-wordmark="trish nguyen">
+<section id="hero" class="hwf-root" data-wordmark="TRISH NGUYEN">
   <canvas aria-hidden="true"></canvas>
   <h1 class="hwf-sr">Trish Nguyen</h1>
 </section>
@@ -90,7 +96,7 @@ hero.destroy();  // drop every listener and observer
 
 | Option | Default | Meaning |
 | --- | --- | --- |
-| `wordmark` | `data-wordmark` attr | The word to print. Lowercase reads best. |
+| `wordmark` | `data-wordmark` attr | The word to print. |
 | `stack` | `[]` | Lines to use *instead* of `wordmark` on narrow screens. |
 | `stackBelow` | `720` | Viewport width at or under which `stack` takes over. |
 | `lineGap` | `0.10` | Gap between stacked lines, as a multiple of font size. |
@@ -114,19 +120,22 @@ The module also exports its pure math (`hwfHex`, `hwfRadius`, `hwfStep`, `hwfWar
 
 ### Hero sizing
 
-`fitHeroToFirstScreen()` in `src/main.js` sets the hero's height from its own measured offset, so it fills exactly what's left of the first screen. This is done in JS because the height of everything above it (nav, plus anything else) isn't a constant CSS can subtract. It re-runs on `resize` and after `document.fonts.ready`, because the nav grows when Montserrat lands. The CSS `height` on `.hwf-root` is only a pre-JS fallback.
+The page is **one screen and does not scroll** — `html, body { height: 100%; overflow: hidden }` in `src/style.css`. The hero is `100dvh`, and the nav is `position: fixed`, so the wordmark gets the whole viewport. The sections below the hero are still in the markup; they are simply clipped.
+
+`fitHeroToFirstScreen()` in `src/main.js` still sets the hero's height from its own measured offset (currently `0`, since nothing is in flow above it) and re-runs on `resize` and after `document.fonts.ready`. The CSS `height` on `.hwf-root` is the pre-JS value.
+
+Undoing the scroll lock means: drop the `overflow: hidden` rule, give the nav a scrolled state or put it back in flow, and the hero re-measures itself.
 
 ## Where to continue
 
 Roughly in order of payoff:
 
-1. **Delete the dev scaffolding above the hero.** `index.html` still carries three leftover test elements — `Montserrat Heading`, `JetBrains Mono body text`, and the `Tailwind working text` div. They occupy ~216px before the hero starts. The hero sizes itself around them correctly, but removing them hands the wordmark the full screen.
-2. **Fill in the section content**, using `git show theme/flower:PRODUCT.md` as the source. `#about`, `#experience`, `#projects`, and `#skills` are built at full structural fidelity but their bodies are placeholders (`Your bio content goes here...`, `// List of projects goes here...`). `PRODUCT.md` already holds the verified facts — SAS Institute CI360 internship, NCSU Engineering IT, NC State CS — so nothing needs inventing. It also records two hard rules: **no project work has been supplied**, so Projects ships as clearly-marked empty slots rather than invented entries; and the **year ranges in it are stale and need your confirmation** before they go on the page.
-3. **Add contact details.** There is no email or social link on the page yet. This is *not* an open question — `PRODUCT.md` already specifies a `mailto:` link and lists the email, GitHub, and LinkedIn to use. Copy them from there.
-4. **Decide on a footer.** The site currently ends at the Skills section. The halftone component began life as a footer; if you want one back, a second `.hwf-root` with `anchor: 'bottom'` would do it — but running the same effect twice on one page may be one time too many.
-5. **Merge `theme/dots` to `main`.** Nothing deploys until you do — the workflow only fires on `main`. Worth settling which theme branch wins first.
-6. **Possible cleanup:** both `@tailwindcss/vite` (in `vite.config.js`) and `@tailwindcss/postcss` (in `postcss.config.js`) are configured. Only one is needed; the build currently works, but dropping `postcss.config.js` would remove the ambiguity.
-7. **Reconcile `.impeccable/surfaces/index-html.md`.** That design contract describes a halftoned-bloom direction (Bodoni Moda display type, a four-ink print palette) that was never built on this branch. The shipped hero shares its halftone idea but none of its typography or color. The bloom photograph it calls for *does* exist — untracked at `design-references/bloom.jpg`, and committed at `public/bloom.jpg` on `theme/flower` — so the direction is revivable, not lost. Either pursue it deliberately or retire the document; a dated status note at the top of that file flags the divergence meanwhile.
+1. **Fill in the section content**, using `git show theme/flower:PRODUCT.md` as the source. `#about`, `#experience`, `#projects`, and `#skills` are built at full structural fidelity but their bodies are placeholders (`Your bio content goes here...`, `// List of projects goes here...`). `PRODUCT.md` already holds the verified facts — SAS Institute CI360 internship, NCSU Engineering IT, NC State CS — so nothing needs inventing. It also records two hard rules: **no project work has been supplied**, so Projects ships as clearly-marked empty slots rather than invented entries; and the **year ranges in it are stale and need your confirmation** before they go on the page. Note these sections are **currently clipped** by the scroll lock — see Hero sizing — so filling them in means deciding how they get reached.
+2. **Add contact details.** There is no email or social link on the page yet. This is *not* an open question — `PRODUCT.md` already specifies a `mailto:` link and lists the email, GitHub, and LinkedIn to use. Copy them from there.
+3. **Decide on a footer.** The site currently ends at the Skills section. The halftone component began life as a footer; if you want one back, a second `.hwf-root` with `anchor: 'bottom'` would do it — but running the same effect twice on one page may be one time too many.
+4. **Merge `theme/dots` to `main`.** Nothing deploys until you do — the workflow only fires on `main`. Worth settling which theme branch wins first.
+5. **Possible cleanup:** both `@tailwindcss/vite` (in `vite.config.js`) and `@tailwindcss/postcss` (in `postcss.config.js`) are configured. Only one is needed; the build currently works, but dropping `postcss.config.js` would remove the ambiguity.
+6. **Reconcile `.impeccable/surfaces/index-html.md`.** That design contract describes a halftoned-bloom direction (Bodoni Moda display type, a four-ink print palette) that was never built on this branch. The shipped hero shares its halftone idea but none of its typography or color. The bloom photograph it calls for *does* exist — untracked at `design-references/bloom.jpg`, and committed at `public/bloom.jpg` on `theme/flower` — so the direction is revivable, not lost. Either pursue it deliberately or retire the document; a dated status note at the top of that file flags the divergence meanwhile.
 
 ## Not present
 
