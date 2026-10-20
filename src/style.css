@@ -141,71 +141,50 @@
   animation: neon-pulse 4s infinite ease-in-out, neon-flicker 1.5s ease-out infinite;
 }
 
-/* Hero neon sign animation */
-@keyframes hero-neon-flicker {
-  0%, 18%, 22%, 25%, 54%, 56%, 100% {
-    text-shadow:
-      0 0 10px rgba(0, 255, 255, 1),
-      0 0 20px rgba(0, 255, 255, 0.9),
-      0 0 30px rgba(0, 255, 255, 0.8),
-      0 0 40px rgba(0, 255, 255, 0.7),
-      0 0 50px rgba(0, 255, 255, 0.6),
-      0 0 60px rgba(0, 255, 255, 0.5),
-      inset 0 0 20px rgba(0, 255, 255, 0.3);
-    color: rgba(0, 255, 255, 1);
-  }
-  20%, 24%, 55% {
-    text-shadow:
-      0 0 5px rgba(0, 255, 255, 0.6),
-      0 0 15px rgba(0, 255, 255, 0.4),
-      0 0 25px rgba(0, 255, 255, 0.2);
-    color: rgba(0, 255, 255, 0.6);
-  }
+/* ==========================================
+   HALFTONE WORDMARK HERO
+   Ported from 21st.dev @kedhareswer/halftone-wordmark-footer.
+   The canvas reads --hwf-bg / --hwf-ink / --hwf-warm, so the theme
+   toggle drives the dot field as well as the page.
+   ========================================== */
+.hwf-root {
+  /* BASE = LIGHT, to match the rest of the sheet */
+  --hwf-bg: #ffffff;
+  --hwf-ink: #0f172a;
+  --hwf-warm: #22d3ee;
+  --hwf-display: "Montserrat", sans-serif;
+
+  position: relative;
+  width: 100%;
+  /* fills what the nav leaves of the first screen, without collapsing on short ones */
+  height: clamp(22rem, calc(100dvh - 11rem), 44rem);
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--hwf-bg);
+  touch-action: pan-y;
 }
 
-@keyframes hero-neon-light-up {
-  0% {
-    text-shadow:
-      0 0 2px rgba(0, 255, 255, 0.2),
-      0 0 4px rgba(0, 255, 255, 0.1);
-    color: rgba(0, 255, 255, 0.3);
-    opacity: 0.3;
-  }
-  50% {
-    text-shadow:
-      0 0 10px rgba(0, 255, 255, 1),
-      0 0 20px rgba(0, 255, 255, 0.9),
-      0 0 30px rgba(0, 255, 255, 0.8),
-      0 0 40px rgba(0, 255, 255, 0.7),
-      0 0 50px rgba(0, 255, 255, 0.6),
-      0 0 60px rgba(0, 255, 255, 0.5),
-      inset 0 0 20px rgba(0, 255, 255, 0.3);
-    color: rgba(0, 255, 255, 1);
-    opacity: 1;
-  }
-  100% {
-    text-shadow:
-      0 0 10px rgba(0, 255, 255, 1),
-      0 0 20px rgba(0, 255, 255, 0.9),
-      0 0 30px rgba(0, 255, 255, 0.8),
-      0 0 40px rgba(0, 255, 255, 0.7),
-      0 0 50px rgba(0, 255, 255, 0.6),
-      0 0 60px rgba(0, 255, 255, 0.5),
-      inset 0 0 20px rgba(0, 255, 255, 0.3);
-    color: rgba(0, 255, 255, 1);
-    opacity: 1;
-  }
+.dark .hwf-root {
+  --hwf-bg: #121321;
+  --hwf-ink: #f8fafc;
+  --hwf-warm: #d946ef;
 }
 
-.neon-sign {
-  perspective: 1000px;
-  font-size: 0;
+.hwf-root canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  max-width: none;
 }
 
-.neon-letter {
-  display: inline-block;
-  font-size: 1em;
-  animation: hero-neon-light-up var(--duration) ease-in-out var(--delay) forwards,
-             hero-neon-flicker 0.5s ease-in-out calc(var(--delay) + var(--duration)) infinite;
+/* the real <h1>, left for screen readers and search engines */
+.hwf-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
-

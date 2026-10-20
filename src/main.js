@@ -2,6 +2,7 @@
    IMPORTS
    ========================================== */
 import './style.css';
+import { initHalftoneWordmark } from './halftone-wordmark.js';
 
 /* ==========================================
    CONSTANTS
@@ -13,6 +14,8 @@ const themeToggleBtn = document.getElementById('theme-toggle');
 const folders = document.querySelectorAll(".folder-container");
 const backToTopBtn = document.getElementById('back-to-top');
 const nav = document.querySelector('nav'); //looks for first <nav>
+const hero = document.getElementById('hero');
+let halftoneHero = null; // set once the hero dot field is wired up
 
 /* ==========================================
    FUNCTIONS
@@ -29,6 +32,8 @@ const toggleTheme = () => {
     html.classList.toggle('dark');
     const isDark = html.classList.contains('dark');
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    // the dot field paints from CSS vars, so it has to be told to re-read them
+    if (halftoneHero) halftoneHero.refresh();
 };
 
 // Mobile menu state helpers
@@ -94,12 +99,36 @@ const setupMenuCloseOnScroll = () => {
 
 }
 
+// Size the hero to whatever is left of the first screen. Done here rather than
+// in CSS because the height of everything above it isn't a constant we can
+// subtract. Measuring the hero's own offset covers the nav and anything else
+// that lands above it. The dot field watches the hero with a ResizeObserver,
+// so it re-sets the word on its own once the height changes.
+const fitHeroToFirstScreen = () => {
+  if (!hero) return;
+  const top = hero.getBoundingClientRect().top + window.scrollY;
+  hero.style.height = Math.max(320, window.innerHeight - top) + 'px';
+};
+
+// Hero wordmark (interactive canvas dot field)
+const setupHalftoneHero = () => {
+  if (!hero) return;
+  fitHeroToFirstScreen();
+  halftoneHero = initHalftoneWordmark(hero, {
+    fontWeight: 900,              // Montserrat Black prints the heaviest dots
+    stack: ['trish', 'nguyen'],   // phones get the name on two lines instead
+    dotGap: 6,
+    radius: 110,
+  });
+};
+
 /* ==========================================
    INITIALIZATION (run once on load)
    ========================================== */
 setThemeClassFromStorage();
 setupGlowOnScroll();
 setupMenuCloseOnScroll();
+setupHalftoneHero();
 
 /* ==========================================
    EVENT LISTENERS
@@ -136,7 +165,16 @@ if (themeToggleBtn) {
     themeToggleBtn.addEventListener('click', toggleTheme);
 }
 
+window.addEventListener('resize', fitHeroToFirstScreen);
+
+// the nav grows when Montserrat lands, so the hero has to be re-measured after
+if (document.fonts && document.fonts.ready) {
+  document.fonts.ready.then(fitHeroToFirstScreen);
+}
+
 // back to top button
-backToTopBtn.addEventListener('click', () => {
-  window.scrollTo({top: 0, behavior: 'smooth'});
-})
+if (backToTopBtn) {
+  backToTopBtn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+}
