@@ -176,15 +176,66 @@ Two things there are less obvious than they look:
   position is derived from the funnel's taper at that depth — hard-coding it
   leaves them floating off the surface.
 
+#### What carries the realism
+
+The silhouette was already right; what was missing was everything a real desk
+has that a clean render does not.
+
+- **The keyboard is a 101-key layout, not a grid.** `keyLayout()` lays the field
+  out in key units (`KU` is the pitch) from rows of widths — 1.5u Tab, 2.25u
+  Enter, 6.25u space — plus the nav cluster and numpad, with the tall `+` and
+  Enter spanning two rows. The ragged right edge of the alpha block and the two
+  side clusters are what identify a keyboard at a glance; a uniform grid reads as
+  a placeholder. Single-unit caps go in one `InstancedMesh`; the wide and tall
+  ones get their own geometry so the corner radius is not stretched with them.
+  A dark `well` under the caps keeps the gaps between keys from showing shell
+  plastic. The whole thing is rotated ~2° off square, because nobody aligns a
+  keyboard to their monitor.
+- **The screen is on.** `screenTexture()` draws an abstract desktop — teal ground,
+  one window, a taskbar — into an offscreen canvas, then composites it through
+  `blur(1.5px)` plus a wide low-alpha pass for phosphor bleed, and lays scanlines
+  over it. The blur matters: a crisp bitmap on the glass looks like a screenshot
+  pasted onto a render. Scanline pitch is 5px in a 576px texture so the lines
+  survive being drawn at ~200px across — finer pitches average away to nothing.
+  A small `PointLight` in front of the tube spills onto its own bezel;
+  `SCREEN_GLOW` in `scene.js` scales it with the picture brightness, which also
+  carries a shallow flicker.
+- **Two cables.** At this camera the floor directly behind a body is hidden by
+  it — screen-up is world -Z — so a cable run only becomes visible once it breaks
+  out sideways past the silhouette. That is why the keyboard cord swings left and
+  the mouse cord crosses open floor. They ride on `lift` with the things they plug
+  into. `CABLE` is deliberately darker than the shells; at shell colour a cord
+  reads as a scratch on the floor. There was a third run — a mains lead out of the
+  monitor's back, clearing the funnel on the right — removed on request; it read as
+  a stray wire rather than as part of the machine.
+- **The case is not one moulding.** A dark frame standing a hair proud of the
+  bezel wall gives the shell seam; the rear shell uses its own slightly cooler
+  `PLASTIC_BACK`; the stand gets a moulded step and a dark swivel collar; and
+  `grainTexture()` now carries a low-frequency value-noise octave under the
+  per-pixel grain, so the plastic ages unevenly instead of reading as one
+  uniform surface.
+- **The badge says `TRISH T-1500`.** No real brand may appear on the bezel, so
+  the model number is ours.
+
 Hover is raycast from `window` rather than the canvas, because the canvas is
 `pointer-events: none` so the Win95 chrome stays clickable; events over a window
-or the taskbar are ignored. The easing is time-based, not per-frame, so the lift
-settles at the same speed regardless of frame rate.
+or the taskbar are ignored. The easing is time-based, not per-frame, so the
+picture settles at the same speed regardless of frame rate.
 
-**`buildComputer` returns `root` and `lift`, and hover must move `lift`.** The
-machine's meshes hang off `lift`; the contact shadows hang off `root` and stay on
-the floor. Lifting `root` takes the contact shadows up with it, and they float
-over the floor as a detached grey blob under the machine.
+**Hover happens on the screen, not in world space.** The machine used to lift and
+turn; it no longer moves at all. `screenDisplay()` builds *two* composited
+pictures — the idle desktop and the same desktop with `hello` in the window body —
+and `setScreen(v)` crossfades them into one live `CanvasTexture`, which `scene.js`
+drives from `hover.value` alongside the brightness bump. The two pictures are
+identical outside the window body, so the alpha blend only changes what it should.
+`setScreen` skips the redraw and the texture re-upload once the mix has settled,
+so a still hover costs nothing per frame.
+
+`buildComputer` still returns `lift` — the machine's meshes and the cables hang off
+it, while the contact shadows hang off `root` and stay on the floor. Nothing moves
+it now, but if anything ever animates the machine again it has to move `lift`:
+moving `root` takes the contact shadows up with it, and they float over the floor
+as a detached grey blob.
 
 ### three 0.186 gotchas
 

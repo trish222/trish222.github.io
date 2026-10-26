@@ -4,7 +4,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
-import { buildComputer, disposeComputer, FACING } from './computer.js';
+import { buildComputer, disposeComputer } from './computer.js';
 import '@fontsource/playfair-display/500.css';
 
 /* ==========================================
@@ -20,7 +20,7 @@ import '@fontsource/playfair-display/500.css';
    ========================================== */
 
 /* --- Look ------------------------------------------------ */
-const CREAM = '#f4efe1';
+const CREAM = '#e6e7e8';
 const BLUE  = '#1b47a3';
 
 const NAME = 'Trish Nguyen';   // the floor wordmark
@@ -81,7 +81,10 @@ const ENV_INTENSITY    = 0.70;
 const AMBIENT_WITH_ENV = 0.50;
 const HEMI_WITH_ENV    = 0.30;
 
-const HOVER_RATE = 9;          // hover easing, per second
+const HOVER_RATE = 7;          // hover easing, per second
+/* Base intensity of the point light spilling off the screen onto its own
+   bezel; the loop scales it with the picture brightness. */
+const SCREEN_GLOW = 2.6;
 
 const MAX_DPR = 2;
 
@@ -452,22 +455,30 @@ export async function initScene(canvas) {
 
   initHover(canvas);
 
-  /* Hover: the machine lifts a little, turns a touch further toward the
-     camera, and the screen brightens. */
-  /* Lift the machine, not the whole group — the contact shadows live on
-     the root and have to stay on the floor. */
-  const lift = computer.lift;
+  /* Hover happens entirely on the screen: the machine does not move, the
+     picture does. The CRT comes up brighter and the window on it shows a
+     greeting (`setScreen` crossfades the two pictures, see
+     `screenDisplay` in computer.js). Nothing moves in world space, so
+     the contact shadows and the cables stay put. */
   const screenMat = computer.screenMat;
+  const screenGlow = computer.screenGlow;
   const clock = new THREE.Clock();
+  let elapsed = 0;
   const tick = () => {
     frame = requestAnimationFrame(tick);
-    /* Time-based easing, so the lift settles at the same speed whatever
-       the frame rate. */
-    const k = 1 - Math.exp(-HOVER_RATE * clock.getDelta());
+    /* Time-based easing, so the picture settles at the same speed
+       whatever the frame rate. */
+    const dt = clock.getDelta();
+    elapsed += dt;
+    const k = 1 - Math.exp(-HOVER_RATE * dt);
     hover.value += (hover.target - hover.value) * k;
-    lift.position.y = hover.value * 0.32;
-    computer.root.rotation.y = FACING + hover.value * 0.06;
-    screenMat.emissiveIntensity = 1 + hover.value * 0.45;
+    computer.setScreen(hover.value);
+    /* A real tube never sits perfectly still — a shallow beat on the
+       brightness, well under what reads as a flash. */
+    const flicker = 1 + 0.018 * Math.sin(elapsed * 11.3) * Math.sin(elapsed * 2.7);
+    const bright = (1 + hover.value * 0.45) * flicker;
+    screenMat.emissiveIntensity = bright;
+    screenGlow.intensity = SCREEN_GLOW * bright;
     render();
   };
   tick();
