@@ -279,4 +279,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Open the About window on load
   openWindow('about');
+
+  /* Three.js is lazy-loaded so the desktop paints first. */
+  const canvas = document.getElementById('scene');
+  if (canvas) {
+    import('./scene.js')
+      .then(({ initScene }) => initScene(canvas))
+      .catch(() => { /* no backdrop; the flat teal desktop stands in */ });
+  }
 });

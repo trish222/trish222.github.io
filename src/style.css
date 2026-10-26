@@ -47,6 +47,22 @@ body {
 }
 
 /* ================================
+   3D BACKDROP
+   Sits behind the icons and windows (which come later in the
+   DOM, so they paint on top). Teal body background shows
+   through when WebGL is unavailable.
+   ================================ */
+#scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ================================
    DESKTOP ICONS
    ================================ */
 .desktop-icons {

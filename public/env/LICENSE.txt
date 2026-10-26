@@ -1,0 +1,9 @@
+studio-small-09-256.hdr
+
+"Studio Small 09" by Sergej Majboroda — Poly Haven
+https://polyhaven.com/a/studio_small_09
+License: CC0 1.0 (public domain dedication)
+
+Downsampled from the 1k release to 256x128 and re-encoded as flat RGBE.
+It is only ever used as a blurred environment map, so the extra resolution
+cost nothing visually and ~1.4 MB of page weight.

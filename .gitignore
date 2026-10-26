@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local mood board — not shipped (contains third-party reference imagery)
+design-references
