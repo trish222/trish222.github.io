@@ -253,7 +253,29 @@ has that a clean render does not.
   about 7%, `envMapIntensity` from 0.8 to 0.5 (the HDRI was doing a lot of the
   lifting), roughness up to 0.68, and the screen's spill light from 2.6 to 2.1 —
   it was washing out its own bezel. GTAO went to `blendIntensity` 1.0 / radius
-  1.15 so the creases actually darken.
+  1.15 so the creases actually darken. `envMapIntensity` is now 0.34: the HDRI
+  is ambient from every direction, so it was filling exactly the faces the key
+  never reaches — the right flank, the funnel — and flattening the body. The
+  floor keeps its own full-strength env, so the ground tone the lighting is
+  calibrated against does not move with it.
+- **Three of the monitor's shadows are painted, not cast.** The key's shadow map
+  covers ±80 world units of floor, so a texel is ~0.08 units: a bezel lip or the
+  gap between a monitor and the base it sits on never lands on one, and GTAO is
+  desktop-only, so nothing on a phone supplies them either. So they are drawn.
+  `recessShadowTexture` is a black alpha frame over the picture, heaviest down
+  the left and across the top where the lip stands between the glass and the
+  key; `sleeveShadowTexture` is a sleeve of shade down the stand's neck,
+  darkest under the collar; `baseShadeTexture` darkens the top faces of the foot
+  and the step, which look straight up into the underside of the monitor and
+  used to be the brightest plastic in the scene instead of the darkest. The base
+  gradient is deliberately flatter than the contact-shadow one — only a narrow
+  ring of each disc is ever visible, and a falloff that has faded by the rim
+  leaves the stand looking lit.
+- **GTAO `scale` tops out around 1.15 here.** Pushed to 1.35+ the sampling noise
+  shows as blotches on the flat of the bezel — the one surface in frame with
+  nothing in the depth or normal buffer for the denoiser to lock onto, so
+  widening its kernel only smears the noise into larger blobs. 1.15 with
+  `samples: 24` is clean; 12 samples is not enough at that scale.
 - **The badge says `TRISH T-1500`.** No real brand may appear on the bezel, so
   the model number is ours.
 

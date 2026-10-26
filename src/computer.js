@@ -132,8 +132,12 @@ function plasticMaterial(grain, color = PLASTIC, roughness = 0.68) {
     bumpScale: 0.022,
     /* The HDRI is a big part of what was lifting the shell to within a
        shade of the cream floor; the machine takes less of it than the
-       floor does. */
-    envMapIntensity: 0.5,
+       floor does. Lower again at 0.34: the HDRI is ambient from every
+       direction, so it was filling the sides the key never reaches —
+       the right flank and the funnel — and flattening the body. The
+       floor keeps its own full-strength env, so the ground tone the
+       lighting is calibrated against does not move. */
+    envMapIntensity: 0.34,
   }));
 }
 
@@ -462,6 +466,70 @@ function contactShadowTexture() {
   return track(new THREE.CanvasTexture(c));
 }
 
+/* Occlusion inside the screen recess. The bezel lip overhangs the glass
+   by a hair, and the key light's shadow map is stretched across the
+   whole floor — a lip that small never lands on a texel of it. So the
+   lip's shadow is painted on instead: a soft frame, heaviest down the
+   left and across the top where the lip stands between the glass and
+   the key, lighter all round for the occlusion any recess has. */
+function recessShadowTexture() {
+  const s = 256;
+  const c = document.createElement('canvas');
+  c.width = c.height = s;
+  const ctx = c.getContext('2d');
+  const img = ctx.createImageData(s, s);
+  const ramp = (d, reach) => (d >= reach ? 0 : (1 - d / reach) ** 1.8);
+  for (let y = 0; y < s; y++) {
+    for (let x = 0; x < s; x++) {
+      const u = x / (s - 1), v = y / (s - 1); // v = 0 is the top edge
+      const all = Math.max(ramp(u, 0.2), ramp(1 - u, 0.2),
+                           ramp(v, 0.2), ramp(1 - v, 0.2));
+      const a = Math.max(0.24 * all,           // the recess, all four sides
+                         0.52 * ramp(u, 0.13), // left wall: away from the key
+                         0.44 * ramp(v, 0.11)); // under the top lip
+      const k = (y * s + x) * 4;
+      img.data[k] = img.data[k + 1] = img.data[k + 2] = 0;
+      img.data[k + 3] = Math.round(a * 255);
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return track(new THREE.CanvasTexture(c));
+}
+
+/* Falloff for the shade the monitor drops on the flat top faces of its
+   own base. Flatter than the contact-shadow gradient: the stand is a
+   stack of discs, so only a narrow ring of each one is ever visible and
+   a falloff that has faded by then leaves the rims looking lit. */
+function baseShadeTexture() {
+  const s = 256; // 128 banded visibly once it was stretched over the foot
+  const c = document.createElement('canvas');
+  c.width = c.height = s;
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+  g.addColorStop(0.00, 'rgba(0,0,0,0.42)');
+  g.addColorStop(0.72, 'rgba(0,0,0,0.33)');
+  g.addColorStop(1.00, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, s, s);
+  return track(new THREE.CanvasTexture(c));
+}
+
+/* Vertical falloff for the sleeve of shade under the monitor: dark at
+   the top, gone by the bottom. */
+function sleeveShadowTexture() {
+  const h = 64;
+  const c = document.createElement('canvas');
+  c.width = 4; c.height = h;
+  const ctx = c.getContext('2d');
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0.00, 'rgba(0,0,0,0.46)');
+  g.addColorStop(0.50, 'rgba(0,0,0,0.15)');
+  g.addColorStop(1.00, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 4, h);
+  return track(new THREE.CanvasTexture(c));
+}
+
 /* ==========================================
    PARTS
    ========================================== */
@@ -490,6 +558,33 @@ function buildStand(body, dark) {
 
   for (const m of [foot, step, neck, collar]) { m.castShadow = true; m.receiveShadow = true; }
   g.add(foot, step, neck, collar);
+
+  /* The monitor closes the light out of the joint it sits on, but the
+     gap is a few centimetres and the key's shadow map covers the whole
+     floor, so none of that occlusion survives. Paint it on: a sleeve of
+     shade down the neck, darkest under the collar. */
+  const sleeve = new THREE.Mesh(
+    track(new THREE.CylinderGeometry(0.938, 1.528, 0.84, 40, 1, true)),
+    track(new THREE.MeshBasicMaterial({
+      map: sleeveShadowTexture(), transparent: true, depthWrite: false,
+    })));
+  sleeve.position.y = 0.78;
+  g.add(sleeve);
+
+  /* Same again for the top faces of the foot and the step, which look
+     straight up into the underside of the monitor and should be the
+     darkest plastic on the machine rather than the brightest. */
+  const shade = baseShadeTexture();
+  for (const [y, r, o] of [[0.3015, 2.06, 0.85], [0.4315, 1.76, 1]]) {
+    const disc = new THREE.Mesh(track(new THREE.CircleGeometry(r, 48)),
+      track(new THREE.MeshBasicMaterial({
+        map: shade, transparent: true, depthWrite: false, opacity: o,
+      })));
+    disc.rotation.x = -Math.PI / 2;
+    disc.position.y = y;
+    g.add(disc);
+  }
+
   return g;
 }
 
@@ -611,6 +706,16 @@ function buildMonitor(body, backBody, dark) {
     })));
   glare.position.set(0, OPEN_CY, BEZEL_D / 2 - 0.17);
   g.add(glare);
+
+  /* The bezel lip's shadow on the picture, in front of the glare so it
+     darkens the reflection with everything else — see
+     recessShadowTexture. */
+  const recess = new THREE.Mesh(domedPanel(openW, openH, 0.13),
+    track(new THREE.MeshBasicMaterial({
+      map: recessShadowTexture(), transparent: true, depthWrite: false,
+    })));
+  recess.position.set(0, OPEN_CY, BEZEL_D / 2 - 0.155);
+  g.add(recess);
 
   /* Button panel, bottom right of the bezel face. */
   const panelW = 1.5, panelH = 0.46;

@@ -392,8 +392,8 @@ function buildComposer(width, height) {
     radius: 1.15, // world units — keep it to creases, not the whole floor
     distanceExponent: 1.4,
     thickness: 1.0,
-    scale: 1.0,
-    samples: 12,
+    scale: 1.15, // deeper than neutral; past ~1.35 the noise shows on the bezel
+    samples: 24, // 12 is not enough once the scale is up
   });
   c.addPass(gtao);
   c.addPass(new OutputPass());
