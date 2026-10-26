@@ -1,11 +1,11 @@
-import * as THREE from 'three';
-import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
-import { buildComputer, disposeComputer } from './computer.js';
-import '@fontsource/playfair-display/500.css';
+import * as THREE from "three";
+import { HDRLoader } from "three/examples/jsm/loaders/HDRLoader.js";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { GTAOPass } from "three/examples/jsm/postprocessing/GTAOPass.js";
+import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
+import { buildComputer, disposeComputer } from "./computer.js";
+import "@fontsource/playfair-display/500.css";
 
 /* ==========================================
    ISOMETRIC INTRO SCENE
@@ -20,10 +20,10 @@ import '@fontsource/playfair-display/500.css';
    ========================================== */
 
 /* --- Look ------------------------------------------------ */
-const CREAM = '#e6e7e8';
-const BLUE  = '#1b47a3';
+const CREAM = "#dcdee0";
+const BLUE = "#1b47a3";
 
-const NAME = 'Trish Nguyen';   // the floor wordmark
+const NAME = "Trish Nguyen"; // the floor wordmark
 
 /* How much of the viewport width one line's horizontal extent covers.
    Under 1, so a whole name sits inside the frame with cream around it. */
@@ -33,9 +33,9 @@ const LINE_FILL = 0.62;
    and ClampToEdge then stretches cream rather than smearing a sliced
    glyph into a streak across the ground. */
 const LINE_IN_TEX = 0.82;
-const MARGIN_X = 0.14;         // left margin before a row's indent
+const MARGIN_X = 0.14; // left margin before a row's indent
 /* Rows nearly touch in the reference — leading is well under the em. */
-const LEADING   = 0.74;
+const LEADING = 0.74;
 /* Share of the visible floor depth the rows should cover — the knob for
    row count. At 16:9 this works out to 8 rows. Portrait gets its own
    value: a phone frame is far deeper in floor terms, so the desktop
@@ -44,14 +44,14 @@ const LEADING   = 0.74;
    frame sees two-thirds more floor depth than it did at 35°, and the
    old value left the type a band across the top with bare floor under
    it. */
-const FILL_DEPTH        = 0.40;
+const FILL_DEPTH = 0.4;
 const FILL_DEPTH_MOBILE = 0.55;
 const ROWS_MIN = 4;
 const ROWS_MAX = 24;
 
 /* Per-row indent as a fraction of texture width, after floor-text.png —
    rows are staggered, and the line runs off the right edge. */
-const ROW_INDENT = [0.03, 0.10, 0.04, 0.11, 0.06];
+const ROW_INDENT = [0.03, 0.1, 0.04, 0.11, 0.06];
 
 /* --- Camera ----------------------------------------------
    Elevation follows the axis tripod in the CAD screenshot the angle was
@@ -61,10 +61,10 @@ const ROW_INDENT = [0.03, 0.10, 0.04, 0.11, 0.06];
    18.9° on screen is 20° of elevation — a much flatter read than the
    35° this started at, with the ground axes near-symmetric. */
 const ELEVATION = THREE.MathUtils.degToRad(20);
-const AZIMUTH   = THREE.MathUtils.degToRad(45);
-const CAM_DIST  = 60;
-const FRUSTUM        = 18;     // world units of vertical view
-const FRUSTUM_MOBILE = 31;     // pull back on narrow screens so the keyboard clears the edge
+const AZIMUTH = THREE.MathUtils.degToRad(45);
+const CAM_DIST = 60;
+const FRUSTUM = 18; // world units of vertical view
+const FRUSTUM_MOBILE = 31; // pull back on narrow screens so the keyboard clears the edge
 const MOBILE_BP = 760;
 
 /* How the two floor axes land on screen at this camera angle. The text
@@ -77,8 +77,8 @@ const MOBILE_BP = 760;
    which is the upright reading of flat text at this camera. */
 const FLOOR_SPIN = 0;
 
-const PROJ_X = Math.cos(AZIMUTH);                        // screen x per unit along +X
-const PROJ_Z = Math.sin(ELEVATION) * Math.sin(AZIMUTH);  // screen y per unit along +Z
+const PROJ_X = Math.cos(AZIMUTH); // screen x per unit along +X
+const PROJ_Z = Math.sin(ELEVATION) * Math.sin(AZIMUTH); // screen y per unit along +Z
 
 /* --- Floor ----------------------------------------------- */
 /* Generously past the viewport on all sides. It has to grow as the
@@ -86,16 +86,16 @@ const PROJ_Z = Math.sin(ELEVATION) * Math.sin(AZIMUTH);  // screen y per unit al
    units of floor depth per unit of screen height, so a plane that cleared
    the frame at 35° now shows its far edge across the top corners. */
 const FLOOR_SIZE = 160;
-const TEX_W        = 2048;
+const TEX_W = 2048;
 const TEX_W_MOBILE = 1024;
-const TEX_H_MAX    = 4096;
+const TEX_H_MAX = 4096;
 
 /* Lighting once the HDRI is in play — see the note on the PI factor below. */
-const ENV_INTENSITY    = 0.70;
-const AMBIENT_WITH_ENV = 0.50;
-const HEMI_WITH_ENV    = 0.30;
+const ENV_INTENSITY = 0.7;
+const AMBIENT_WITH_ENV = 0.5;
+const HEMI_WITH_ENV = 0.3;
 
-const HOVER_RATE = 7;          // hover easing, per second
+const HOVER_RATE = 7; // hover easing, per second
 /* Base intensity of the point light spilling off the screen onto its own
    bezel; the loop scales it with the picture brightness. */
 const SCREEN_GLOW = 2.1;
@@ -126,15 +126,15 @@ let texState = { rows: 0, texW: 0, ratio: 1 };
    stubbing getContext). Caller falls back to the plain CSS desktop. */
 function supportsWebGL() {
   try {
-    const probe = document.createElement('canvas');
-    return !!(probe.getContext('webgl2') || probe.getContext('webgl'));
+    const probe = document.createElement("canvas");
+    return !!(probe.getContext("webgl2") || probe.getContext("webgl"));
   } catch {
     return false;
   }
 }
 
 function prefersReducedMotion() {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 function isMobile() {
@@ -154,7 +154,7 @@ function fontSpec(size) {
 }
 
 function measureNameRatio() {
-  const ctx = document.createElement('canvas').getContext('2d');
+  const ctx = document.createElement("canvas").getContext("2d");
   ctx.font = fontSpec(100);
   nameRatio = ctx.measureText(NAME).width / 100;
 }
@@ -194,22 +194,29 @@ function drawFloorTexture(rows) {
   const size = (texW * LINE_IN_TEX) / nameRatio;
   const leading = size * LEADING;
   /* Pad past the ascenders and descenders so the border stays clean. */
-  const texH = Math.min(Math.round((rows - 1) * leading + size * 1.6), TEX_H_MAX);
+  const texH = Math.min(
+    Math.round((rows - 1) * leading + size * 1.6),
+    TEX_H_MAX,
+  );
 
-  const c = document.createElement('canvas');
+  const c = document.createElement("canvas");
   c.width = texW;
   c.height = texH;
-  const ctx = c.getContext('2d');
+  const ctx = c.getContext("2d");
 
   ctx.fillStyle = CREAM;
   ctx.fillRect(0, 0, texW, texH);
 
   ctx.font = fontSpec(size);
   ctx.fillStyle = BLUE;
-  ctx.textBaseline = 'middle';
+  ctx.textBaseline = "middle";
   const top = (texH - (rows - 1) * leading) / 2;
   for (let i = 0; i < rows; i++) {
-    ctx.fillText(NAME, texW * (MARGIN_X - ROW_INDENT[i % ROW_INDENT.length]), top + i * leading);
+    ctx.fillText(
+      NAME,
+      texW * (MARGIN_X - ROW_INDENT[i % ROW_INDENT.length]),
+      top + i * leading,
+    );
   }
 
   const tex = new THREE.CanvasTexture(c);
@@ -227,12 +234,15 @@ function fitFloor(width, height) {
   if (!floorMat) return;
   const { rows, texWorldX } = layoutFor(width, height);
 
-  if (rows !== texState.rows || (isMobile() ? TEX_W_MOBILE : TEX_W) !== texState.texW) {
+  if (
+    rows !== texState.rows ||
+    (isMobile() ? TEX_W_MOBILE : TEX_W) !== texState.texW
+  ) {
     const old = floorMat.map;
     floorMat.map = drawFloorTexture(rows);
     floorMat.needsUpdate = true;
     if (old) {
-      disposables = disposables.filter(d => d !== old);
+      disposables = disposables.filter((d) => d !== old);
       old.dispose();
     }
     disposables.push(floorMat.map);
@@ -266,7 +276,7 @@ function buildScene() {
   s.add(buildFloor());
 
   computer = buildComputer();
-  computer.root.name = 'computer';
+  computer.root.name = "computer";
   s.add(computer.root);
 
   /* One low directional light — the shallow angle is what stretches the
@@ -274,13 +284,13 @@ function buildScene() {
      Intensities look ~3x high because three's physical lighting divides
      them by PI; tuned so lit cream lands on CREAM and the shadow sits at
      ~0.72 of it, matching the reference. */
-  const key = new THREE.DirectionalLight(0xfff6e2, 4.4);
-  key.position.set(-30, 8, 14);    // ~13° above the floor, raking from upper left
+  const key = new THREE.DirectionalLight(0xfffaf2, 4.4);
+  key.position.set(-30, 8, 14); // ~13° above the floor, raking from upper left
   key.castShadow = true;
   key.shadow.mapSize.set(2048, 2048);
-  key.shadow.radius = 3;           // VSM blur width
+  key.shadow.radius = 3; // VSM blur width
   key.shadow.blurSamples = 16;
-  key.shadow.bias = 0;             // VSM wants no depth bias
+  key.shadow.bias = 0; // VSM wants no depth bias
   key.shadow.normalBias = 0.02;
   /* The box has to bound every bit of floor in frame, not just the
      machine: anything outside it loses its shadow on a straight line,
@@ -288,15 +298,19 @@ function buildScene() {
      Widening it spreads the same map over more ground, so the blur
      radius comes down to keep the edge from going to mush. */
   const cam = key.shadow.camera;
-  cam.left = -80; cam.right = 80; cam.top = 80; cam.bottom = -80;
-  cam.near = 1; cam.far = 220;
+  cam.left = -80;
+  cam.right = 80;
+  cam.top = 80;
+  cam.bottom = -80;
+  cam.near = 1;
+  cam.far = 220;
   cam.updateProjectionMatrix();
   s.add(key, key.target);
 
   /* Soft fill — keeps the shadowed cream warm rather than grey, while
      staying low enough that the shadow reads as a distinct wedge. */
   const ambient = new THREE.AmbientLight(0xffffff, 1.5);
-  const hemi = new THREE.HemisphereLight(0xfffaf0, 0xcfc4a8, 0.76);
+  const hemi = new THREE.HemisphereLight(0xfcfcfd, 0xc6c8cc, 0.76);
   s.add(ambient, hemi);
   fillLights = { ambient, hemi };
 
@@ -309,9 +323,9 @@ function buildScene() {
 function applyCameraSize(cam, width, height) {
   const f = frustumFor();
   const aspect = width / height;
-  cam.left   = (-f * aspect) / 2;
-  cam.right  = (f * aspect) / 2;
-  cam.top    = f / 2;
+  cam.left = (-f * aspect) / 2;
+  cam.right = (f * aspect) / 2;
+  cam.top = f / 2;
   cam.bottom = -f / 2;
   cam.updateProjectionMatrix();
 }
@@ -355,8 +369,8 @@ async function loadEnvironment() {
     pmrem.dispose();
     return true;
   } catch (e) {
-    console.warn('env map failed:', e);
-    return false;   // plain lighting; the scene still reads
+    console.warn("env map failed:", e);
+    return false; // plain lighting; the scene still reads
   }
 }
 
@@ -375,7 +389,7 @@ function buildComposer(width, height) {
   gtao.output = GTAOPass.OUTPUT.Default;
   gtao.blendIntensity = 1.0;
   gtao.updateGtaoMaterial({
-    radius: 1.15,            // world units — keep it to creases, not the whole floor
+    radius: 1.15, // world units — keep it to creases, not the whole floor
     distanceExponent: 1.4,
     thickness: 1.0,
     scale: 1.0,
@@ -398,8 +412,8 @@ function initHover(canvas) {
   const ndc = new THREE.Vector2();
   const ray = new THREE.Raycaster();
 
-  onPointerMove = e => {
-    if (e.target?.closest?.('.window, #taskbar, #start-menu')) {
+  onPointerMove = (e) => {
+    if (e.target?.closest?.(".window, #taskbar, #start-menu")) {
       hover.target = 0;
       return;
     }
@@ -409,7 +423,7 @@ function initHover(canvas) {
     ray.setFromCamera(ndc, camera);
     hover.target = ray.intersectObject(computer.root, true).length ? 1 : 0;
   };
-  window.addEventListener('pointermove', onPointerMove, { passive: true });
+  window.addEventListener("pointermove", onPointerMove, { passive: true });
 }
 
 /* ==========================================
@@ -432,7 +446,9 @@ export async function initScene(canvas) {
      before the first paint or it silently falls back to Georgia. */
   try {
     await document.fonts.load(fontSpec(100));
-  } catch { /* fall back to the serif stack */ }
+  } catch {
+    /* fall back to the serif stack */
+  }
   measureNameRatio();
 
   scene = buildScene();
@@ -443,11 +459,12 @@ export async function initScene(canvas) {
     try {
       composer = buildComposer(w, h);
     } catch {
-      composer = null;   // fall back to a straight render
+      composer = null; // fall back to a straight render
     }
   }
 
-  const render = () => (composer ? composer.render() : renderer.render(scene, camera));
+  const render = () =>
+    composer ? composer.render() : renderer.render(scene, camera);
 
   /* Handles for the visual-review scripts. */
   window.__scene = scene;
@@ -464,10 +481,12 @@ export async function initScene(canvas) {
     fitFloor(width, height);
     if (!frame) render();
   };
-  window.addEventListener('resize', onResize);
+  window.addEventListener("resize", onResize);
 
   render();
-  loadEnvironment().then(ok => { if (ok && !frame) render(); });
+  loadEnvironment().then((ok) => {
+    if (ok && !frame) render();
+  });
 
   /* Reduced motion: one static frame, no loop and no hover. */
   if (prefersReducedMotion()) return true;
@@ -494,7 +513,8 @@ export async function initScene(canvas) {
     computer.setScreen(hover.value);
     /* A real tube never sits perfectly still — a shallow beat on the
        brightness, well under what reads as a flash. */
-    const flicker = 1 + 0.018 * Math.sin(elapsed * 11.3) * Math.sin(elapsed * 2.7);
+    const flicker =
+      1 + 0.018 * Math.sin(elapsed * 11.3) * Math.sin(elapsed * 2.7);
     const bright = (1 + hover.value * 0.45) * flicker;
     screenMat.emissiveIntensity = bright;
     screenGlow.intensity = SCREEN_GLOW * bright;
@@ -511,7 +531,7 @@ export async function initScene(canvas) {
       tick();
     }
   };
-  document.addEventListener('visibilitychange', onVisibility);
+  document.addEventListener("visibilitychange", onVisibility);
 
   return true;
 }
@@ -519,10 +539,11 @@ export async function initScene(canvas) {
 export function disposeScene() {
   if (frame) cancelAnimationFrame(frame);
   frame = null;
-  if (onResize) window.removeEventListener('resize', onResize);
-  if (onVisibility) document.removeEventListener('visibilitychange', onVisibility);
-  if (onPointerMove) window.removeEventListener('pointermove', onPointerMove);
-  disposables.forEach(d => d.dispose());
+  if (onResize) window.removeEventListener("resize", onResize);
+  if (onVisibility)
+    document.removeEventListener("visibilitychange", onVisibility);
+  if (onPointerMove) window.removeEventListener("pointermove", onPointerMove);
+  disposables.forEach((d) => d.dispose());
   disposables = [];
   disposeComputer();
   floorMat = null;

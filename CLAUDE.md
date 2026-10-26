@@ -71,7 +71,7 @@ units of depth per unit of screen height at 20° against 1.7 at 35°):
 - **`FILL_DEPTH`** — see below; the old value left the type a band across the top
   with bare floor under it.
 
-The floor is a cream plane whose texture is drawn with canvas 2D: the name
+The floor is a plain light-grey plane whose texture is drawn with canvas 2D: the name
 repeated in deep blue Playfair Display, rows tightly leaded and staggered, after
 `design-references/floor-text.png`. Drawing the type into the floor texture rather
 than extruding geometry is deliberate — the shadow then falls *across* the letters
@@ -110,13 +110,18 @@ texture, and `ClampToEdge` stretches the border pixels across the rest of it. Wi
 a glyph sliced by the texture edge, that smears into long blue streaks running the
 width of the floor — very visible once the type went diagonal.
 
+`CREAM` is a historical name — the ground is now a neutral grey (`#dcdee0`), and
+the key and hemisphere tints were neutralised along with it. That second part
+matters: a warm key over a neutral ground still renders as cream, so the colour
+constant alone does not control how grey the floor reads.
+
 One `DirectionalLight` sits ~13° above the floor — the shallow angle is what makes
 the shadow long and diagonal — plus ambient and hemisphere fill. Its shadow camera
 is ±80: a surface outside that box has no shadow at all, so the box has to bound
 the whole visible floor, not just the machine. **Light
 intensities look ~3x too high because three's physical lighting divides them by
-PI.** They are tuned so lit cream lands on `CREAM` and shadowed cream sits at ~0.72
-of it, matching the tonal drop in the reference. Changing one means re-checking
+PI.** They are tuned so the lit ground lands on `CREAM` and the shadowed ground sits at
+~0.72 of it, matching the tonal drop in the reference. Changing one means re-checking
 the others.
 
 `_scene-shot.mjs` renders the scene with the Win95 chrome hidden, for looking at
