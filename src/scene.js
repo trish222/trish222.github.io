@@ -37,10 +37,14 @@ const MARGIN_X = 0.14;         // left margin before a row's indent
 /* Rows nearly touch in the reference — leading is well under the em. */
 const LEADING   = 0.74;
 /* Share of the visible floor depth the rows should cover — the knob for
-   row count. At 16:9 this works out to 4 rows. Portrait gets its own
+   row count. At 16:9 this works out to 8 rows. Portrait gets its own
    value: a phone frame is far deeper in floor terms, so the desktop
-   figure would leave the type a small patch adrift in cream. */
-const FILL_DEPTH        = 0.236;
+   figure would leave the type a small patch adrift in cream.
+   The figure went up with the flatter camera: at 20° of elevation the
+   frame sees two-thirds more floor depth than it did at 35°, and the
+   old value left the type a band across the top with bare floor under
+   it. */
+const FILL_DEPTH        = 0.40;
 const FILL_DEPTH_MOBILE = 0.55;
 const ROWS_MIN = 4;
 const ROWS_MAX = 24;
@@ -49,8 +53,14 @@ const ROWS_MAX = 24;
    rows are staggered, and the line runs off the right edge. */
 const ROW_INDENT = [0.03, 0.10, 0.04, 0.11, 0.06];
 
-/* --- Camera ---------------------------------------------- */
-const ELEVATION = THREE.MathUtils.degToRad(35);
+/* --- Camera ----------------------------------------------
+   Elevation follows the axis tripod in the CAD screenshot the angle was
+   specified from: there the ground axes fall about 18-19° below the
+   horizon either side of a vertical z. For an orthographic camera at a
+   symmetric 45° azimuth that screen slope is atan(sin(elevation)), so
+   18.9° on screen is 20° of elevation — a much flatter read than the
+   35° this started at, with the ground axes near-symmetric. */
+const ELEVATION = THREE.MathUtils.degToRad(20);
 const AZIMUTH   = THREE.MathUtils.degToRad(45);
 const CAM_DIST  = 60;
 const FRUSTUM        = 18;     // world units of vertical view
@@ -71,7 +81,11 @@ const PROJ_X = Math.cos(AZIMUTH);                        // screen x per unit al
 const PROJ_Z = Math.sin(ELEVATION) * Math.sin(AZIMUTH);  // screen y per unit along +Z
 
 /* --- Floor ----------------------------------------------- */
-const FLOOR_SIZE = 70;         // generously past the viewport on all sides
+/* Generously past the viewport on all sides. It has to grow as the
+   camera flattens: at 20° of elevation the frame reaches about 2.9 world
+   units of floor depth per unit of screen height, so a plane that cleared
+   the frame at 35° now shows its far edge across the top corners. */
+const FLOOR_SIZE = 160;
 const TEX_W        = 2048;
 const TEX_W_MOBILE = 1024;
 const TEX_H_MAX    = 4096;
@@ -84,7 +98,7 @@ const HEMI_WITH_ENV    = 0.30;
 const HOVER_RATE = 7;          // hover easing, per second
 /* Base intensity of the point light spilling off the screen onto its own
    bezel; the loop scales it with the picture brightness. */
-const SCREEN_GLOW = 2.6;
+const SCREEN_GLOW = 2.1;
 
 const MAX_DPR = 2;
 
@@ -264,13 +278,18 @@ function buildScene() {
   key.position.set(-30, 8, 14);    // ~13° above the floor, raking from upper left
   key.castShadow = true;
   key.shadow.mapSize.set(2048, 2048);
-  key.shadow.radius = 5;           // VSM blur width
+  key.shadow.radius = 3;           // VSM blur width
   key.shadow.blurSamples = 16;
   key.shadow.bias = 0;             // VSM wants no depth bias
   key.shadow.normalBias = 0.02;
+  /* The box has to bound every bit of floor in frame, not just the
+     machine: anything outside it loses its shadow on a straight line,
+     which at this flatter camera cut the cast shadow off mid-frame.
+     Widening it spreads the same map over more ground, so the blur
+     radius comes down to keep the edge from going to mush. */
   const cam = key.shadow.camera;
-  cam.left = -42; cam.right = 42; cam.top = 42; cam.bottom = -42;
-  cam.near = 1; cam.far = 140;
+  cam.left = -80; cam.right = 80; cam.top = 80; cam.bottom = -80;
+  cam.near = 1; cam.far = 220;
   cam.updateProjectionMatrix();
   s.add(key, key.target);
 
@@ -354,9 +373,9 @@ function buildComposer(width, height) {
 
   const gtao = new GTAOPass(scene, camera, width, height);
   gtao.output = GTAOPass.OUTPUT.Default;
-  gtao.blendIntensity = 0.85;
+  gtao.blendIntensity = 1.0;
   gtao.updateGtaoMaterial({
-    radius: 0.9,            // world units — keep it to creases, not the whole floor
+    radius: 1.15,            // world units — keep it to creases, not the whole floor
     distanceExponent: 1.4,
     thickness: 1.0,
     scale: 1.0,

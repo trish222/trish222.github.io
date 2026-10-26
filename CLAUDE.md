@@ -51,8 +51,25 @@ design-references/  local mood board (CRT monitor photos, isometric angles) — 
 ### The scene
 
 `src/scene.js` and `src/computer.js` are the only modules that import three.
-Orthographic camera 35° down / 45° around, matching
-`design-references/isometric-angle.webp`.
+Orthographic camera **20° down / 45° around**. The azimuth matches
+`design-references/isometric-angle.webp`; the elevation comes from a CAD axis
+tripod supplied later, where the two ground axes fall ~18-19° below the horizon
+either side of a vertical z. For an orthographic camera at a symmetric 45°
+azimuth that on-screen slope is `atan(sin(elevation))`, which puts the elevation
+at 20° — much flatter than the 35° this started at.
+
+Flattening the camera is not a one-line change, because three things are sized
+against how much floor the frame sees (`frustum / sin(elevation)`, so 2.9 world
+units of depth per unit of screen height at 20° against 1.7 at 35°):
+
+- **`FLOOR_SIZE`** — at 70 the plane's far edge came into frame across the top
+  corners, showing scene background either side of it. Now 160.
+- **The key light's shadow camera** — outside its box a surface simply has no
+  shadow, so at ±42 the cast shadow stopped dead on a straight line mid-frame.
+  Now ±80, with `shadow.radius` down from 5 to 3 since the same map now covers
+  nearly four times the ground.
+- **`FILL_DEPTH`** — see below; the old value left the type a band across the top
+  with bare floor under it.
 
 The floor is a cream plane whose texture is drawn with canvas 2D: the name
 repeated in deep blue Playfair Display, rows tightly leaded and staggered, after
@@ -81,7 +98,8 @@ than on desktop. The band is the honest result of keeping the name readable.
 
 Row count is derived from the viewport rather than fixed, so a narrow screen gets
 more rows instead of a band of type adrift in cream. `FILL_DEPTH` is the knob: at
-16:9 it yields 4 rows. Portrait has its own `FILL_DEPTH_MOBILE` because a phone
+16:9 it yields 8 rows (it was 4 before the camera flattened to 20°, which left the
+type a band across the top with bare floor under it). Portrait has its own `FILL_DEPTH_MOBILE` because a phone
 frame is far deeper in floor terms — the desktop figure leaves the type a small
 patch surrounded by cream. To pin an exact count everywhere, clamp `ROWS_MIN` and
 `ROWS_MAX` to the same number.
@@ -93,7 +111,9 @@ a glyph sliced by the texture edge, that smears into long blue streaks running t
 width of the floor — very visible once the type went diagonal.
 
 One `DirectionalLight` sits ~13° above the floor — the shallow angle is what makes
-the shadow long and diagonal — plus ambient and hemisphere fill. **Light
+the shadow long and diagonal — plus ambient and hemisphere fill. Its shadow camera
+is ±80: a surface outside that box has no shadow at all, so the box has to bound
+the whole visible floor, not just the machine. **Light
 intensities look ~3x too high because three's physical lighting divides them by
 PI.** They are tuned so lit cream lands on `CREAM` and shadowed cream sits at ~0.72
 of it, matching the tonal drop in the reference. Changing one means re-checking
@@ -211,9 +231,24 @@ has that a clean render does not.
 - **The case is not one moulding.** A dark frame standing a hair proud of the
   bezel wall gives the shell seam; the rear shell uses its own slightly cooler
   `PLASTIC_BACK`; the stand gets a moulded step and a dark swivel collar; and
-  `grainTexture()` now carries a low-frequency value-noise octave under the
+  `plasticTextures()` carries a low-frequency value-noise octave under the
   per-pixel grain, so the plastic ages unevenly instead of reading as one
   uniform surface.
+- **The plastic is textured through `map`, not just `roughnessMap`.** One noise
+  field comes out as two textures: a wide-range roughness/bump map, and a
+  near-white albedo map with a few percent of value swing. Roughness alone was
+  invisible — on a surface this matt the sheen barely moves, so the shell read as
+  one flat colour whatever the roughness did. Both maps share a field on purpose:
+  on real plastic the duller patches are also the darker ones. Scale matters as
+  much as amplitude — at 512px tiled twice across the shell a texel is about a
+  device pixel, and the blotches sit at a tenth of a tile; the earlier 256px/6×
+  settings averaged away to flat vinyl at the size the machine actually renders.
+- **The shell is kept out of the floor's value range.** It used to sit within a
+  shade of the lit ground, which read as bright and flat. The palette came down
+  about 7%, `envMapIntensity` from 0.8 to 0.5 (the HDRI was doing a lot of the
+  lifting), roughness up to 0.68, and the screen's spill light from 2.6 to 2.1 —
+  it was washing out its own bezel. GTAO went to `blendIntensity` 1.0 / radius
+  1.15 so the creases actually darken.
 - **The badge says `TRISH T-1500`.** No real brand may appear on the bezel, so
   the model number is ours.
 

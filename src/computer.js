@@ -20,12 +20,12 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
    ========================================== */
 
 /* --- Palette --------------------------------------------- */
-const PLASTIC      = 0xded6c2;   // front shell, warm off-white
-const PLASTIC_BACK = 0xd6ccb6;   // rear shell: moulded separately, so it reads cooler
-const PLASTIC_DARK = 0xb3ab97;   // recesses, vent cavities, seams
-const KEY_CAP      = 0xe4ddcb;
-const KEY_MOD      = 0xd2c9b3;   // the wide keys are a shade darker, as they usually are
-const CABLE        = 0xa79d86;   // darker than the shells, or it reads as a scratch on the floor
+const PLASTIC      = 0xcec4ab;   // front shell, warm off-white — kept clear of the cream floor
+const PLASTIC_BACK = 0xc0b69c;   // rear shell: moulded separately, so it reads cooler
+const PLASTIC_DARK = 0x938b78;   // recesses, vent cavities, seams
+const KEY_CAP      = 0xd8d0bb;
+const KEY_MOD      = 0xc2b9a1;   // the wide keys are a shade darker, as they usually are
+const CABLE        = 0x978d78;   // darker than the shells, or it reads as a scratch on the floor
 const SCREEN_TEAL  = 0x0b7a76;
 const SCREEN_INK   = '#1b47a3';  // the floor blue, reused on the screen
 
@@ -49,22 +49,41 @@ function track(...xs) { disposables.push(...xs); return xs[0]; }
    MATERIALS
    ========================================== */
 
-/* Two octaves: per-pixel grain for the moulding texture, plus soft
-   low-frequency blotches so the plastic ages unevenly rather than
-   reading as one uniform surface. Mapped into roughness and a very
-   small bump. */
-function grainTexture(size = 256) {
-  const c = document.createElement('canvas');
-  c.width = c.height = size;
-  const ctx = c.getContext('2d');
+/* One noise field, two maps. Per-pixel grain for the moulding texture
+   plus soft low-frequency blotches so the plastic ages unevenly rather
+   than reading as one uniform surface.
 
-  /* Low-frequency layer: value noise on a 16px lattice, bilinear. */
-  const n = 16, cell = size / n;
+   Both octaves have to be sized against how big the machine lands on
+   screen, or they average away to a flat vinyl sheet. At 512px tiled
+   twice across the shell a texel is roughly a device pixel, so the
+   grain survives; a 10-cell lattice puts the blotches at about a tenth
+   of a tile, which is large enough to read as uneven plastic rather
+   than as more noise.
+
+   Roughness alone was not enough: on a surface this matt the sheen
+   barely moves, so the shell still read as one flat colour. The same
+   field therefore also comes out as a near-white albedo map — a few
+   percent of value swing — which is what actually makes the moulding
+   look like plastic rather than paper. Driving both from one field is
+   deliberate: on real plastic the duller patches are also the slightly
+   darker ones. */
+function plasticTextures(size = 512) {
+  /* Low-frequency layer: value noise on a 10-cell lattice, bilinear. */
+  const n = 10, cell = size / n;
   const lattice = Array.from({ length: (n + 1) * (n + 1) }, () => Math.random());
   const at = (i, j) => lattice[(j % n) * (n + 1) + (i % n)];
   const smooth = t => t * t * (3 - 2 * t);
 
-  const img = ctx.createImageData(size, size);
+  const mk = () => {
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    return [c, c.getContext('2d')];
+  };
+  const [rc, rctx] = mk();
+  const [ac, actx] = mk();
+  const rough = rctx.createImageData(size, size);
+  const albedo = actx.createImageData(size, size);
+
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const fx = x / cell, fy = y / cell;
@@ -73,29 +92,48 @@ function grainTexture(size = 256) {
       const a = at(i, j) * (1 - tx) + at(i + 1, j) * tx;
       const b = at(i, j + 1) * (1 - tx) + at(i + 1, j + 1) * tx;
       const low = a * (1 - ty) + b * ty;
-      const v = 168 + low * 46 + Math.random() * 44;
+      const fine = Math.random();
       const k = (y * size + x) * 4;
-      img.data[k] = img.data[k + 1] = img.data[k + 2] = v;
-      img.data[k + 3] = 255;
+
+      /* Wide spread: roughnessMap multiplies the material roughness, so
+         the contrast here is what breaks the sheen up across a panel. */
+      const r = 138 + low * 66 + fine * 54;
+      rough.data[k] = rough.data[k + 1] = rough.data[k + 2] = r;
+      rough.data[k + 3] = 255;
+
+      /* Narrow spread: map multiplies the material colour, so anything
+         wider than a few percent reads as dirt rather than moulding. */
+      const v = 232 + low * 17 + fine * 6;
+      albedo.data[k] = albedo.data[k + 1] = albedo.data[k + 2] = v;
+      albedo.data[k + 3] = 255;
     }
   }
-  ctx.putImageData(img, 0, 0);
+  rctx.putImageData(rough, 0, 0);
+  actx.putImageData(albedo, 0, 0);
 
-  const t = new THREE.CanvasTexture(c);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.repeat.set(6, 6);
-  return track(t);
+  const wrap = (c, srgb) => {
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(2, 2);
+    if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+    return track(t);
+  };
+  return { rough: wrap(rc, false), albedo: wrap(ac, true) };
 }
 
-function plasticMaterial(grain, color = PLASTIC, roughness = 0.62) {
+function plasticMaterial(grain, color = PLASTIC, roughness = 0.68) {
   return track(new THREE.MeshStandardMaterial({
     color,
     roughness,
     metalness: 0,
-    roughnessMap: grain,
-    bumpMap: grain,
-    bumpScale: 0.012,
-    envMapIntensity: 0.8,
+    map: grain.albedo,
+    roughnessMap: grain.rough,
+    bumpMap: grain.rough,
+    bumpScale: 0.022,
+    /* The HDRI is a big part of what was lifting the shell to within a
+       shade of the cream floor; the machine takes less of it than the
+       floor does. */
+    envMapIntensity: 0.5,
   }));
 }
 
@@ -545,7 +583,7 @@ function buildMonitor(body, backBody, dark) {
 
   /* A lit tube spills light onto its own bezel. Small range and no
      shadow, so it only warms the plastic right around the opening. */
-  const screenGlow = new THREE.PointLight(0x8ee8e0, 2.6, 5.5, 2);
+  const screenGlow = new THREE.PointLight(0x8ee8e0, 2.1, 5.5, 2);
   screenGlow.position.set(0, OPEN_CY, BEZEL_D / 2 + 0.55);
   g.add(screenGlow);
 
@@ -815,7 +853,7 @@ function buildMouse(body, dark) {
    ========================================== */
 
 export function buildComputer() {
-  const grain = grainTexture();
+  const grain = plasticTextures();
   const body = plasticMaterial(grain);
   const backBody = plasticMaterial(grain, PLASTIC_BACK, 0.68);
   const dark = plasticMaterial(grain, PLASTIC_DARK, 0.78);
