@@ -59,9 +59,18 @@ const ROW_INDENT = [0.03, 0.1, 0.04, 0.11, 0.06];
    horizon either side of a vertical z. For an orthographic camera at a
    symmetric 45° azimuth that screen slope is atan(sin(elevation)), so
    18.9° on screen is 20° of elevation — a much flatter read than the
-   35° this started at, with the ground axes near-symmetric. */
+   35° this started at.
+
+   The azimuth is then swung 8° off that symmetry, toward the side the
+   screen faces (the machine's glass looks down world +Z, and the camera
+   sits in the +X/+Z octant, so a *smaller* azimuth walks it round
+   towards the front). The ground axes are no longer mirror images — +X
+   flattens to ~11.7° below the horizon while +Z steepens to ~24° — but
+   the monitor turns out of its even three-quarter view and shows more
+   picture, which is the point. Keep it slight: past ~30° the side vents
+   go out of shot and the view stops reading as isometric. */
 const ELEVATION = THREE.MathUtils.degToRad(20);
-const AZIMUTH = THREE.MathUtils.degToRad(45);
+const AZIMUTH = THREE.MathUtils.degToRad(37);
 const CAM_DIST = 60;
 const FRUSTUM = 18; // world units of vertical view
 const FRUSTUM_MOBILE = 31; // pull back on narrow screens so the keyboard clears the edge
@@ -70,7 +79,10 @@ const MOBILE_BP = 760;
 /* How the two floor axes land on screen at this camera angle. The text
    runs along world +X and the rows stack along world +Z, so both are
    foreshortened diagonals — that is what sells the type as lying on the
-   ground rather than floating over it. */
+   ground rather than floating over it. Off the symmetric azimuth the two
+   no longer match: the baselines lie flatter and the stack climbs more
+   steeply, so type size comes down a touch and the row count goes up.
+   Both fall out of these two numbers, so nothing needs hand-retuning. */
 /* In-plane spin of the floor texture, in quarter turns of the ground
    plane: which floor axis the baselines run along. At 0 the baselines
    run down-right along +X and the glyph tops point up-right along -Z,

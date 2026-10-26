@@ -51,12 +51,21 @@ design-references/  local mood board (CRT monitor photos, isometric angles) — 
 ### The scene
 
 `src/scene.js` and `src/computer.js` are the only modules that import three.
-Orthographic camera **20° down / 45° around**. The azimuth matches
-`design-references/isometric-angle.webp`; the elevation comes from a CAD axis
-tripod supplied later, where the two ground axes fall ~18-19° below the horizon
-either side of a vertical z. For an orthographic camera at a symmetric 45°
-azimuth that on-screen slope is `atan(sin(elevation))`, which puts the elevation
-at 20° — much flatter than the 35° this started at.
+Orthographic camera **20° down / 37° around**. The elevation comes from a CAD
+axis tripod, where the two ground axes fall ~18-19° below the horizon either
+side of a vertical z. For an orthographic camera at a symmetric 45° azimuth
+(which is where this started, after `design-references/isometric-angle.webp`)
+that on-screen slope is `atan(sin(elevation))`, which puts the elevation at 20°
+— much flatter than the 35° it began at.
+
+The azimuth then came off that symmetry by 8°, on request, to turn more picture
+toward the viewer. The screen looks down world +Z and the camera sits in the
++X/+Z octant, so a *smaller* azimuth walks the camera round toward the front.
+The two ground axes are no longer mirror images — +X now falls ~11.7° below the
+horizon and +Z ~24° — so the floor type lies flatter and stacks more steeply.
+Both fall straight out of `PROJ_X` / `PROJ_Z`, so the type resized and re-rowed
+itself; nothing was hand-retuned. Keep any further swing slight: past ~30° the
+side vents leave the shot and the view stops reading as isometric.
 
 Flattening the camera is not a one-line change, because three things are sized
 against how much floor the frame sees (`frustum / sin(elevation)`, so 2.9 world
@@ -186,9 +195,11 @@ stand).
 
 `FACING` is 0: the machine is square to the floor grid, so its bezel edges run
 parallel to the name text (which lies along +X) and the screen turns to face
-left. At the 45-degree camera azimuth that lands on the even three-quarter view
-of `crt-computer-full.jpeg`, front and one side both in play — and it is what
-brings the side vents into shot.
+left. Against the camera azimuth that lands on a three-quarter view after
+`crt-computer-full.jpeg`, front and one side both in play — and it is what
+brings the side vents into shot. The view is weighted toward the front rather
+than even, because the camera was swung 8° off the symmetric 45° (see the scene
+notes); the machine itself has not turned.
 
 Two things there are less obvious than they look:
 
