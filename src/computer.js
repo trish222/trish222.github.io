@@ -30,11 +30,20 @@ const SCREEN_TEAL  = 0x0b7a76;
 const SCREEN_INK   = '#1b47a3';  // the floor blue, reused on the screen
 
 /* --- Proportions ----------------------------------------- */
-const MON_W = 6.4, MON_H = 5.4, BEZEL_D = 1.35;
+export const MON_W = 6.4, MON_H = 5.4;
+const BEZEL_D = 1.35;
 const BACK_D = 4.2, BACK_TAPER = 0.42;
-const SCREEN_W = 5.1, SCREEN_H = 3.9;
-const MON_Y = 3.85;              // centre height of the monitor body
-const OPEN_CY = 0.26;            // screen opening rides above centre
+export const SCREEN_W = 5.1, SCREEN_H = 3.9;
+export const MON_Y = 3.85;       // centre height of the monitor body
+export const OPEN_CY = 0.26;     // screen opening rides above centre
+
+/* The black overscan border drawn around the picture, as a fraction of
+   the screen either side (see `drawPicture`). The live HTML overlay is
+   mapped onto the inner rectangle rather than the whole panel: the
+   bezel lip overhangs the glass by enough to clip a sliver off the
+   left edge at this camera, and sitting inside the overscan keeps the
+   overlay clear of it. */
+export const OVERSCAN = 0.035;
 
 /* Square to the floor grid, so the bezel edges run parallel to the name
    text (which lies along +X) and the screen turns to face left. At the
@@ -302,11 +311,18 @@ function screenDisplay() {
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 8;
 
+  /* While the camera is flying in, the picture is a bitmap of the real
+     login screen rather than this abstract desktop — see `setStill`
+     below. The mix is frozen for as long as that is up. */
+  let still = null;
+  let mix = 0;
+
   /* Redrawing the canvas and re-uploading the texture every frame is
      wasted work once the mix has settled. */
   let drawn = -1;
   const setMix = v => {
-    if (Math.abs(v - drawn) < 0.004) return;
+    mix = v;
+    if (still || Math.abs(v - drawn) < 0.004) return;
     drawn = v;
     ctx.globalAlpha = 1;
     ctx.drawImage(idle, 0, 0);
@@ -319,7 +335,40 @@ function screenDisplay() {
   };
   setMix(0);
 
-  return { texture: t, setMix };
+  /* Put an arbitrary bitmap on the glass, framed by the same overscan
+     `drawPicture` leaves and run through the same tube treatment, so it
+     arrives with the blur, scanlines and vignette the rest of the
+     picture has rather than as a crisp paste-up.
+
+     This is what the fly-in shows. The alternative — the live HTML
+     overlay, scaled by a CSS matrix — makes the browser re-rasterise a
+     filtered subtree at a new scale every frame, which measured at
+     ~45ms a frame on a phone-sized viewport. As a texture it costs one
+     upload and the move holds 60fps. */
+  const setStill = bitmap => {
+    const ui = document.createElement('canvas');
+    ui.width = w; ui.height = h;
+    const u = ui.getContext('2d');
+    u.fillStyle = '#05100f';
+    u.fillRect(0, 0, w, h);
+    const m = Math.round(w * OVERSCAN);
+    u.drawImage(bitmap, m, Math.round(h * OVERSCAN), w - m * 2, h - Math.round(h * OVERSCAN) * 2);
+    still = compositePicture(ui, w, h);
+    ctx.globalAlpha = 1;
+    ctx.drawImage(still, 0, 0);
+    t.needsUpdate = true;
+  };
+
+  /* Back to the abstract desktop. `drawn` is invalidated so the frozen
+     mix is actually redrawn rather than skipped as already current. */
+  const clearStill = () => {
+    if (!still) return;
+    still = null;
+    drawn = -1;
+    setMix(mix);
+  };
+
+  return { texture: t, setMix, setStill, clearStill };
 }
 
 /* The reflection in the glass, as a window rather than a single smear:
@@ -780,7 +829,12 @@ function buildMonitor(body, backBody, dark) {
   top.position.set(0, MON_H * 0.86 * 0.5 - 0.5, -BEZEL_D / 2 - 1.5);
   g.add(top);
 
-  return { group: g, screenMat, screenGlow, setScreen: display.setMix };
+  return {
+    group: g, screen, screenMat, screenGlow,
+    setScreen: display.setMix,
+    setStill: display.setStill,
+    clearStill: display.clearStill,
+  };
 }
 
 /* ==========================================
@@ -1024,9 +1078,16 @@ export function buildComputer() {
 
   return {
     root, lift,
+    /* The picture plane, so scene.js can project its corners and lay the
+       live login screen over it. */
+    screen: monitor.screen,
     screenMat: monitor.screenMat,
     screenGlow: monitor.screenGlow,
     setScreen: monitor.setScreen,
+    /* The fly-in puts a bitmap of the real login on the glass for the
+       length of the move; see screenDisplay. */
+    setStill: monitor.setStill,
+    clearStill: monitor.clearStill,
   };
 }
 

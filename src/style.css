@@ -1,4 +1,28 @@
 @import "tailwindcss";
+@import "./vendor/98.scoped.css";
+
+/* ================================
+   PLAYFAIR DISPLAY — the floor wordmark
+
+   Self-hosted from the @fontsource package (OFL-1.1; the licence travels
+   with the file in public/fonts/LICENSE.txt) rather than imported from
+   node_modules, for two reasons: the URL has to stay stable so
+   index.html can preload it, and it belongs in the *entry* stylesheet
+   rather than in the lazy scene chunk — scene.js draws the type into a
+   canvas, so the face has to be resident before the first 3D frame.
+   Latin only: the wordmark is ASCII, and the other five subsets
+   @fontsource ships would never be fetched anyway.
+   ================================ */
+@font-face {
+  font-family: 'Playfair Display';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/playfair-display-latin-500-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+    U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+    U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
 /* ================================
    WIN95 VARIABLES
@@ -12,6 +36,10 @@
   --black: #000000;
   --title-active: #000080;
   --highlight: #000080;
+  /* Must match CREAM in scene.js: the 3D canvas stops at the taskbar,
+     so this is what shows in the strip the taskbar vacates during the
+     fly-in. */
+  --scene-floor: #dcdee0;
   --font: 'MS Sans Serif', 'Trebuchet MS', Arial, sans-serif;
   --font-size: 11px;
 }
@@ -572,3 +600,254 @@ body {
 }
 
 .form-field label { font-size: 11px; font-weight: bold; }
+
+/* ================================
+   THE CRT's PICTURE, AS LIVE HTML
+
+   #screen is a plain DOM box of a fixed base size (set from JS, so the
+   aspect matches SCREEN_W/SCREEN_H in computer.js exactly) that
+   scene.js maps onto the monitor's screen plane with a CSS matrix()
+   every frame. The camera is orthographic, so the projection of a
+   plane is affine — three projected corners give the transform with no
+   perspective homography needed, and the same code holds all the way
+   through the fly-in.
+
+   It is mapped onto the *inner* rectangle of the picture, inside the
+   black overscan border the 3D texture draws. The bezel lip overhangs
+   the glass far enough to clip a sliver off the left edge at the
+   isometric camera; sitting inside the overscan keeps the live HTML
+   clear of it, and the overscan then frames it the way a real tube
+   does.
+   ================================ */
+#screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  z-index: 1;
+  overflow: hidden;
+  background: var(--desktop);
+  cursor: pointer;
+  will-change: transform;
+
+  /* All driven from scene.js. --zoom every frame; --scan and --blur are
+     quantised while the camera moves, because they feed a filter and
+     three gradients and every distinct value costs a full raster of the
+     box. --settle is the crossfade's slight scale. */
+  --zoom: 0;    /* 0 isometric, 1 arrived */
+  --hover: 0;   /* pointer over the machine */
+  --scan: 12px; /* scanline pitch, in this box's own px */
+  --blur: 0px;  /* CRT softness, likewise */
+  --settle: 1;  /* the last fraction of the arrival's scale */
+}
+
+/* For the length of the camera move the picture on the glass is a
+   bitmap of this subtree, drawn into the 3D screen texture (see "the
+   still" in scene.js) rather than laid over it. So the live overlay is
+   hidden for the body of the move and fades in over the last 0.3s,
+   crossing with the canvas going out. Both show the same login at the
+   same size, so the hand-over has nothing to give away.
+
+   scene.js also sets `visibility: hidden` inline while --page-fade is
+   0. An element at opacity 0 still gets painted, and painting this one
+   — a blurred subtree under three gradients, rescaled every frame — is
+   the entire cost the still exists to avoid. */
+body.screen-active #screen {
+  opacity: var(--page-fade, 0);
+}
+
+body.screen-zooming #screen {
+  pointer-events: none;
+}
+
+/* The page on the glass. Inert until the camera has arrived: a click at
+   the isometric angle is a click on the *screen*, not into a form that
+   is 250px wide and skewed. */
+#screen-page {
+  position: absolute;
+  inset: 0;
+  background: var(--desktop);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  /* A crisp bitmap on the glass is what makes a render look like a
+     screenshot pasted over it — the same reason the 3D picture is
+     composited through a blur. The radius is in this box's px, so
+     scene.js divides it by the current on-screen scale to keep it
+     constant in device pixels. It goes to zero as the camera arrives. */
+  filter: blur(var(--blur)) brightness(calc(1 + var(--hover) * 0.09));
+  /* Scaled the last FADE_SCALE of the way in by the crossfade, so the
+     page settles into the viewport rather than snapping to it. Exactly
+     1 at both ends of the flight. */
+  transform: scale(var(--settle));
+}
+
+body.screen-focused #screen-page {
+  pointer-events: auto;
+}
+
+/* Phosphor, scanlines, glass and the shadow the bezel lip throws into
+   the recess — the things that say "tube" rather than "div". All of it
+   is gone by the time the page fills the viewport. */
+#screen .crt-fx {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: calc(1 - var(--zoom));
+  /* --zoom is written every frame of the flight. Promoting the layer
+     keeps that a compositor op rather than a repaint of the gradients
+     underneath it. */
+  will-change: opacity;
+  background-image:
+    /* scanlines */
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.28) 0 calc(var(--scan) * 0.42),
+      rgba(0, 0, 0, 0) calc(var(--scan) * 0.42) var(--scan)
+    ),
+    /* the room in the glass */
+    linear-gradient(
+      158deg,
+      rgba(255, 255, 255, 0.13) 0%,
+      rgba(255, 255, 255, 0.03) 26%,
+      rgba(255, 255, 255, 0) 44%
+    ),
+    /* tube vignette */
+    radial-gradient(
+      116% 116% at 50% 47%,
+      rgba(0, 0, 0, 0) 54%,
+      rgba(0, 0, 0, 0.52) 100%
+    );
+  /* The lip stands between the glass and the key light, so the recess
+     is deepest down the left and across the top. */
+  box-shadow:
+    inset 7% 6% 9% -2% rgba(0, 0, 0, 0.55),
+    inset -3% -3% 7% -2% rgba(0, 0, 0, 0.3);
+}
+
+/* Desktop chrome steps aside for the whole of the fly-in. */
+body.screen-active .desktop-icons,
+body.screen-active .window,
+body.screen-active #taskbar,
+body.screen-active #start-menu {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.45s ease;
+}
+
+body.screen-active #screen {
+  z-index: 3000;
+  cursor: default;
+}
+
+/* No transition on the canvas: its opacity is a tween on the fly-in
+   timeline, overlapping the last 0.3s of the camera move. A CSS
+   transition could only start once a class landed — which is after the
+   camera has stopped, and that gap is exactly the pop this replaces. */
+
+/* The canvas only reaches down to the taskbar, so for the length of the
+   fly-in the 40px the taskbar vacates would show the bare teal
+   WebGL-fallback body against the grey floor. Carry the floor colour
+   through there instead, and let it cross to teal on --scene-fade,
+   which tracks the zoom. Not the crossfade: the floor is out of shot
+   long before the canvas starts to dissolve, so mixing on that leaves a
+   lighter band under a screen that has already gone teal. */
+body {
+  /* Only in play when screen-active is *leaving*: see below. */
+  transition: background-color 0.5s ease;
+}
+
+body.screen-active {
+  background-color: color-mix(
+    in srgb,
+    var(--desktop) calc(var(--scene-fade, 0) * 100%),
+    var(--scene-floor)
+  );
+  /* The fly-in writes --scene-fade as it goes, so a transition here
+     would lag behind it and fight it. Going *in*, the instant step to
+     floor grey happens while the taskbar above it is still opaque, so
+     there is nothing to smooth; coming *out*, the class is removed and
+     the rule above takes over, easing grey back to teal over the same
+     window the taskbar fades back in. */
+  transition: none;
+}
+
+/* ================================
+   LOGIN DIALOG
+   ================================ */
+.login-dialog {
+  width: 380px;
+  max-width: 72%;
+}
+
+.login-dialog .win98-body {
+  padding: 12px 14px 14px;
+}
+
+.login-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.login-key {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.login-row p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.login-field {
+  margin-bottom: 8px;
+}
+
+.login-field label {
+  flex: 0 0 72px;
+}
+
+.login-field input {
+  flex: 1;
+  /* body sets user-select:none and a default cursor for the desktop
+     metaphor; a real field has to opt back out of both. */
+  user-select: text;
+  cursor: text;
+}
+
+.login-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.login-note {
+  margin: 10px 0 0;
+  min-height: 1.4em;
+  color: #0a0a0a;
+}
+
+/* ================================
+   BACK OUT OF THE SCREEN
+   ================================ */
+#screen-back-bar {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 4000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+body.screen-focused #screen-back-bar {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#screen-back-bar button {
+  cursor: pointer;
+}

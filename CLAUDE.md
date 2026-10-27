@@ -8,14 +8,20 @@ and what to take from it.
 
 ## Rules
 
-- Only use assets and libraries licensed MIT, Apache, OFL, or CC0.
+- Only use assets and libraries licensed MIT, Apache, OFL, or CC0, plus GSAP
+  (free under GreenSock's standard license).
 - No Microsoft logos, icons, wallpapers, or fonts.
 - Build 3D objects from primitives in code rather than importing models.
 - Keep the site mobile responsive.
 
 Current third-party inventory: `three` and its `examples/jsm` addons (MIT),
-`@fontsource/playfair-display` (OFL-1.1), `tailwindcss` / `vite` / `playwright`
-(MIT), and `public/env/studio-small-09-256.hdr` — "Studio Small 09" by Sergej
+`gsap` (GreenSock standard licence — the one documented exception to the list
+above; it drives the fly-in timeline, imported as `gsap/gsap-core` so CSSPlugin
+stays out of the bundle), `@fontsource/playfair-display` (OFL-1.1, vendored into
+`public/fonts/` — see below), `tailwindcss` / `vite` / `playwright` / `stats.js`
+(MIT; `stats.js` is dev-only and is dropped from the production build),
+`98.css` (MIT, build-time only — see below), and
+`public/env/studio-small-09-256.hdr` — "Studio Small 09" by Sergej
 Majboroda via Poly Haven, CC0 (see `public/env/LICENSE.txt`). Desktop icons are
 Unicode emoji, not Microsoft artwork. Every 3D object is built from primitives in
 code; nothing is an imported model.
@@ -35,15 +41,47 @@ code; nothing is an imported model.
   Runs `npm install && npm run build`, publishes `dist/`. `base: '/'` in
   `vite.config.js` — this is a user site, so don't change it.
 
+### 98.css
+
+The login screen on the CRT is built with [98.css] (MIT). It is **not**
+imported from `node_modules` — `npm run vendor:98` derives
+`src/vendor/98.scoped.css` from it, and that generated file is what
+`src/style.css` imports. Three things have to change first, all of them
+in `scripts/vendor-98css.mjs`:
+
+- **It ships MS Sans Serif as woff/woff2.** Those are Microsoft fonts,
+  which the rules above forbid, and importing the package directly makes
+  Vite emit the binaries into `dist/`. The `@font-face` blocks are
+  dropped and the stack falls back to the site's own `--font`. (Its
+  icons are fine — all inline `data:` SVGs redrawn by the 98.css author,
+  no Microsoft artwork.)
+- **It styles bare `body`, `h1`-`h4`, `button`, `input`, `select`,
+  `table` and `textarea`**, which would stomp the desktop chrome. Every
+  rule is scoped under `.ui98`, so the kit only applies inside the login
+  screen.
+- **`.window` and `.window-body` are already taken** by the desktop's own
+  chrome, and `main.js` drives every `.window` on the page through the
+  window manager. They are renamed `.win98` / `.win98-body` — so the
+  login dialog's markup reads `class="login-dialog win98"` rather than
+  the `class="window"` the 98.css docs show.
+
+Regenerate after bumping the dependency; never hand-edit the output.
+
+[98.css]: https://github.com/jdan/98.css
+
 ### Layout
 
 ```
 index.html        all markup — canvas, windows, taskbar, Start menu (static, no templating)
 src/main.js       window manager: focus/open/close/minimize/maximize, drag, taskbar, clock
-src/scene.js      camera, floor, lighting, env map, AO, hover
+src/scene.js      camera, floor, lighting, env map, AO, hover, the fly-in
 src/computer.js   the CRT machine, built from primitives
 public/env/       CC0 studio HDRI used as the environment map
 src/style.css     Win95 design tokens (:root vars) + all component CSS
+src/perf.js       dev-only stats.js FPS meter; never reaches production
+src/vendor/       98.scoped.css — generated, see "98.css" above
+scripts/          vendor-98css.mjs, which generates it
+public/fonts/     Playfair Display latin-500 (OFL) at a stable, preloadable path
 public/           copied as-is
 design-references/  local mood board (CRT monitor photos, isometric angles) — untracked
 ```
@@ -133,6 +171,197 @@ PI.** They are tuned so the lit ground lands on `CREAM` and the shadowed ground 
 ~0.72 of it, matching the tonal drop in the reference. Changing one means re-checking
 the others.
 
+### The live page on the glass, and the fly-in
+
+**The CRT's picture is real HTML, not a texture.** `#screen` in
+`index.html` is a plain DOM box holding a Windows 98 login dialog
+(98.css, see above, over `--desktop` teal); `updateScreenOverlay` in
+`scene.js` lays it onto the screen plane with a CSS `matrix()` every
+frame. The camera is **orthographic**, so the projection of a plane is
+affine — three projected corners give the transform exactly, with none
+of the `matrix3d` homography a perspective camera would need, and the
+same two lines hold at every point of the fly-in. If the camera ever
+becomes perspective, this is the code that breaks.
+
+Three things there are less obvious than they look:
+
+- **The box is sized from JS, not CSS.** `SCREEN_BASE_W` and the height
+  derived from it are the denominators of the matrix, and `offsetHeight`
+  rounds to whole pixels. The base width also sets how big the dialog
+  lands once the page has the viewport: at 1200 it is near its natural
+  size on a desktop viewport, so the arrival does not read as a
+  blown-up screenshot.
+- **It is mapped inside the overscan, not onto the whole panel.** The
+  bezel lip overhangs the glass by more than the opening's lateral
+  clearance, so at the isometric camera it clips about 1.5% off the left
+  edge of the screen — enough for the overlay to spill onto the
+  plastic. `OVERSCAN` in `computer.js` is the black border `drawPicture`
+  already draws; sitting inside it keeps the live HTML clear of the lip
+  *and* lets the real tube's overscan frame it.
+- **Scanline pitch and blur are divided by the current scale.** They are
+  authored in the box's own pixels but want to be constant in device
+  pixels; at the isometric framing the box draws five times smaller than
+  it is. The blur is the same point `screenTexture` makes — a crisp
+  bitmap on the glass looks like a screenshot pasted onto a render.
+  Both fade out as the camera arrives, along with the vignette and the
+  recess shadow in `.crt-fx`.
+
+**The fly-in is one parameter.** `fly.value` is 0 at the establishing
+shot and 1 with the page filling the viewport, and `applyFly` derives
+the entire camera pose from it — so a resize part-way through re-derives
+the framing instead of losing it. `applyFly(0)` reproduces the original
+isometric pose exactly; that is the only definition of it now. Note
+`applyFly` is **linear** in its parameter: the easing lives on the
+timeline, so `__flyTo` and the spline both work in geometry rather than
+in time.
+
+**What drives that parameter is one paused GSAP timeline**, built once
+by `buildFlyTimeline`. `play()` flies in, `reverse()` flies out along
+the identical eased curve — so the back animation *is* the forward one
+run backwards rather than a second implementation that can drift. It
+carries two tweens, both on a plain proxy object read in `onUpdate`
+rather than GSAP writing camera properties directly:
+
+- **the move**, 1.6s on `power3.inOut`;
+- **the crossfade**, 0.3s on `power1.inOut`, starting at 1.3s so it
+  overlaps the tail of the move. It fades the canvas out, fades the live
+  HTML overlay in, and scales the page the last 1.5% up to its resting
+  size, so the arrival settles rather than popping. Before this the
+  canvas fade was a CSS transition that could only start once the camera
+  had already stopped — that gap *was* the pop.
+
+GSAP owns the timing; `applyFly` owns the pose. Keep it that way: the
+curved path means position is sampled off a spline rather than
+interpolated between two values, and a mid-flight resize has to be able
+to re-derive everything from `fly.value`.
+
+`gsap.ticker.lagSmoothing(250, 250)` is set deliberately. GSAP's default
+(500ms counted as 33ms) protects the animation at the cost of wall-clock
+time — on a software renderer it stretched this 1.6s flight past 30
+seconds. 250/250 reproduces the `Math.min(dt, 0.25)` cap the old
+hand-rolled loop used, on the same reasoning: a machine that cannot hold
+4fps should arrive promptly rather than sit through a long flight.
+
+**The camera follows a CatmullRomCurve3, not a two-phase blend.** It
+used to run a turn (to 55%) overlapping a zoom (from 45%), the overlap
+existing only to disguise the hand-over between them; a single
+C1-continuous spline has no hand-over to disguise. `buildFlyPath` fits
+three curves — position, look-at target, and log-frustum — through four
+poses **sampled off that old path** at `FLY_KNOTS`, so the arc it was
+art-directed into survives the rebuild instead of being re-invented.
+`samplePose` is that old path, kept solely as the knot source.
+
+All three curves share one parameterisation, which is what keeps
+position, target and zoom locked to each other. The frustum is a curve
+too, carrying `log(height)` in `x` — reusing three's Catmull-Rom for it
+guarantees identical parameterisation where a separate scalar easing
+would drift, and log space matters because for an orthographic camera
+the frustum height *is* the zoom, so lerping it linearly lurches. It is
+clamped to its endpoints: a frustum that dips below the final height and
+comes back reads as a bounce. `screenFrustum` uses `min`, not `max`: the
+screen is 4:3-ish and the viewport rarely is, so "fills the viewport"
+means cropping the other axis rather than letterboxing it.
+
+`FLY_TENSION` is 0.42 rather than three's default 0.5 — slacker, so the
+curve bows a little more gently through the knots.
+
+Three things have to be given up along the way:
+
+- **GTAO fades out over the first 30%.** Its radius is in world units,
+  tuned against a frame that sees 18 of them; six times closer in it is
+  no longer sampling creases and blotches the bezel instead.
+- **The canvas stops at the taskbar**, so the 40px the taskbar vacates
+  would show the bare teal WebGL-fallback `body` against the grey floor.
+  `body.screen-active` carries `--scene-floor` through there instead and
+  crosses to teal on `--scene-fade`. `--scene-floor` has to match `CREAM`
+  in `scene.js`. That hand-over tracks the **zoom**, not the crossfade,
+  and is held until `fly.value` passes 0.7: the floor is out of shot long
+  before the canvas starts to dissolve, and mixing on the crossfade
+  leaves a visibly lighter band under a screen that has already gone
+  teal. It is snapped to 5% so most frames rewrite the same string and
+  cost no style invalidation.
+- **The live HTML comes off the glass for the length of the move** — see
+  "the still" below.
+
+### The still, and why the live overlay stands down mid-flight
+
+The picture during the flight is a **bitmap of the login drawn into the
+3D screen texture** (`setStill` / `clearStill` in `computer.js`), not the
+live DOM overlay. The overlay is hidden — `visibility: hidden`, set
+inline, because an element at `opacity: 0` is still painted — and fades
+back in over the crossfade. Both show the same login at the same place,
+so the hand-over has nothing to give away.
+
+This is purely about raster cost, and it is the single largest win in
+the whole animation. `#screen-page` carries a blur filter and `.crt-fx`
+three gradients plus an inset box-shadow; the CSS matrix rescales the box
+every frame, and the compositor cannot reuse a raster across a scale
+change. So the browser re-blurred and re-drew those gradients once per
+frame over an area that by the end of the move is the whole viewport.
+Measured: **~57ms a frame flying out on a 390x844 viewport**. Moving the
+picture into the texture — which the GPU was drawing anyway — takes the
+move to a flat 60fps in both directions on both viewports.
+
+Things that were tried first and did **not** work, so they do not need
+trying again: replacing the subtree with a single `<img>` of the same
+bitmap (~45ms frames — an `<img>` with a filter still forms its own
+render surface); dropping the filter and the box-shadow (no measurable
+change). Hiding the overlay outright was the only thing that moved the
+number, which is what the texture approach amounts to.
+
+`drawStill` rasterises the overlay through an SVG `<foreignObject>`,
+which is the only way to get the browser's own layout of real HTML into
+a canvas. Two non-obvious requirements:
+
+- **It must be assembled as DOM and serialised with `XMLSerializer`.**
+  `foreignObject` content is parsed as XML, and neither half is
+  well-formed as authored — the login markup has bare `<input ...>`, and
+  the stylesheets carry 98.css's icons as inline `data:` SVG, so the CSS
+  text is full of raw `<` and `&`. Hand-concatenating the strings
+  produces a document the parser rejects outright, and the only symptom
+  is an image that never decodes.
+- **Every stylesheet has to be inlined and the `:root` tokens copied
+  onto the wrapper**, since the SVG renders as an image with no access to
+  the parent document or the network, and `:root` inside it is the `<svg>`
+  rather than the `<html>` the selectors expect. Styles are collected
+  from `document.styleSheets` rather than imported, so it keeps working
+  whatever Vite does to the CSS between dev and build. Fonts cannot be
+  fetched from in there either, so the dialog renders in the local
+  fallback of `--font` — correct for a dialog that asks for a UI font.
+
+It is drawn in idle time after init and refreshed on `input` (and on
+`depart`, since the form may have been typed into), never on the click —
+a few milliseconds of rasterising is a visible hitch if it lands on the
+first frame of the move. Every failure path leaves `stillCanvas` null and
+the flight then shows the abstract desktop picture instead, with the
+login arriving on the crossfade. Different, still smooth, never broken.
+`canvas.toDataURL` is called purely to detect tainting early, where it
+would otherwise surface later as a WebGL security error on upload.
+
+`--scan` and `--blur` are still written on `#screen`, but **snapped to a
+coarse grid while the camera moves** (`BLUR_STEP`, `SCAN_STEP`). They
+feed a filter and three gradients, so every distinct value costs a
+raster; the steps are invisible under motion and resolve exactly at
+rest, which is where stepping would show. `--zoom` stays per-frame —
+it only drives opacity on a layer promoted with `will-change`, which the
+compositor does for free.
+
+Body classes carry the state to CSS: `screen-active` for the whole trip
+(the desktop chrome stands down), `screen-zooming` only while the camera
+moves, `screen-focused` once it has arrived. `prefers-reduced-motion`
+gets the destination without the journey. With no WebGL none of it
+exists — `initScene` returns false before the overlay is unhidden, so
+the login screen is only ever reachable through the 3D monitor.
+
+`window.__flyTo(t)` parks the flight at a point of the **timeline** and
+draws it — the way to tune the head-on framing without trying to catch
+it mid-animation. It seeks the real timeline rather than posing the
+camera itself, so what it shows is what the flight shows there: the
+login bitmap on the glass, the crossfade, the body classes and all.
+Note it takes timeline progress now, not the old geometric parameter;
+the two differ by `power3.inOut`. The arrival logs its position, target
+and frustum height to the console.
+
 `_scene-shot.mjs` renders the scene with the Win95 chrome hidden, for looking at
 the 3D on its own. Note `.git/info/exclude` holds `_*.mjs`, so all of these helper
 scripts are local-only and never committed.
@@ -148,6 +377,29 @@ another. It shoots desktop / mobile / light / reduced-motion / no-WebGL variants
 `.impeccable/review/` and prints a per-variant probe plus a console-error tally. The
 no-WebGL pass stubs `getContext('webgl*')` to `null`; `scene: "fallback"` there and
 `scene: "live WxH"` elsewhere is the expected result.
+
+`_review.mjs` does not exercise the fly-in. `_flysteps.mjs` walks
+`window.__flyTo` through the run and shoots each stop; `_flycheck.mjs` clicks the
+screen for real, fills the form and clicks back, on mobile and under reduced
+motion. Both are `_`-prefixed, so local-only.
+
+`_perfcheck.mjs` is the frame-rate probe: `npm run dev` in one shell,
+`node _perfcheck.mjs` in another (optionally with a url and
+`desktop`/`mobile` to limit it). It flies in and out for real and prints
+median / p95 / worst frame time and a count of frames over 33.4ms for
+each leg. It needs a **dev** build, since the meter only exists there.
+Three things about it are deliberate:
+
+- **It runs headed.** Headless chromium falls back to SwiftShader, and
+  software-rasterised numbers say nothing about the real thing.
+- **One browser per variant**, because two live WebGL contexts in a
+  single headed chromium reliably takes the renderer down.
+- **Every leg parks the page first and retries if it did not animate.**
+  A headed window on macOS intermittently receives a real OS click just
+  after it opens (`isTrusted: true`, always around the middle of the
+  viewport), which lands on the glass and starts the fly-in before the
+  probe is ready. This is the harness, not the page — it does not happen
+  headless.
 
 `_shot.mjs` and `_one.mjs` are older one-off scripts still pointing at elements from a
 previous theme (`#ink-field`) — they will throw. Fix or ignore; `_review.mjs` supersedes them.
@@ -295,7 +547,10 @@ Hover is raycast from `window` rather than the canvas, because the canvas is
 or the taskbar are ignored. The easing is time-based, not per-frame, so the
 picture settles at the same speed regardless of frame rate.
 
-**Hover happens on the screen, not in world space.** The machine used to lift and
+**Hover happens on the screen, not in world space.** (The live HTML
+overlay now covers the picture, so what the crossfade below actually
+drives is the glow spilling onto the bezel; hover switches off entirely
+once the fly-in starts.) The machine used to lift and
 turn; it no longer moves at all. `screenDisplay()` builds *two* composited
 pictures — the idle desktop and the same desktop with `hello` in the window body —
 and `setScreen(v)` crossfades them into one live `CanvasTexture`, which `scene.js`
@@ -309,6 +564,46 @@ it, while the contact shadows hang off `root` and stay on the floor. Nothing mov
 it now, but if anything ever animates the machine again it has to move `lift`:
 moving `root` takes the contact shadows up with it, and they float over the floor
 as a detached grey blob.
+
+### Frame rate, and what holds it at 60
+
+`src/perf.js` is a stats.js panel plus a rolling log of frame deltas
+tagged with `fly.value`, exposed as `window.__perf` for `_perfcheck.mjs`
+to read. `scene.js` reaches it only through a dynamic `import()` behind
+`import.meta.env.DEV`; Vite folds that to `false` when building, so
+rollup drops the branch and stats.js with it. **Verify after touching
+it:** `npm run build && grep -r showPanel dist/` must find nothing.
+
+The baseline before any of this, measured on a real GPU at DPR 1: the
+zoom-out ran at a **33ms median on desktop and 57ms on a phone-sized
+viewport**, with half the frames over two frame-times. It is now a flat
+16.7ms median on both, worst frame 17.8ms, zero janky frames in either
+direction. What got it there, in order of how much each was worth:
+
+1. **The live HTML coming off the glass** — see "the still" above. This
+   was nearly all of it.
+2. **The shadow map is rendered once and frozen.** Nothing in the scene
+   ever casts a different shadow: the light is fixed and the machine
+   does not move. `renderer.shadowMap.autoUpdate = false` plus one
+   `needsUpdate = true` saves re-rendering a 2048² VSM depth pass with
+   16 blur samples on every frame. **If anything is ever animated back
+   into the scene, this is what has to be reverted.**
+3. **`MAX_DPR` is 1.5, not 2.** The scene shades through GTAO on a
+   full-screen composite, so cost goes with the square of this; on a 2x
+   display the difference is not visible on matt plastic and a blurred
+   tube.
+4. **`--scan` and `--blur` are snapped to a coarse grid mid-flight** —
+   again, see above.
+
+The font is preloaded from `index.html` off `public/fonts/`. Playfair is
+drawn into the floor texture with canvas 2D, so the face has to be
+resident before the first 3D frame; discovering it through the lazy
+scene chunk's stylesheet is far too late. That is why it is declared in
+`src/style.css` (the entry stylesheet) and vendored to a stable path
+rather than imported from `@fontsource` — a preload needs a URL that
+does not move, and Vite hashes what it emits. Latin only; the wordmark
+is ASCII. `crossorigin` on the preload link is required even same-origin
+or the file is fetched twice.
 
 ### three 0.186 gotchas
 
@@ -335,10 +630,15 @@ scripts.
 - **Rule violation still outstanding:** `--font` in `src/style.css` asks for
   `'MS Sans Serif'` and `'Trebuchet MS'`, both Microsoft fonts. Nothing is bundled
   (it only resolves if the visitor already has them), but it breaks the no-MS-fonts
-  rule and needs an OFL substitute.
-- The scene chunk is ~161 kB gzipped plus a 128 kB HDRI, all lazy-loaded after
-  the desktop paints. The entry chunk is still ~2.5 kB gzipped.
+  rule and needs an OFL substitute. The vendored 98.css falls back to the same
+  `--font`, so fixing it fixes the login screen too — there is one knob, not two.
+- The scene chunk is ~187 kB gzipped plus a 128 kB HDRI, all lazy-loaded after
+  the desktop paints. The entry chunk is still ~2.7 kB gzipped. GSAP accounts
+  for ~26 kB of the scene chunk; importing `gsap/gsap-core` rather than `gsap`
+  keeps CSSPlugin out and saves ~7 kB of that.
 - No tests, no linter, no README. Don't assume a test command exists.
+- `/favicon.ico` 404s — there isn't one. Pre-existing; the review scripts
+  filter it out.
 - `npm audit` reports pre-existing advisories in the Vite 5 dependency tree (esbuild,
   rollup, postcss, nanoid). Clearing them fully means Vite 8 — a deliberate upgrade, not
   a drive-by.

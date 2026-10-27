@@ -265,6 +265,46 @@ function initDesktopIcons() {
 }
 
 /* ==========================================
+   THE LOGIN SCREEN ON THE CRT
+
+   The markup is live HTML the whole time — scene.js lays it onto the
+   monitor's screen plane with a CSS transform, and clicking it flies
+   the camera in until it has the viewport. Everything here is the page
+   itself; the camera work all lives in scene.js.
+   ========================================== */
+
+function initLoginScreen() {
+  const form = document.querySelector('.login-form');
+  const note = document.querySelector('.login-note');
+  if (!form) return;
+
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const user = document.getElementById('login-user').value.trim() || 'user';
+    note.textContent = `Welcome, ${user}. Nothing to log on to — this is a portfolio.`;
+  });
+}
+
+/* Wired only once the scene is live, since the way back out is a camera
+   move. */
+function initScreenControls(scene) {
+  const bar = document.getElementById('screen-back-bar');
+  if (bar) bar.hidden = false;
+
+  const back = () => scene.flyFromScreen();
+  document.getElementById('screen-back')?.addEventListener('click', back);
+  document.querySelector('[data-login-cancel]')?.addEventListener('click', back);
+  document.querySelector('.login-dialog .title-bar-controls button')
+    ?.addEventListener('click', back);
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && document.body.classList.contains('screen-focused')) {
+      back();
+    }
+  });
+}
+
+/* ==========================================
    INIT
    ========================================== */
 
@@ -280,11 +320,17 @@ document.addEventListener('DOMContentLoaded', () => {
   // Open the About window on load
   openWindow('about');
 
+  initLoginScreen();
+
   /* Three.js is lazy-loaded so the desktop paints first. */
   const canvas = document.getElementById('scene');
   if (canvas) {
     import('./scene.js')
-      .then(({ initScene }) => initScene(canvas))
+      .then(async scene => {
+        /* The login screen is only reachable through the 3D monitor, so
+           it stays hidden unless the scene actually came up. */
+        if (await scene.initScene(canvas)) initScreenControls(scene);
+      })
       .catch(() => { /* no backdrop; the flat teal desktop stands in */ });
   }
 });
