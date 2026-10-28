@@ -60,6 +60,66 @@ function clampIntoView(win) {
   moveWindow(win, win.offsetLeft, win.offsetTop);
 }
 
+/* ------------------------------------------------------------------
+   OPENING GEOMETRY  (desktop only — a phone maximizes instead)
+
+   The widths and positions in index.html are 1995 figures. 480px of
+   About Me at left:130 is a postage stamp pinned to the top-left corner
+   of a 1567px display, with the rest of the screen bare teal. So on
+   anything wider than a phone the authored width becomes a *floor*
+   rather than the answer: the window is sized against the viewport and
+   centred in it.
+
+   Only on the window's **first** open. After that it reopens where it
+   was last left, because a visitor who dragged it there meant it —
+   which is also why the resize handler only clamps and never re-places.
+   Signing out clears the flags, so a new session starts centred again.
+   ------------------------------------------------------------------ */
+const OPEN_FRAC   = 0.44; // of the desktop's width, before the floor
+const OPEN_MAX    = 820;  // past this a line of body copy is too long to read
+const OPEN_MARGIN = 56;   // breathing room left either side on a narrow frame
+const CASCADE     = 28;   // per window already up, so the second lands beside the first
+/* Width scales with the viewport but these windows are sized by their
+   content, so without a floor About Me arrives 784x233 — bigger than
+   before and *worse*, a letterbox slot with two sentences adrift in it.
+   The floor is whichever is smaller: a share of the frame's height, or
+   a proportion of the window's own width. Only a floor — the Resume is
+   taller than both and keeps its natural height. */
+const OPEN_MIN_H  = 0.52; // of the desktop's height
+const OPEN_H_RATIO = 0.62; // of the window's own width
+/* Centred on 0.5 reads as *low*, because the taskbar has already taken
+   the bottom of the frame and the eye splits what is left. */
+const OPEN_RISE   = 0.38;
+
+function placeWindow(win) {
+  if (win.dataset.maximized === 'true' || win.dataset.placed === 'true') return;
+  win.dataset.placed = 'true';
+
+  /* The authored width, remembered once — after the first placement
+     style.width holds the computed one, and scaling that again every
+     session would walk the window wider and wider. */
+  if (!win.dataset.baseWidth) {
+    win.dataset.baseWidth = String(parseInt(win.style.width, 10) || win.offsetWidth);
+  }
+
+  const desk = document.getElementById('desktop');
+  const base = Number(win.dataset.baseWidth);
+  const want = Math.max(base, desk.clientWidth * OPEN_FRAC);
+  win.style.width = `${Math.round(Math.min(want, OPEN_MAX, desk.clientWidth - OPEN_MARGIN * 2))}px`;
+
+  /* Read the height *after* the width lands: these windows are sized by
+     their content, so the reflow is what decides how tall they are. */
+  const floor = Math.round(Math.min(desk.clientHeight * OPEN_MIN_H,
+                                    win.offsetWidth * OPEN_H_RATIO));
+  if (win.offsetHeight < floor) win.style.height = `${floor}px`;
+
+  const others = document.querySelectorAll('.window:not(.hidden)').length - 1;
+  const step = Math.max(0, others % 5) * CASCADE;
+  moveWindow(win,
+    Math.round((desk.clientWidth  - win.offsetWidth)  / 2 + step),
+    Math.round((desk.clientHeight - win.offsetHeight) * OPEN_RISE + step));
+}
+
 /* Below this the desktop metaphor stops paying for itself: a window is
    already the full width of the frame (max-width clamps it, and `left`
    can then only be 0), so what it actually gives you is a window that
@@ -83,6 +143,10 @@ function fitWindow(win) {
     delete win.dataset.autoMax;
     restore(win);
   }
+  /* After the restore, so a window first opened on a phone — which
+     never got placed — is centred rather than dropped back onto its
+     authored 1995 corner. */
+  placeWindow(win);
   clampIntoView(win);
 }
 
@@ -279,9 +343,11 @@ function initDragging() {
 
 function maximize(win) {
   if (win.dataset.maximized === 'true') return;
-  win.dataset.prevTop   = win.style.top;
-  win.dataset.prevLeft  = win.style.left;
-  win.dataset.prevWidth = win.style.width;
+  win.dataset.prevTop    = win.style.top;
+  win.dataset.prevLeft   = win.style.left;
+  win.dataset.prevWidth  = win.style.width;
+  /* Placement may have set one, and `height: ''` would drop it. */
+  win.dataset.prevHeight = win.style.height;
   win.style.top    = '0';
   win.style.left   = '0';
   win.style.width  = '100%';
@@ -297,7 +363,7 @@ function restore(win) {
   win.style.top    = win.dataset.prevTop;
   win.style.left   = win.dataset.prevLeft;
   win.style.width  = win.dataset.prevWidth;
-  win.style.height = '';
+  win.style.height = win.dataset.prevHeight || '';
   win.dataset.maximized = 'false';
 }
 
@@ -531,6 +597,12 @@ function logOff() {
   if (!signedIn()) return;
   document.body.classList.remove('signed-in');
   Object.keys(WINDOWS).forEach(closeWindow);
+  /* A new session opens centred again, rather than inheriting where the
+     last one happened to leave things. */
+  document.querySelectorAll('.window').forEach(w => {
+    delete w.dataset.placed;
+    w.style.height = '';
+  });
   refillBin();
   const form = document.querySelector('.login-form');
   form?.querySelectorAll('button').forEach(b => { b.disabled = false; });

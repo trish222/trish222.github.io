@@ -509,6 +509,29 @@ The drag and focus pass that came with them:
   old code subtracted a hard-coded 40 from `innerHeight` and was wrong
   in exactly that state. `toggleMaximize` is `height: 100%` for the same
   reason.
+- **Windows open sized and centred against the viewport.** The widths
+  and positions in `index.html` are 1995 figures: 480px of About Me at
+  `left:130` is a postage stamp in the corner of a 1567px display, with
+  the rest bare teal. `placeWindow` makes the authored width a *floor*
+  (`OPEN_FRAC` of the desktop, capped at `OPEN_MAX` — past which a line
+  of body copy is too long to read) and centres the result, a little
+  above the middle (`OPEN_RISE`, because the taskbar has already taken
+  the bottom and dead centre reads as low). A height floor goes with it,
+  and is not optional: these windows are sized by their content, so
+  scaling width alone made About Me arrive 784x233 — bigger than before
+  and *worse*, a letterbox slot with two sentences adrift in it. The
+  floor is the smaller of a share of the frame's height and a
+  proportion of the window's own width, and it is only a floor, so the
+  Resume keeps its taller natural height. Each window after the first
+  steps `CASCADE` down-right so the second lands beside the first
+  rather than exactly on it.
+  Placement happens on the **first** open only (`dataset.placed`), so a
+  window reopens where it was dragged to — a visitor who put it there
+  meant it, which is also why the resize handler only clamps. Signing
+  out clears the flags and the computed height, so a new session starts
+  centred. `dataset.baseWidth` remembers the authored width, since after
+  the first placement `style.width` holds the computed one and scaling
+  that again each session would walk the window steadily wider.
 - **Every window is clamped into view as it opens**, and again on
   resize. The inline positions in `index.html` are desktop figures:
   Contact opens at `left:310px`, which on a 390px phone is almost
@@ -547,6 +570,13 @@ a desktop width un-maximizes exactly those and leaves a deliberate press
 alone. `toggleMaximize` deletes the flag — a press owns the state from
 then on. `fitWindow` is the one place that decides, and both `openWindow`
 and the resize handler go through it.
+
+Crossing back to a desktop width runs `restore` and then
+`placeWindow`, in that order, so a window first opened on a phone — one
+that was never placed — is centred rather than dropped back onto its
+authored 1995 corner. `maximize`/`restore` carry `prevHeight` along with
+the position for the same reason: placement may have set a height, and
+`height: ''` would quietly drop it.
 
 Two consequences fall out, both intended: a maximized window does not
 drag (the `pointerdown` handler returns early), so on a phone the title
