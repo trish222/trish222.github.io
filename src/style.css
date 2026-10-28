@@ -1105,6 +1105,101 @@ body.screen-active #screen {
   cursor: default;
 }
 
+/* ================================
+   LOOKING AROUND
+
+   The canvas is the input surface for the establishing shot: dragging
+   it swings the camera a little either way, and a press on the machine
+   that does not travel more than a few pixels is the click that flies
+   in. Both decisions are scene.js's — see "LOOKING AROUND" there —
+   and all this does is let the events reach it.
+
+   #scene is pointer-events:none for the whole of the rest of the
+   site's life, so the Win95 chrome stays clickable. `orbit-live` is on
+   the body only while the camera is parked at the establishing shot
+   and nobody has signed in, which is exactly the window in which
+   there is no chrome to click.
+   ================================ */
+body.orbit-live #scene {
+  pointer-events: auto;
+  /* Overwritten per-move by scene.js — `pointer` over the machine,
+     `grab` over the room, `grabbing` mid-drag. This is the value
+     before the first pointermove, and the one a keyboard-only or
+     reduced-motion visitor sees. */
+  cursor: grab;
+}
+
+/* The live login is a 1200px box folded onto the glass by a matrix.
+   While the camera is the visitor's to swing it stands aside, so a
+   drag that starts over the picture rotates like any other and the
+   press that matters is the one the canvas raycasts. (It keeps its
+   click handler for programmatic clicks — that is what the review
+   scripts use, and it is the only route in without a pointer.) */
+body.orbit-live #screen {
+  pointer-events: none;
+}
+
+/* The hint. Unhidden by scene.js once the controls are live, so it
+   never shows up without WebGL; faded for good by `orbit-used` the
+   first time anyone drags. It comes in late on purpose — the
+   establishing shot should land before anything is asked of it. */
+#orbit-hint {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  z-index: 2500;
+  margin: 0;
+  padding: 5px 12px 6px;
+  font-family: var(--font);
+  font-size: var(--font-size);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  color: var(--darker);
+  /* Reads as a label lying on the floor rather than a toast over it:
+     the floor grey it sits on, with the raised 1px edge every other
+     control here has. */
+  background: color-mix(in srgb, var(--scene-floor) 86%, transparent);
+  box-shadow:
+    inset -1px -1px var(--dark),
+    inset 1px 1px var(--white);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+body.orbit-live #orbit-hint {
+  opacity: 0.85;
+  transition-delay: 1.6s;
+}
+
+/* After `body.orbit-live` so it wins at equal specificity: once it has
+   been used, it goes and does not come back. */
+body.orbit-used #orbit-hint {
+  opacity: 0;
+  transition-delay: 0s;
+}
+
+.orbit-hint-arrows {
+  display: inline-block;
+  margin-right: 2px;
+  font-size: 1.15em;
+  vertical-align: -1px;
+  animation: orbit-nudge 2.6s ease-in-out infinite;
+}
+
+@keyframes orbit-nudge {
+  0%, 60%, 100% { transform: translateX(0); }
+  70% { transform: translateX(-2px); }
+  85% { transform: translateX(2px); }
+}
+
+/* The nudge is the only moving part of the hint, and a hint is not
+   worth any motion a visitor has asked not to see. */
+@media (prefers-reduced-motion: reduce) {
+  .orbit-hint-arrows { animation: none; }
+}
+
 /* No transition on the canvas: its opacity is a tween on the fly-in
    timeline, overlapping the last 0.3s of the camera move. A CSS
    transition could only start once a class landed — which is after the

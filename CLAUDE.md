@@ -76,9 +76,9 @@ Regenerate after bumping the dependency; never hand-edit the output.
 ### Layout
 
 ```
-index.html        all markup — canvas, windows, taskbar, Start menu (static, no templating)
+index.html        all markup — canvas, windows, taskbar, Start menu, drag hint (static, no templating)
 src/main.js       window manager: focus/open/close/minimize/maximize, drag, taskbar, clock
-src/scene.js      camera, floor, lighting, env map, AO, hover, the fly-in
+src/scene.js      camera, floor, lighting, env map, AO, hover, the orbit, the fly-in
 src/computer.js   the CRT machine, built from primitives
 public/env/       CC0 studio HDRI used as the environment map
 src/style.css     Win95 design tokens (:root vars) + all component CSS
@@ -420,6 +420,154 @@ The window registry in `main.js` carries the icon basename alongside the
 title, and skips any entry whose `#window-<id>` does not exist — which is
 what lets a desktop icon land before its window does.
 
+### Looking around the establishing shot
+
+**The camera is the visitor's at `fly.value === 0`, and nobody else's.**
+`OrbitControls` (three/addons, MIT) hang off `camera` and the canvas. No
+pan, no wheel zoom (with `enableZoom` off, OrbitControls returns before
+it would `preventDefault`, so the page still scrolls), and both angles
+clamped — but the two clamps are expressed in **different frames**, and
+that is the thing to understand before touching them:
+
+- **Azimuth is measured off the monitor's front**, not off home.
+  `ORBIT_SWING` is ±90° of it, and the front is azimuth `FACING` — the
+  screen looks down the machine's local +Z, so a camera dead in front
+  of the glass sits at exactly the machine's own y-rotation. The leash
+  is therefore the full half-turn the machine can be seen from: a
+  profile of one flank round to a profile of the other.
+- **Elevation is measured off home**, where `ORBIT_UP` / `ORBIT_DOWN`
+  give 10° steeper and only 4° flatter. That asymmetry is the floor:
+  the frame reads `frustum / sin(elevation)` of floor depth, so dropping
+  the camera reaches for the edge of `FLOOR_SIZE` and of the key light's
+  shadow box, while raising it costs nothing.
+
+**Home is not the middle of the azimuth range, and is not meant to be.**
+It is 37° round from the front, so the swing runs −127° one way and +53°
+the other. Nothing recenters it: `applyFly(0)` is still the opening
+framing and still where the walk home goes. The far side of the machine
+is simply further away than the near side.
+
+Three things keep it from fighting the rest of the file:
+
+- **`applyFly(0)` is still the only definition of home.** `initOrbit`
+  seeds `orbitHome` from the pose it produced, and the elevation limits
+  are offsets from *those* angles, so moving `ELEVATION` moves that half
+  of the leash with it. The azimuth half follows `FACING` instead, so
+  it moves with the machine. Nothing restates the camera constants.
+- **The controls own the camera only at the establishing shot.**
+  `flyToScreen` switches them off, `depart` switches them back on, and
+  `orbitAllowed()` also refuses while `signed-in` is on the body.
+  `applyFly` has the pose everywhere else, so the spline, the overlay
+  matrix and the frustum are all untouched.
+- **The input surface is the canvas, not a new overlay.** `#scene` is
+  `pointer-events: none` for the rest of the site's life so the Win95
+  chrome stays clickable; `body.orbit-live` turns that on, and that
+  class is only ever present before the sign-in with the camera parked
+  — exactly the window in which there is no chrome to click. `#screen`
+  goes `pointer-events: none` for the same stretch, so a drag starting
+  over the live login rotates like any other. It keeps its `click`
+  handler, which is both the programmatic route the review scripts use
+  and the only way in without a pointer.
+
+**A press is a click if it travelled less than `CLICK_SLOP` (5px);
+past that the camera has already answered it by turning.** Both halves
+of the decision are recorded on `pointerdown` — the position *and*
+whether the raycast hit the machine — because by the time the pointer
+comes up the camera has moved and the raycast would be asking about a
+different frame. The target is the whole machine (`computer.root`), the
+same thing hover highlights, not just the glass. OrbitControls captures
+the pointer on the canvas, so the `pointerup` arrives there however far
+the drag went.
+
+**The walk home is a GSAP tween, `IDLE_MS` (3s) after the last release.**
+It writes the camera directly through `setOrbitAngles` and `tickOrbit`
+stands `controls.update()` down for its duration: `update()` derives its
+angles from the camera position every call, so there is nothing to keep
+in sync and nothing to fight. It starts by spending the damping glide in
+one undamped `update()` — left running, the residue keeps being applied
+underneath the tween and the walk lands a fraction of a degree short.
+The next drag kills it.
+
+**Reduced motion keeps the rotation and loses the inertia.** Damping is
+what a visitor who asked for less motion is asking not to be given — the
+camera should stop when their pointer does — and there is no walk home
+at all. Both fall out of one fact: under reduced motion there is no
+render loop, so `tickOrbit` never runs; with damping off, OrbitControls'
+own handlers call `update()` themselves, and the `change` listener draws
+the frame.
+
+**`cameraMoving()` is what `updateScreenOverlay` snaps `--scan` and
+`--blur` against**, not `fly.dir` — an orbit changes the screen's
+on-screen scale just as a flight does, and every distinct value of those
+two costs a raster. It covers the flight, the drag, the damping glide
+(`ORBIT_SETTLE_MS` after the last change) and the walk home, and
+resolves exactly at rest.
+
+**The overlay comes off the glass once the screen is edge-on**, which
+at a ±90° leash is a working part rather than a guard. `screenFacing()`
+is the screen's own normal against the camera's *view direction* — the
+direction, not the position vector, because this camera is orthographic
+— and `FACE_MIN` is 0.17, about 80° off the normal. Two reasons, and the
+leash reaches both: past 90° the plane is seen from behind and projects
+to a *mirrored* quad, so the matrix would fold the login inside out
+rather than hide it; and well before that it stops being a picture at
+all — at 80° the glass draws about a fifth of its square-on width while
+the box behind it is still 1200px being blurred and gradient-filled to
+produce that sliver, and the 3D texture underneath carries the same tube
+at the same angle. Because it is the angle off the normal, elevation
+counts toward it too: at the +10° rise the azimuth cutoff comes in a
+degree or so earlier, which is correct. It and the still share
+`syncScreenVisibility`, so neither can clear the other's hiding.
+
+**The flight starts from wherever the camera is** (`FLY_FROM`). Only the
+spline's *first knot* moves: pan is off and zoom is off, so an orbit
+changes nothing but the camera's place on a fixed-radius sphere, and the
+target and frustum at that knot are still the establishing shot's. The
+start is therefore stored as a pair of angles (`flyStart`), not a
+position — which is what lets a mid-flight resize re-derive the whole
+curve from the new viewport instead of carrying a stale frustum into it.
+`depart` puts the home knot back; the camera stays where the flight left
+it and the idle walk brings it in. The alternative, `FLY_FROM = "home"`,
+walks the camera back over `RETURN_FAST_S` first and then runs the
+art-directed arc untouched — it was built and compared, and it loses:
+the correction runs the wrong way, pulling back toward the room before
+coming in, and puts 0.45s of it in front of the click. `_flyfrom.mjs`
+shoots both on one clock.
+
+**The hint** (`#orbit-hint`) is unhidden by `initOrbit`, so it never
+appears without WebGL, and is dismissed for good by `orbit-used` on the
+first `change` — on `start` it would also be dismissed by a press that
+turned out to be a click, which is not a visitor who has found the
+gesture. It is `aria-hidden`: it describes a pointer gesture with no
+keyboard or assistive equivalent, and the thing it decorates is reached
+by pressing the monitor either way.
+
+What the leash passes through, in order, swinging from one clamp to the
+other: a profile of the vented flank, the three-quarter view home sits
+in, a dead-on front elevation at azimuth 0 (side vents gone, floor type
+barely foreshortened), and a profile of the other flank. Only the two
+clamps hide the login. Nothing in the scene breaks anywhere along it —
+the floor plane and the shadow box both stay out of frame, because the
+frustum never changes and so the visible patch of floor is the same
+size at every azimuth, just rotated.
+
+`spendGlide()` is a detail that matters twice. Anything that *takes* the
+camera somewhere — the walk home, `window.__orbit` — has to finish the
+damping glide first with one undamped `update()`, or the residue keeps
+being applied underneath and the move lands short of where it was aimed.
+On a machine holding 60fps the residue three seconds after a release is
+~1e-10 and it is a no-op. It is only visible under a renderer slow
+enough that the glide has barely been spent — which is exactly what
+`_orbit.mjs` runs on, so a result there that looks like drift usually is
+not.
+
+`window.__orbit(swing, rise)` poses the camera in degrees relative to
+home and draws it, or reports where it is and what the leash allows;
+`window.__flyFrom(mode)` switches the start-pose mode on a live page;
+`window.__enter()` is the flight exactly as a press on the machine
+starts it, refit or walk home included. `_orbit.mjs` is the pass that
+covers all of it.
+
 ### The sign-in gate
 
 **The Win98 desktop is behind the login, not beside it.** Its chrome —
@@ -622,6 +770,32 @@ no-WebGL pass stubs `getContext('webgl*')` to `null`; `scene: "fallback"` there 
 screen for real, fills the form and clicks back, on mobile and under reduced
 motion. Both are `_`-prefixed, so local-only.
 
+`_orbit.mjs` covers the camera leash, on desktop / mobile / reduced
+motion. It drags with real pointer events so everything goes through
+OrbitControls, and reads the results back off `window.__orbit` rather
+than trusting the constants: that azimuth clamps at ±90° off the
+monitor's front (−127/+53 off home) and the rise at −4/+10, that the
+login comes off the glass at both clamps and is back well inside them,
+that a drag on the monitor rotates and a 3px press flies in, that the
+camera walks home and does *not* under reduced motion, that the hint
+goes on first use, and that the controls are off during the flight and
+after the sign-in and back on after flying out.
+
+Two things about it. The walk home is **polled, not slept on**: GSAP's
+`lagSmoothing` counts a frame longer than 250ms as 250ms, so on a
+renderer giving the desktop variant about a frame a second a 1.1s tween
+takes several seconds of wall clock — the documented trade, not
+something to measure here. And `window.__orbit(swing, rise)` takes
+degrees relative to **home** (so `__orbit(0, 0)` is the opening framing)
+while reporting azimuth in both frames, because the two halves of the
+leash live in different ones.
+
+`_flyfrom.mjs` shoots the two `FLY_FROM` modes side by side from the
+same off-home pose. Both legs are *posed* rather than played, because
+SwiftShader cannot render a 1.6s flight in 1.6s: the flight is seeked
+through the real timeline (whose progress is linear in time) and the
+walk home is reproduced from its ease, so both strips sit on one clock.
+
 `_step3.mjs` covers the desktop itself, and the two variants are
 deliberately *different runs*, because the two viewports are now
 different interaction models — mouse / double-click / floating windows
@@ -800,9 +974,12 @@ has that a clean render does not.
 - **The badge says `TRISH T-1500`.** No real brand may appear on the bezel, so
   the model number is ours.
 
-Hover is raycast from `window` rather than the canvas, because the canvas is
-`pointer-events: none` so the Win95 chrome stays clickable; events over a window
-or the taskbar are ignored. The easing is time-based, not per-frame, so the
+Hover is raycast from `window` rather than the canvas, because the canvas
+only takes events while `orbit-live` is on the body and a move over the
+chrome still has to be able to turn the hover off; events over a window
+or the taskbar are ignored. One raycast per move feeds two things — the
+hover value and the canvas's cursor, which says what a press will do:
+`pointer` over the machine, `grab` over the room, `grabbing` mid-drag. The easing is time-based, not per-frame, so the
 picture settles at the same speed regardless of frame rate.
 
 **Hover happens on the screen, not in world space.** (The live HTML
@@ -836,7 +1013,9 @@ The baseline before any of this, measured on a real GPU at DPR 1: the
 zoom-out ran at a **33ms median on desktop and 57ms on a phone-sized
 viewport**, with half the frames over two frame-times. It is now a flat
 16.7ms median on both, worst frame 17.8ms, zero janky frames in either
-direction. What got it there, in order of how much each was worth:
+direction. Re-measured after the orbit went in, unchanged: desktop
+16.7 / 20.6 worst / 0 janky, mobile 16.7 / 18.6 / 0. What got it there,
+in order of how much each was worth:
 
 1. **The live HTML coming off the glass** — see "the still" above. This
    was nearly all of it.
@@ -845,13 +1024,21 @@ direction. What got it there, in order of how much each was worth:
    does not move. `renderer.shadowMap.autoUpdate = false` plus one
    `needsUpdate = true` saves re-rendering a 2048² VSM depth pass with
    16 blur samples on every frame. **If anything is ever animated back
-   into the scene, this is what has to be reverted.**
+   into the scene, this is what has to be reverted.** The orbit is not
+   that: it moves the *camera*, and a shadow map is in the light's
+   space, not the camera's.
 3. **`MAX_DPR` is 1.5, not 2.** The scene shades through GTAO on a
    full-screen composite, so cost goes with the square of this; on a 2x
    display the difference is not visible on matt plastic and a blurred
    tube.
 4. **`--scan` and `--blur` are snapped to a coarse grid mid-flight** —
-   again, see above.
+   again, see above. Snapped while the camera is *orbiting* too, for
+   the same reason: see `cameraMoving` under "Looking around".
+
+`_perfcheck.mjs` measures the flight only. The orbit itself is not in
+those numbers — it adds one `controls.update()` and one overlay matrix
+per moving frame, which is small against what the flight does, but it
+has not been measured.
 
 The font is preloaded from `index.html` off `public/fonts/`. Playfair is
 drawn into the floor texture with canvas 2D, so the face has to be
@@ -892,10 +1079,10 @@ scripts.
   `--font`, so fixing it fixes the login screen too — there is one knob, not two.
   An OFL pixel face was fitted here and reverted on request; see "Typography" for
   what fitting one costs.
-- The scene chunk is ~187 kB gzipped plus a 128 kB HDRI, all lazy-loaded after
-  the desktop paints. The entry chunk is still ~3.6 kB gzipped. GSAP accounts
+- The scene chunk is ~195 kB gzipped plus a 128 kB HDRI, all lazy-loaded after
+  the desktop paints. The entry chunk is still ~3.8 kB gzipped. GSAP accounts
   for ~26 kB of the scene chunk; importing `gsap/gsap-core` rather than `gsap`
-  keeps CSSPlugin out and saves ~7 kB of that.
+  keeps CSSPlugin out and saves ~7 kB of that. OrbitControls is ~8 kB of it.
 - No tests, no linter, no README. Don't assume a test command exists.
 - `/favicon.ico` 404s — there isn't one. Pre-existing; the review scripts
   filter it out.

@@ -4,6 +4,7 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { GTAOPass } from "three/examples/jsm/postprocessing/GTAOPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 /* gsap-core, not the "gsap" entry: every tween here targets a plain
    object and the DOM writes happen by hand in onUpdate, so CSSPlugin
    and the default-eases bundle it drags in are dead weight. Saves
@@ -12,6 +13,7 @@ import { gsap } from "gsap/gsap-core";
 import {
   buildComputer,
   disposeComputer,
+  FACING,
   MON_W,
   MON_H,
   MON_Y,
@@ -136,6 +138,117 @@ const SCREEN_GLOW = 2.1;
 const MAX_DPR = 1.5;
 
 /* ==========================================
+   LOOKING AROUND
+
+   OrbitControls (three/addons, MIT) on a short leash. The visitor can
+   swing the establishing shot a little either way to see round the
+   machine, and it eases back to the home isometric pose on its own
+   once they stop. The point is to let the room be looked at, not to
+   hand the camera over: there is no pan, no wheel zoom, and both
+   angles are clamped either side of home rather than being free.
+
+   Three things keep this fitting the rest of the file rather than
+   fighting it:
+
+   - **`applyFly(0)` is still the definition of home.** The controls
+     are seeded from the pose it produces and the limits are offsets
+     from the angles it produced, so moving ELEVATION or AZIMUTH moves
+     the leash with them and there is nothing to restate.
+   - **The controls own the camera only at `fly.value === 0`.** The
+     moment the flight starts they are switched off and `applyFly` has
+     the pose back. Everything downstream of the camera — the overlay
+     matrix, the spline, the frustum — is untouched.
+   - **The input surface is the canvas**, not a new overlay. It is
+     `pointer-events: none` for the whole of the rest of the site's
+     life so the Win95 chrome stays clickable, and it only takes
+     events while `orbit-live` is on the body: before the sign-in,
+     with the camera parked at the establishing shot, which is exactly
+     the window in which there is no chrome to click. The live login
+     on the glass stands aside for the same stretch (see the CSS), so a
+     drag that starts over the picture rotates like any other.
+   ========================================== */
+/* Azimuth, either side of the **monitor's front** — not either side of
+   home. The screen looks down the machine's local +Z and the machine is
+   turned by FACING, so a camera dead in front of the glass sits at
+   azimuth FACING; the leash is that angle ± this.
+
+   Anchoring it to the machine rather than to the camera is what makes
+   it asymmetric: home is 37° round from the front, so the swing is
+   -127° one way and +53° the other. That is deliberate. The home pose
+   is unchanged and is still where the walk home goes — what moved is
+   only how far either side of it the visitor may get, and the far side
+   of the machine is simply further away than the near one.
+
+   At the clamps themselves the glass is exactly edge-on, which is what
+   FACE_MIN below is now actually for. */
+const ORBIT_SWING = THREE.MathUtils.degToRad(90);
+/* Elevation gets a far shorter leash than azimuth, and an asymmetric
+   one. Steeper is free; flatter is not — the frame sees
+   frustum/sin(elevation) of floor depth, so dropping the camera
+   reaches for the edge of FLOOR_SIZE and of the key light's shadow
+   box. At 16° a portrait phone frame already reads ~±56 world units
+   of floor against a ±80 plane, which is as close as it should get. */
+const ORBIT_DOWN = THREE.MathUtils.degToRad(4); // flatter than home
+const ORBIT_UP = THREE.MathUtils.degToRad(10); // steeper than home
+/* Weighted rather than sticky: the drag keeps gliding for a few frames
+   after the pointer stops. */
+const ORBIT_DAMPING = 0.075;
+/* Under 1 so the swing is not twitchy. OrbitControls scales a drag by
+   viewport *height*, so at 0.55 the full 180° takes about 0.57 of the
+   frame's height dragged sideways — half the width of a 16:9 desktop
+   frame, a comfortable single gesture. At the library default it is
+   half that, which on a leash this wide is a flick straight into the
+   clamp. */
+const ORBIT_SPEED = 0.55;
+
+/* Quiet before the camera takes itself home, and how long that takes. */
+const IDLE_MS = 3000;
+const RETURN_S = 1.1;
+const RETURN_EASE = "power2.inOut";
+/* Walking home as the first half of a click — brisker than the idle
+   return, because there is a flight waiting behind it. */
+const RETURN_FAST_S = 0.45;
+/* How far off home still counts as home, so a stray pixel of drag does
+   not schedule a tween with nothing to do. */
+const ORBIT_EPS = THREE.MathUtils.degToRad(0.2);
+
+/* A press is a click if the pointer stayed inside this many CSS px of
+   where it went down; past that it was a drag, and the camera has
+   already moved in answer to it. */
+const CLICK_SLOP = 5;
+/* Quiet after the last orbit change before the camera counts as at
+   rest again — see `cameraMoving`. Two or three frames: long enough to
+   cover the gaps between damping updates, short enough that the CRT
+   variables resolve exactly the moment the glide ends. */
+const ORBIT_SETTLE_MS = 120;
+
+/* Where the flight starts from when the visitor has swung the camera
+   off home. "current" refits the spline's first knot to wherever they
+   left it, so the flight begins on the click; "home" walks the camera
+   back first and then runs the art-directed arc untouched. Switchable
+   at runtime through window.__flyFrom for comparing the two. */
+const FLY_FROM = "current";
+
+/* Below this much of the screen's own normal pointing at the camera,
+   the live HTML comes off the glass. Two reasons, and the leash above
+   reaches both:
+
+   - **Past 90° the plane is seen from behind**, and a back-facing plane
+     projects to a *mirrored* quad: the matrix would fold the login
+     inside out rather than hide it.
+   - **Well before that it stops being a picture.** cos(80°) is 0.17, so
+     at this threshold the glass is drawn about a fifth of its square-on
+     width — a 240px panel down to 40 — and the box behind it is still
+     1200px being blurred and gradient-filled to produce that sliver.
+     The 3D texture underneath carries the same tube at the same angle,
+     and at a sliver's width the two are indistinguishable.
+
+   It is the angle off the glass's own normal, so elevation counts
+   toward it as well as azimuth — at the +10° rise the azimuth cutoff
+   comes in a degree or so earlier, which is correct. */
+const FACE_MIN = 0.17; // ~80° off the normal
+
+/* ==========================================
    FLYING INTO THE SCREEN
 
    One parameter, `fly.value`: 0 is the isometric establishing shot, 1
@@ -232,6 +345,39 @@ let onVisibility = null;
 let onScreenInput = null;
 /* Last value written to --scene-fade, so a repeat is not rewritten. */
 let sceneFade = -1;
+
+/* --- Looking around ------------------------------------- */
+let controls = null;
+/* The pose applyFly(0) produced, in the controls' own terms. Filled in
+   by initOrbit; the leash and the walk home are both expressed against
+   it, so nothing here restates ELEVATION or AZIMUTH. */
+const orbitHome = { theta: 0, phi: 0, radius: CAM_DIST };
+const orbitSpherical = new THREE.Spherical();
+let orbitTween = null; // the walk home, while one is running
+let orbitDragging = false;
+/* performance.now() of the last release; 0 once the timer has fired or
+   while there is nothing to time. */
+let orbitIdleAt = 0;
+let orbitChangedAt = -Infinity;
+let orbitDirty = false; // the camera moved and the overlay has not caught up
+let onCanvasDown = null;
+let onCanvasUp = null;
+let onCanvasCancel = null;
+/* The press being tracked for the click-or-drag decision. */
+let press = { id: -1, x: 0, y: 0, hit: false };
+let flyFrom = FLY_FROM;
+/* Which pose the spline's first knot sits at. Null is the isometric
+   establishing shot — the definition of home. A pair of orbit angles
+   when the flight started from somewhere the visitor had swung the
+   camera to; only the position on the sphere differs there, so a resize
+   mid-flight still re-derives the target and the frustum from the
+   viewport rather than carrying a stale copy of them. */
+let flyStart = null;
+/* The two reasons the live HTML comes off the glass, kept apart so
+   neither can clear the other's hiding — see syncScreenVisibility. */
+let stillHidden = false;
+let screenAway = false;
+let screenHidden = ""; // last value written to the overlay's visibility
 /* Dev-only stats.js panel; null in a production build — see src/perf.js. */
 let perf = null;
 
@@ -545,6 +691,15 @@ function buildFlyPath(width, height) {
     targets.push(pose.target.clone());
     frustums.push(new THREE.Vector3(Math.log(pose.frustum), 0, 0));
   }
+  /* The flight may have been started from an orbited pose rather than
+     from home. Only the camera's place on the sphere differs there —
+     pan is off, so the target is still ISO_TARGET, and the frustum is
+     still the establishing shot's — so this is the one knot that
+     moves, and the rest of the curve (and every resize) is unchanged. */
+  if (flyStart) {
+    orbitSpherical.set(orbitHome.radius, flyStart.phi, flyStart.theta);
+    positions[0].setFromSpherical(orbitSpherical).add(targets[0]);
+  }
   const curve = (pts) =>
     new THREE.CatmullRomCurve3(pts, false, "catmullrom", FLY_TENSION);
   flyPath = {
@@ -601,6 +756,280 @@ function buildCamera() {
 }
 
 /* ==========================================
+   LOOKING AROUND — the implementation
+
+   See the constants above for what this is and why it is shaped this
+   way. The short version: OrbitControls own the camera at
+   `fly.value === 0` and nowhere else.
+   ========================================== */
+
+/* The controls are the camera's owner only at the establishing shot,
+   and only while the login is still what the visitor is looking at.
+   Both halves matter: the flight disables them on its way in, and
+   signing out leaves the camera parked at the screen until the back
+   button flies it out. */
+function orbitAllowed() {
+  return (
+    !!controls &&
+    controls.enabled &&
+    fly.value === 0 &&
+    !document.body.classList.contains("signed-in")
+  );
+}
+
+/* True while the camera is in motion for any reason: the flight, a
+   drag, the damping glide after one, or the walk home.
+   updateScreenOverlay snaps the two expensive CRT variables while it
+   is — the cost is a raster per distinct value, and an orbit changes
+   the screen's on-screen scale just as a flight does. */
+function cameraMoving() {
+  return (
+    fly.dir !== 0 ||
+    orbitDragging ||
+    !!orbitTween ||
+    performance.now() - orbitChangedAt < ORBIT_SETTLE_MS
+  );
+}
+
+/* Poses the camera from a pair of orbit angles around the controls'
+   target. The radius never changes: zoom is off, and for an
+   orthographic camera the distance along the view axis makes no
+   difference to the framing anyway. camera.up is +Y and the controls
+   are not re-basing it, so a plain spherical is exactly what
+   OrbitControls would compute. */
+function setOrbitAngles(theta, phi) {
+  orbitSpherical.set(orbitHome.radius, phi, theta);
+  camera.position.setFromSpherical(orbitSpherical).add(controls.target);
+  camera.lookAt(controls.target);
+  camera.updateMatrixWorld();
+  orbitDirty = true;
+}
+
+function orbitOffHome() {
+  if (!controls) return false;
+  return (
+    Math.abs(controls.getAzimuthalAngle() - orbitHome.theta) > ORBIT_EPS ||
+    Math.abs(controls.getPolarAngle() - orbitHome.phi) > ORBIT_EPS
+  );
+}
+
+function killReturn() {
+  orbitTween?.kill();
+  orbitTween = null;
+}
+
+/* Finishes the damping glide now rather than over the next frames. One
+   undamped update() applies what is left of the flick and clears it,
+   which is what OrbitControls' own damping would have arrived at
+   anyway — just not spread out.
+
+   Anything that *takes* the camera somewhere has to do this first, or
+   the residue keeps being applied underneath and the move lands short
+   of where it was aimed. On a machine holding 60fps the residue three
+   seconds after a release is ~1e-10 and this is a no-op; it only shows
+   on a renderer slow enough that the glide has barely been spent. */
+function spendGlide() {
+  const damped = controls.enableDamping;
+  controls.enableDamping = false;
+  controls.update();
+  controls.enableDamping = damped;
+}
+
+/* The walk home. Eased with a definite end rather than an exponential
+   approach, so the camera is demonstrably back at applyFly(0) instead
+   of asymptotically near it — which matters, because that pose is what
+   the fly-in's first knot is measured from.
+
+   It writes the camera directly and `controls.update()` stands down for
+   the duration (see tickOrbit): update() derives its angles from the
+   camera position every call, so there is nothing to keep in sync and
+   nothing to fight. The next drag kills it — see the `start` handler. */
+function returnHome(duration = RETURN_S, onDone = null) {
+  killReturn();
+  /* `from` is read *after* this, so the tween starts from the pose the
+     glide actually leaves rather than jumping on its first frame. */
+  spendGlide();
+  const from = {
+    theta: controls.getAzimuthalAngle(),
+    phi: controls.getPolarAngle(),
+  };
+  orbitTween = gsap.to(from, {
+    theta: orbitHome.theta,
+    phi: orbitHome.phi,
+    duration,
+    ease: RETURN_EASE,
+    onUpdate: () => setOrbitAngles(from.theta, from.phi),
+    onComplete: () => {
+      orbitTween = null;
+      setOrbitAngles(orbitHome.theta, orbitHome.phi);
+      onDone?.();
+    },
+  });
+}
+
+function setOrbitEnabled(on) {
+  if (!controls) return;
+  controls.enabled = on;
+  document.body.classList.toggle("orbit-live", on);
+  if (on) {
+    orbitIdleAt = performance.now();
+  } else {
+    killReturn();
+    orbitDragging = false;
+    orbitIdleAt = 0;
+    press.id = -1;
+    if (canvasEl) canvasEl.style.cursor = "";
+  }
+}
+
+/* Called once a frame from the render loop. Reduced motion has no loop
+   — see initScene — so none of this runs there: no damping to advance
+   (it is switched off) and, by request, no walk home either. The
+   `change` handler covers drawing in that case. */
+function tickOrbit(dt) {
+  if (!orbitAllowed()) return;
+  /* Damping glides on for a few frames after the pointer stops, which
+     is the whole of the "weighted" feel; that needs update() every
+     frame, not just on input. */
+  if (!orbitTween) controls.update(dt);
+
+  if (!orbitDragging && !orbitTween && orbitIdleAt &&
+      performance.now() - orbitIdleAt > IDLE_MS) {
+    orbitIdleAt = 0;
+    if (orbitOffHome()) returnHome();
+  }
+
+  if (orbitDirty) {
+    orbitDirty = false;
+    camera.updateMatrixWorld();
+    updateScreenOverlay();
+  }
+}
+
+/* Is the point under this event on the machine? The whole machine, not
+   just the glass: it is the same target hover already highlights, and
+   on a phone the monitor alone is a small thing to hit. */
+const pickNdc = new THREE.Vector2();
+const pickRay = new THREE.Raycaster();
+
+function pickMachine(e) {
+  if (!computer || !canvasEl || !camera) return false;
+  const r = canvasEl.getBoundingClientRect();
+  if (!r.width || !r.height) return false;
+  pickNdc.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+  pickNdc.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+  pickRay.setFromCamera(pickNdc, camera);
+  return pickRay.intersectObject(computer.root, true).length > 0;
+}
+
+/* The click-or-rotate decision. A press that travelled more than
+   CLICK_SLOP was a drag, and the camera has already answered it by
+   turning; only a press that stayed put is a click. Both halves are
+   recorded on the way down, because by the time the pointer comes up
+   the camera has moved and the raycast would be asking about a
+   different frame. */
+function initCanvasPress(canvas) {
+  onCanvasDown = (e) => {
+    press.id = -1;
+    if (!orbitAllowed() || !e.isPrimary) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    press = { id: e.pointerId, x: e.clientX, y: e.clientY, hit: pickMachine(e) };
+  };
+  /* OrbitControls captures the pointer on this same element, so the up
+     still arrives here however far outside the canvas the drag went. */
+  onCanvasUp = (e) => {
+    if (e.pointerId !== press.id) return;
+    const moved = Math.hypot(e.clientX - press.x, e.clientY - press.y);
+    const hit = press.hit;
+    press.id = -1;
+    if (hit && moved <= CLICK_SLOP && orbitAllowed()) enterScreen();
+  };
+  onCanvasCancel = () => {
+    press.id = -1;
+  };
+  canvas.addEventListener("pointerdown", onCanvasDown);
+  canvas.addEventListener("pointerup", onCanvasUp);
+  canvas.addEventListener("pointercancel", onCanvasCancel);
+}
+
+/* The way in, from wherever the camera happens to be. */
+function enterScreen() {
+  if (flyFrom === "home" && orbitOffHome()) {
+    /* Off before the walk, so the leash cannot be grabbed again
+       half-way through it. */
+    setOrbitEnabled(false);
+    returnHome(RETURN_FAST_S, flyToScreen);
+    return;
+  }
+  flyToScreen();
+}
+
+function initOrbit() {
+  controls = new OrbitControls(camera, canvasEl);
+  controls.target.copy(ISO_TARGET);
+  controls.enablePan = false;
+  /* No wheel zoom: the frustum is the fly-in's business, and a
+     scrolled-in establishing shot has nothing behind it. With zoom off
+     OrbitControls returns from the wheel handler before it would
+     preventDefault, so the page is left to scroll as it likes. */
+  controls.enableZoom = false;
+  controls.rotateSpeed = ORBIT_SPEED;
+  /* Inertia is precisely what a reduced-motion visitor has asked not
+     to be given: the camera should stop when their pointer does. They
+     keep the rotation — that is theirs to drive — and lose the glide
+     and the walk home. With damping off, the controls' own handlers
+     call update() themselves, so there is nothing for the render loop
+     to do, which is just as well: there isn't one. */
+  controls.enableDamping = !prefersReducedMotion();
+  controls.dampingFactor = ORBIT_DAMPING;
+
+  /* Home is whatever applyFly(0) just produced, and nothing here moves
+     it: it is the opening framing, and it is where the walk home goes.
+     The *elevation* leash is still expressed against it, so it follows
+     ELEVATION; the azimuth leash is not — see ORBIT_SWING. */
+  orbitHome.theta = controls.getAzimuthalAngle();
+  orbitHome.phi = controls.getPolarAngle();
+  orbitHome.radius = camera.position.distanceTo(controls.target);
+  /* Around the machine's front, not around home — see ORBIT_SWING.
+     orbitHome.theta sits inside the range rather than in the middle of
+     it, which is the whole point. */
+  controls.minAzimuthAngle = FACING - ORBIT_SWING;
+  controls.maxAzimuthAngle = FACING + ORBIT_SWING;
+  controls.minPolarAngle = orbitHome.phi - ORBIT_UP;
+  controls.maxPolarAngle = orbitHome.phi + ORBIT_DOWN;
+
+  controls.addEventListener("start", () => {
+    orbitDragging = true;
+    killReturn();
+    orbitIdleAt = 0;
+  });
+  controls.addEventListener("end", () => {
+    orbitDragging = false;
+    orbitIdleAt = performance.now();
+  });
+  controls.addEventListener("change", () => {
+    orbitChangedAt = performance.now();
+    orbitDirty = true;
+    /* The hint has done its job the first time the camera actually
+       turns. On `start` rather than here it would also be dismissed by
+       a press that turned out to be a click, which is not a visitor
+       who has found the gesture. */
+    document.body.classList.add("orbit-used");
+    /* Reduced motion renders a single frame and keeps no loop, so the
+       draw has to happen here or the rotation is invisible. */
+    if (!frame) {
+      orbitDirty = false;
+      camera.updateMatrixWorld();
+      updateScreenOverlay();
+      render();
+    }
+  });
+
+  document.getElementById("orbit-hint")?.removeAttribute("hidden");
+  setOrbitEnabled(true);
+}
+
+/* ==========================================
    THE LIVE PAGE ON THE GLASS
 
    #screen is a DOM box that gets laid onto the screen plane with a CSS
@@ -623,11 +1052,45 @@ function projectCorner(x, y, width, height, out) {
   out[1] = (-screenCorner.y * 0.5 + 0.5) * height;
 }
 
+/* How squarely the glass is turned toward the camera: 1 head-on, 0
+   edge-on, negative seen from behind. The view *direction* is what
+   counts, not the camera's position — this camera is orthographic, so
+   every point of the frame is viewed along the same axis. */
+const screenNormal = new THREE.Vector3();
+const viewDir = new THREE.Vector3();
+
+function screenFacing() {
+  screenNormal.set(0, 0, 1).transformDirection(computer.screen.matrixWorld);
+  camera.getWorldDirection(viewDir);
+  return -screenNormal.dot(viewDir);
+}
+
+/* The live HTML comes off the glass for two unrelated reasons — the
+   still has it during a flight, and the geometry can turn it away from
+   the camera — so both are tracked and neither clears the other.
+   `visibility`, not opacity: an element at opacity 0 is still painted,
+   and painting this one is the whole cost worth avoiding. */
+function syncScreenVisibility() {
+  if (!screenEl) return;
+  const v = stillHidden || screenAway ? "hidden" : "";
+  if (v === screenHidden) return; // don't invalidate style for a repeat
+  screenHidden = v;
+  screenEl.style.visibility = v;
+}
+
 function updateScreenOverlay() {
   if (!screenEl || !camera || !computer) return;
   const width = canvasEl.clientWidth;
   const height = canvasEl.clientHeight;
   if (!width || !height) return;
+
+  /* Seen from behind, a plane projects to a mirrored quad: the matrix
+     below would fold the login inside out rather than hide it. Inside
+     the current orbit leash the glass never turns that far — this is
+     what keeps widening ORBIT_SWING from being able to break it. */
+  screenAway = screenFacing() < FACE_MIN;
+  syncScreenVisibility();
+  if (screenAway) return;
 
   const hw = (SCREEN_W * SCREEN_INNER) / 2;
   const hh = (SCREEN_H * SCREEN_INNER) / 2;
@@ -664,7 +1127,7 @@ function updateScreenOverlay() {
   const snap = (v, step) => Math.round(v / step) * step;
   let scan = Math.max(8, 3 / scale);
   let blur = (0.9 / scale) * (1 - fly.value);
-  if (fly.dir !== 0) {
+  if (cameraMoving()) {
     scan = snap(scan, SCAN_STEP);
     blur = snap(blur, BLUR_STEP);
   }
@@ -730,22 +1193,24 @@ function buildComposer(width, height) {
 }
 
 /* ==========================================
-   HOVER
+   HOVER, AND THE CURSOR
 
-   The canvas is pointer-events:none so the Win95 chrome stays
-   clickable, so the move is tracked on the window and converted into
-   canvas space by hand. Events over a window or the taskbar are
-   ignored — those are in front of the scene.
+   One raycast per pointer move, feeding two things: the screen's
+   hover brightness, and what the cursor says the canvas will do with
+   a press — the machine is a click, the room around it is a drag.
+
+   Tracked on the window rather than the canvas even though the canvas
+   now takes events, because it only takes them while `orbit-live` is
+   on the body; a move over the chrome has to be able to turn the
+   hover off. Events over a window or the taskbar are ignored — those
+   are in front of the scene.
    ========================================== */
-function initHover(canvas) {
-  const ndc = new THREE.Vector2();
-  const ray = new THREE.Raycaster();
-
+function initPointer(canvas) {
   onPointerMove = (e) => {
     /* Once the camera is on its way in, the picture is the live page
        rather than the texture, and the hover feedback has nothing left
        to say. */
-    if (fly.value > 0) {
+    if (fly.value > 0 || !orbitAllowed()) {
       hover.target = 0;
       return;
     }
@@ -753,11 +1218,9 @@ function initHover(canvas) {
       hover.target = 0;
       return;
     }
-    const r = canvas.getBoundingClientRect();
-    ndc.x = ((e.clientX - r.left) / r.width) * 2 - 1;
-    ndc.y = -((e.clientY - r.top) / r.height) * 2 + 1;
-    ray.setFromCamera(ndc, camera);
-    hover.target = ray.intersectObject(computer.root, true).length ? 1 : 0;
+    const on = pickMachine(e);
+    hover.target = on ? 1 : 0;
+    canvas.style.cursor = orbitDragging ? "grabbing" : on ? "pointer" : "grab";
   };
   window.addEventListener("pointermove", onPointerMove, { passive: true });
 }
@@ -818,6 +1281,9 @@ function logArrival() {
 
 function arrive() {
   fly.dir = 0;
+  /* Already off on the way in; this is the reduced-motion jump, which
+     gets here without passing through flyToScreen's tween. */
+  setOrbitEnabled(false);
   document.body.classList.remove("screen-zooming");
   document.body.classList.add("screen-focused");
   /* Snap both parameters to the endpoint. GSAP lands on it exactly, but
@@ -835,6 +1301,16 @@ function depart() {
   document.body.classList.remove("screen-active", "screen-zooming");
   applyFade(0);
   showStill(false);
+  /* The flight out ended on whatever pose it started from, which may
+     have been an orbited one. Put the home knot back, so the next
+     flight and the next resize are both measured from the establishing
+     shot again; the camera itself stays where the flight left it, and
+     the idle walk home brings it in. */
+  if (flyStart) {
+    flyStart = null;
+    if (canvasEl) buildFlyPath(canvasEl.clientWidth, canvasEl.clientHeight);
+  }
+  setOrbitEnabled(true);
   /* The form may have been typed into while it was up, so the bitmap is
      stale for the next flight. */
   stillDirty = true;
@@ -873,7 +1349,8 @@ function applyFade(v) {
      monitor dead to a second click. `depart` removes the class before
      it calls this, which is what makes the test come out right there. */
   const flying = document.body.classList.contains("screen-active");
-  screenEl.style.visibility = v === 0 && flying ? "hidden" : "";
+  stillHidden = v === 0 && flying;
+  syncScreenVisibility();
 }
 
 /* ==========================================
@@ -1126,6 +1603,19 @@ function jumpFly(to) {
 
 export function flyToScreen() {
   if (!screenEl || fly.value === 1 || (flyTl && flyTl.isActive() && flyTl.reversed() === false)) return;
+  /* The camera is applyFly's again from here to `depart`. */
+  setOrbitEnabled(false);
+  /* Started from an orbited pose, the curve's first knot moves to it,
+     so the flight begins where the visitor left the camera instead of
+     snapping home first. In "home" mode enterScreen has already walked
+     it back, so there is nothing off home to fit. */
+  if (controls && flyFrom === "current" && orbitOffHome()) {
+    flyStart = {
+      theta: controls.getAzimuthalAngle(),
+      phi: controls.getPolarAngle(),
+    };
+    buildFlyPath(canvasEl.clientWidth, canvasEl.clientHeight);
+  }
   document.body.classList.add("screen-active", "screen-zooming");
   if (prefersReducedMotion()) return jumpFly(1);
   showStill(true);
@@ -1233,6 +1723,69 @@ export async function initScene(canvas) {
   window.__scene = scene;
   window.__composer = composer;
   window.__stillReady = () => !!stillCanvas;
+  /* Parks or reads the orbit, for the review scripts: no argument
+     reports where the camera is and what the leash allows, a pair of
+     degrees poses it. The arguments are relative to **home**, so
+     __orbit(0, 0) is the opening framing. The report carries azimuth
+     in both frames, because the two halves of the leash are expressed
+     in different ones — elevation against home, azimuth against the
+     monitor's front. */
+  window.__orbit = (swing, rise) => {
+    if (!controls) return null;
+    if (swing !== undefined) {
+      /* Park exactly where asked, and *stay* there: kill a walk home in
+         progress, spend the glide, and clear the idle timer so the next
+         one does not reclaim the camera out from under a screenshot. */
+      killReturn();
+      orbitIdleAt = 0;
+      spendGlide();
+      setOrbitAngles(
+        THREE.MathUtils.clamp(
+          orbitHome.theta + THREE.MathUtils.degToRad(swing),
+          controls.minAzimuthAngle,
+          controls.maxAzimuthAngle,
+        ),
+        THREE.MathUtils.clamp(
+          orbitHome.phi - THREE.MathUtils.degToRad(rise || 0),
+          controls.minPolarAngle,
+          controls.maxPolarAngle,
+        ),
+      );
+      controls.update();
+      updateScreenOverlay();
+      render();
+    }
+    const deg = THREE.MathUtils.radToDeg;
+    const theta = controls.getAzimuthalAngle();
+    return {
+      swing: deg(theta - orbitHome.theta), // off home
+      front: deg(theta - FACING), // off the monitor's front
+      rise: deg(orbitHome.phi - controls.getPolarAngle()),
+      enabled: controls.enabled,
+      facing: screenFacing(),
+      limits: {
+        front: [
+          deg(controls.minAzimuthAngle - FACING),
+          deg(controls.maxAzimuthAngle - FACING),
+        ],
+        swing: [
+          deg(controls.minAzimuthAngle - orbitHome.theta),
+          deg(controls.maxAzimuthAngle - orbitHome.theta),
+        ],
+        rise: [-deg(ORBIT_DOWN), deg(ORBIT_UP)],
+      },
+    };
+  };
+  /* "current" starts the flight from wherever the camera has been
+     swung to; "home" walks it back first. See FLY_FROM. */
+  window.__flyFrom = (mode) => {
+    if (mode === "current" || mode === "home") flyFrom = mode;
+    return flyFrom;
+  };
+  /* The flight exactly as a press on the machine starts it — the
+     refit of the curve's first knot, or the walk home, included.
+     flyToScreen skips both; this is the one the review scripts want. */
+  window.__enter = () => enterScreen();
   /* Parks the flight at a point of the *timeline* and draws it. It
      seeks the real timeline rather than posing the camera itself, so
      what it shows is what the flight shows there — the login bitmap on
@@ -1249,6 +1802,11 @@ export async function initScene(canvas) {
     document.body.classList.toggle("screen-zooming", moving);
     showStill(moving);
     fly.dir = 0; // parked: --scan and --blur resolve exactly
+    /* Parked anywhere but the establishing shot, the camera is the
+       flight's — same as during a real one, so the hint and the
+       canvas's pointer events park with it. (Seeking to 0 fires the
+       timeline's onReverseComplete, which hands them back.) */
+    setOrbitEnabled(t === 0);
     flyTl.progress(t, false);
     render();
     return {
@@ -1272,7 +1830,14 @@ export async function initScene(canvas) {
     /* Re-derived from fly.value rather than reset, so a resize part-way
        through the fly-in — or while the login page is up — keeps the
        camera where it was. */
+    const keep = orbitAllowed()
+      ? { theta: controls.getAzimuthalAngle(), phi: controls.getPolarAngle() }
+      : null;
     applyFly(fly.value, width, height);
+    /* applyFly puts the camera back on the path, which at the
+       establishing shot is home — and the visitor may have swung it
+       off. A resize is not a reason to take that away. */
+    if (keep) setOrbitAngles(keep.theta, keep.phi);
     fitFloor(width, height);
     updateScreenOverlay();
     if (!frame && fly.value < 1) render();
@@ -1282,12 +1847,19 @@ export async function initScene(canvas) {
   render();
   initScreenOverlay();
   buildFlyTimeline();
+  /* Both before the reduced-motion return: the camera is still the
+     visitor's to swing there, and the canvas is still what carries the
+     press that flies in. What reduced motion loses is the inertia and
+     the walk home — see initOrbit. */
+  initOrbit();
+  initPointer(canvas);
+  initCanvasPress(canvas);
   loadEnvironment().then((ok) => {
     if (ok && !frame) render();
   });
 
-  /* Reduced motion: one static frame, no loop and no hover. The screen
-     is still clickable — the fly-in just arrives instead of flying. */
+  /* Reduced motion: one static frame and no loop. The screen is still
+     clickable — the fly-in just arrives instead of flying. */
   if (prefersReducedMotion()) return true;
 
   /* Vite folds `import.meta.env.DEV` to `false` when building, so this
@@ -1300,8 +1872,6 @@ export async function initScene(canvas) {
       perf = null; // the meter is never load-bearing
     }
   }
-
-  initHover(canvas);
 
   /* Hover happens entirely on the screen: the machine does not move, the
      picture does. The CRT comes up brighter and the window on it shows a
@@ -1319,6 +1889,9 @@ export async function initScene(canvas) {
        whatever the frame rate. */
     const dt = clock.getDelta();
     elapsed += dt;
+    /* The controls own the camera at the establishing shot and nowhere
+       else, so this is a no-op from the moment a flight starts. */
+    tickOrbit(dt);
     const k = 1 - Math.exp(-HOVER_RATE * dt);
     hover.value += (hover.target - hover.value) * k;
     computer.setScreen(hover.value);
@@ -1361,6 +1934,26 @@ export function disposeScene() {
   if (onVisibility)
     document.removeEventListener("visibilitychange", onVisibility);
   if (onPointerMove) window.removeEventListener("pointermove", onPointerMove);
+  killReturn();
+  if (canvasEl && onCanvasDown) {
+    canvasEl.removeEventListener("pointerdown", onCanvasDown);
+    canvasEl.removeEventListener("pointerup", onCanvasUp);
+    canvasEl.removeEventListener("pointercancel", onCanvasCancel);
+  }
+  /* disconnect(), not just enabled = false: it is what puts back the
+     touch-action and the cursor it wrote on the canvas. */
+  controls?.disconnect();
+  controls?.dispose();
+  controls = null;
+  onCanvasDown = onCanvasUp = onCanvasCancel = null;
+  press = { id: -1, x: 0, y: 0, hit: false };
+  orbitDragging = false;
+  orbitIdleAt = 0;
+  orbitDirty = false;
+  orbitChangedAt = -Infinity;
+  flyStart = null;
+  flyFrom = FLY_FROM;
+  document.getElementById("orbit-hint")?.setAttribute("hidden", "");
   perf?.dispose();
   perf = null;
   disposables.forEach((d) => d.dispose());
@@ -1381,11 +1974,23 @@ export function disposeScene() {
   }
   stillCanvas = null;
   stillDirty = true;
+  stillHidden = false;
+  screenAway = false;
+  screenHidden = "";
   sceneFade = -1;
   document.body.style.removeProperty("--scene-fade");
-  if (canvasEl) canvasEl.style.opacity = "";
+  if (canvasEl) {
+    canvasEl.style.opacity = "";
+    canvasEl.style.cursor = "";
+  }
   document.body.style.removeProperty("--page-fade");
-  document.body.classList.remove("screen-active", "screen-zooming", "screen-focused");
+  document.body.classList.remove(
+    "screen-active",
+    "screen-zooming",
+    "screen-focused",
+    "orbit-live",
+    "orbit-used",
+  );
   fly = { value: 0, dir: 0 };
   screenEl = null;
   gtaoPass = null;

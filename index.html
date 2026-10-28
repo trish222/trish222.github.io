@@ -404,6 +404,23 @@
 
   </div><!-- /#desktop -->
 
+  <!-- DRAG TO LOOK AROUND
+
+       The establishing shot's camera is on a short leash the visitor
+       can swing (OrbitControls — see "LOOKING AROUND" in scene.js), and
+       a drag is not a thing a page usually invites, so it has to say
+       so. Unhidden by scene.js once the controls are actually live, so
+       it never appears without WebGL, and faded out for good the first
+       time anyone takes it up.
+
+       aria-hidden because it describes a pointer gesture with no
+       keyboard or assistive equivalent: the camera move is decoration
+       either way, and the thing it decorates — the monitor, and the
+       login behind it — is reached by pressing it. -->
+  <p id="orbit-hint" aria-hidden="true" hidden>
+    <span class="orbit-hint-arrows">&#8596;</span> Drag to look around
+  </p>
+
   <!-- Only on screen once the camera has flown in, and gone again once
        signed in: from there the way out is Start > Log Off. -->
   <div id="screen-back-bar" class="ui98" hidden>
