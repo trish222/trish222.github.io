@@ -25,6 +25,47 @@
 }
 
 /* ================================
+   THE WINDOW FACES
+
+   Two, both OFL and both vendored to stable paths in public/fonts/
+   (licences and provenance in the LICENSE.txt beside them) rather than
+   imported from node_modules, for the same reason Playfair is: Vite
+   hashes what it emits, and these want URLs that do not move.
+
+   The *chrome* face is not one of them — --font is still a local stack
+   (see the token below), so title bars, buttons, menus, icon labels and
+   the login dialog render in whatever the visitor already has.
+   ================================ */
+
+/* Body copy inside windows. A pixel face is a readability tax on
+   anything longer than a label, and this one is drawn for the
+   opposite — it is the Braille Institute's legibility face. */
+@font-face {
+  font-family: 'Atkinson Hyperlegible';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/atkinson-hyperlegible-latin-400-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Atkinson Hyperlegible';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/atkinson-hyperlegible-latin-700-normal.woff2') format('woff2');
+}
+
+/* The resume and anything else that wants to read as a terminal. */
+@font-face {
+  font-family: 'Departure Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/departure-mono-regular.woff2') format('woff2');
+}
+
+/* ================================
    WIN95 VARIABLES
    ================================ */
 :root {
@@ -40,7 +81,14 @@
      so this is what shows in the strip the taskbar vacates during the
      fly-in. */
   --scene-floor: #dcdee0;
+  /* Chrome: title bars, buttons, menus, icon labels, the taskbar, the
+     login dialog. The vendored 98.css falls back to --font too, so
+     this is one knob for the whole kit. */
   --font: 'MS Sans Serif', 'Trebuchet MS', Arial, sans-serif;
+  /* Reading matter inside windows. */
+  --font-body: 'Atkinson Hyperlegible', sans-serif;
+  /* The resume, and anything else pretending to be a terminal. */
+  --font-mono: 'Departure Mono', ui-monospace, monospace;
   --font-size: 11px;
 }
 
@@ -116,7 +164,24 @@ body {
 .desktop-icon:hover { background: rgba(0,0,128,0.3); border-color: rgba(255,255,255,0.5); }
 .desktop-icon.selected { background: rgba(0,0,128,0.5); border-color: rgba(255,255,255,0.8); }
 
-.icon-img { font-size: 32px; line-height: 1; }
+/* Every piece of icon art on the page goes through this: nearest
+   neighbour, so 32x32 pixel art stays 32x32 pixel art instead of being
+   resampled into mush on a 2x display. */
+.icon-img,
+.start-logo,
+.window-title img,
+.taskbar-item img,
+.start-menu-item img {
+  image-rendering: pixelated;
+  flex: none;
+}
+
+.icon-img { width: 32px; height: 32px; }
+
+.window-title img,
+.taskbar-item img,
+.start-menu-item img,
+.start-logo { width: 16px; height: 16px; }
 
 .desktop-icon span {
   color: white;
@@ -124,6 +189,7 @@ body {
   text-align: center;
   text-shadow: 1px 1px 2px black;
   word-break: break-word;
+  line-height: 1.25;
 }
 
 /* ================================
@@ -161,6 +227,9 @@ body {
 }
 
 .window-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   color: white;
   font-weight: bold;
   font-size: 11px;
@@ -215,8 +284,16 @@ body {
   color: white;
 }
 
-/* Body */
+/* Body
+
+   The one place on the page that is reading matter rather than chrome,
+   so it is the one place that leaves the UI face behind: Atkinson
+   Hyperlegible at a size meant for sentences. The controls inside it
+   are still chrome and opt back in below. */
 .window-body {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.5;
   padding: 8px;
   flex: 1;
   overflow: auto;
@@ -244,6 +321,15 @@ body {
   border-left: 1px solid var(--dark);
   border-right: 1px solid var(--white);
   border-bottom: 1px solid var(--white);
+}
+
+/* Buttons, fields and chips are controls, not copy: back to the UI
+   face. */
+.window-body .win-button,
+.window-body .win-input,
+.window-body .tag,
+.window-body label {
+  font-family: var(--font);
 }
 
 /* ================================
@@ -289,7 +375,7 @@ body {
   border-bottom: 2px solid var(--white);
 }
 
-.start-logo { font-size: 16px; }
+
 
 .taskbar-divider {
   width: 2px;
@@ -396,11 +482,19 @@ body {
 .start-menu-items { flex: 1; padding: 2px 0; }
 
 .start-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 6px 16px;
   font-size: 12px;
   cursor: pointer;
   white-space: nowrap;
 }
+
+/* The two commands at the foot carry no art; line them up with the
+   rows that do rather than letting them sit flush left. */
+#logoff-item,
+#shutdown-item { padding-left: 40px; }
 
 .start-menu-item:hover {
   background: var(--highlight);
@@ -725,14 +819,76 @@ body.screen-focused #screen-page {
     inset -3% -3% 7% -2% rgba(0, 0, 0, 0.3);
 }
 
-/* Desktop chrome steps aside for the whole of the fly-in. */
-body.screen-active .desktop-icons,
-body.screen-active .window,
-body.screen-active #taskbar,
-body.screen-active #start-menu {
-  opacity: 0;
-  pointer-events: none;
+/* ================================
+   THE SIGN-IN GATE
+
+   The Win98 desktop is behind the login, not beside it: none of its
+   chrome exists until `signed-in` lands on the body. That covers both
+   states it used to be wrong in — overlaid on the establishing shot,
+   and showing through the login once the camera had arrived — so the
+   old `screen-active` rule this replaces is subsumed.
+
+   Hidden rather than `display: none` so the reveal can cross-fade, and
+   so a window's inline top/left stays meaningful while it is away.
+   ================================ */
+.desktop-icons,
+.window,
+#taskbar,
+#start-menu {
   transition: opacity 0.45s ease;
+}
+
+/* There is no taskbar before the sign-in, so the room gets the whole
+   window — otherwise the 40px the taskbar reserves shows bare body
+   under the floor. (The --scene-fade hand-over for that strip is still
+   what covers the edges of the crossfade, where the canvas has faded
+   but the login box has not quite reached the frame.) */
+body:not(.signed-in) #desktop {
+  height: 100vh;
+}
+
+body:not(.signed-in) .desktop-icons,
+body:not(.signed-in) .window,
+body:not(.signed-in) #taskbar,
+body:not(.signed-in) #start-menu {
+  opacity: 0;
+  /* The canvas is pointer-events:none so the chrome stays clickable;
+     inert chrome is what lets a click reach the glass behind it. */
+  pointer-events: none;
+}
+
+/* Signed in, the camera is parked at the screen and the canvas is
+   already faded out, so this is a pure DOM hand-over: the overlay and
+   its way back out step aside and the teal desktop behind them is what
+   is left. `display: none` here, not opacity — #screen is a 1200px box
+   under a matrix() and would otherwise still take the clicks. */
+body.signed-in #screen,
+body.signed-in #screen-back-bar {
+  display: none;
+}
+
+/* ================================
+   NO WEBGL
+
+   The monitor is the only way to the login, so without a scene there
+   would be no way in at all. The overlay drops its matrix and simply
+   fills the viewport: same login, no room around it. scene.js never
+   ran, so nothing is writing the sizes or the CRT variables either.
+   ================================ */
+body.no-scene #screen {
+  position: fixed;
+  inset: 0;
+  width: auto !important;
+  height: auto !important;
+  transform: none;
+  opacity: 1;
+  cursor: default;
+  --zoom: 1; /* no scanlines, no vignette: there is no tube here */
+  --blur: 0px;
+}
+
+body.no-scene #screen-page {
+  pointer-events: auto;
 }
 
 body.screen-active #screen {

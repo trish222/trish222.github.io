@@ -18,13 +18,17 @@ Current third-party inventory: `three` and its `examples/jsm` addons (MIT),
 `gsap` (GreenSock standard licence — the one documented exception to the list
 above; it drives the fly-in timeline, imported as `gsap/gsap-core` so CSSPlugin
 stays out of the bundle), `@fontsource/playfair-display` (OFL-1.1, vendored into
-`public/fonts/` — see below), `tailwindcss` / `vite` / `playwright` / `stats.js`
+`public/fonts/` — see below), `@fontsource/atkinson-hyperlegible`
+(OFL-1.1, likewise vendored), `tailwindcss` / `vite` / `playwright` / `stats.js`
 (MIT; `stats.js` is dev-only and is dropped from the production build),
-`98.css` (MIT, build-time only — see below), and
-`public/env/studio-small-09-256.hdr` — "Studio Small 09" by Sergej
+`98.css` (MIT, build-time only — see below),
+`public/fonts/departure-mono-regular.woff2` — Departure Mono by Helena
+Zhang, OFL-1.1, checked in from its GitHub release because it is not on
+npm, and `public/env/studio-small-09-256.hdr` — "Studio Small 09" by Sergej
 Majboroda via Poly Haven, CC0 (see `public/env/LICENSE.txt`). Desktop icons are
-Unicode emoji, not Microsoft artwork. Every 3D object is built from primitives in
-code; nothing is an imported model.
+our own pixel art, drawn from primitives by `scripts/make-icons.mjs` — not
+Microsoft artwork, and no longer emoji either. Every 3D object is built from
+primitives in code; nothing is an imported model.
 
 ## Stack
 
@@ -81,7 +85,9 @@ src/style.css     Win95 design tokens (:root vars) + all component CSS
 src/perf.js       dev-only stats.js FPS meter; never reaches production
 src/vendor/       98.scoped.css — generated, see "98.css" above
 scripts/          vendor-98css.mjs, which generates it
-public/fonts/     Playfair Display latin-500 (OFL) at a stable, preloadable path
+public/fonts/     the four OFL faces at stable, preloadable paths (see "Typography")
+public/icons/     placeholder desktop icons, generated — `npm run icons`
+scripts/make-icons.mjs  draws them; no dependencies, PNG written by hand
 public/           copied as-is
 design-references/  local mood board (CRT monitor photos, isometric angles) — untracked
 ```
@@ -325,9 +331,16 @@ a canvas. Two non-obvious requirements:
   the parent document or the network, and `:root` inside it is the `<svg>`
   rather than the `<html>` the selectors expect. Styles are collected
   from `document.styleSheets` rather than imported, so it keeps working
-  whatever Vite does to the CSS between dev and build. Fonts cannot be
-  fetched from in there either, so the dialog renders in the local
-  fallback of `--font` — correct for a dialog that asks for a UI font.
+  whatever Vite does to the CSS between dev and build. **Fonts cannot be
+  fetched from in there either**, so the dialog renders in the local
+  fallback of `--font` — which is fine only because `--font` is itself a
+  local stack. Give the chrome a webfont and the still and the live
+  overlay set the same dialog in two different typefaces, swapping at
+  the exact moment the still exists to paper over; the fix is to fetch
+  the face once and append it as a `data:` URI `@font-face` after the
+  collected CSS, and to copy `word-spacing` and `-webkit-font-smoothing`
+  onto the wrapper, since it inherits those from a `body` that does not
+  exist in here.
 
 It is drawn in idle time after init and refreshed on `input` (and on
 `depart`, since the form may have been typed into), never on the click —
@@ -346,12 +359,96 @@ rest, which is where stepping would show. `--zoom` stays per-frame —
 it only drives opacity on a layer promoted with `will-change`, which the
 compositor does for free.
 
-Body classes carry the state to CSS: `screen-active` for the whole trip
-(the desktop chrome stands down), `screen-zooming` only while the camera
-moves, `screen-focused` once it has arrived. `prefers-reduced-motion`
-gets the destination without the journey. With no WebGL none of it
-exists — `initScene` returns false before the overlay is unhidden, so
-the login screen is only ever reachable through the 3D monitor.
+Body classes carry the state to CSS: `screen-active` for the whole trip,
+`screen-zooming` only while the camera moves, `screen-focused` once it
+has arrived. `prefers-reduced-motion` gets the destination without the
+journey. With no WebGL none of it exists — `initScene` returns false and
+`initWithoutScene` takes over; see the sign-in gate below.
+
+### Typography, and the desktop icons
+
+**The chrome face is a local stack and the window faces are vendored.**
+`--font` asks for MS Sans Serif, then Trebuchet MS, then Arial: nothing
+is bundled for it, so title bars, buttons, menus, icon labels, the
+taskbar and the login dialog render in whatever the visitor already has.
+The vendored 98.css falls back to `--font` too, so it is one knob for the
+whole kit. (This is the rule violation tracked under "Notes" below — see
+there before reaching for it.)
+
+The two faces that *are* shipped are OFL and vendored into
+`public/fonts/` with their provenance in the `LICENSE.txt` beside them,
+rather than imported from `node_modules`, for the same reason Playfair
+is: Vite hashes what it emits and a preload needs a URL that does not
+move.
+
+- **Playfair Display** — the name repeated across the 3D floor.
+- **Atkinson Hyperlegible** (`--font-body`) — reading matter inside
+  windows, set on `.window-body`. The chrome face is a readability tax
+  on anything longer than a label; the controls inside a window body are
+  chrome and opt back in explicitly.
+- **Departure Mono** (`--font-mono`) — the resume and anything else that
+  wants to read as a terminal.
+
+A pixel chrome face (Pixelify Sans) was fitted and then taken back out on
+request. Two things it needed are worth knowing if one is ever fitted
+again, because neither is obvious and both cost a round trip to find:
+`-webkit-font-smoothing: none` plus integer sizes, since antialiasing
+only greys the edges of blocks that are already the right shape; and a
+widened word space, since a one-column space reads as "Awebapp" at UI
+sizes. The third is in the still — see "fonts cannot be fetched" under
+the fly-in, which stops being a footnote the moment `--font` is a face
+the generic fallback does not resemble.
+
+**The desktop icons are 32×32 PNGs in `public/icons/`**, generated by
+`scripts/make-icons.mjs` (`npm run icons`) from rectangles, tapers and
+discs — the same reasoning as the 3D machine: a checked-in binary with
+no source is a dead end, and at this size every pixel should be placed
+rather than resampled. They are **placeholders for Trish's own pixel
+art**: drop real PNGs of the same names over them and nothing else
+changes. They replaced emoji, which are a font rather than artwork and
+so render as whatever the visitor's OS feels like. Everything that shows
+one — desktop, taskbar, Start menu, title bars — draws it with
+`image-rendering: pixelated`, at 32px on the desktop and 16px everywhere
+else. The Start button's mark is a little CRT: the machine the site is
+set inside, and nothing anyone else owns.
+
+The window registry in `main.js` carries the icon basename alongside the
+title, and skips any entry whose `#window-<id>` does not exist — which is
+what lets a desktop icon land before its window does.
+
+### The sign-in gate
+
+**The Win98 desktop is behind the login, not beside it.** Its chrome —
+icons, windows, taskbar, Start menu — is `opacity: 0` and
+`pointer-events: none` until `signed-in` lands on the body, which the
+login form's submit handler in `main.js` does. That covers the two
+states it used to be visibly wrong in: overlaid on the establishing shot
+of the 3D room, and showing through the login once the camera had
+arrived. It replaces the old rule that hid the chrome for the length of
+`screen-active`.
+
+Signing in is a pure DOM hand-over, not another camera move: the camera
+is already parked at the screen and the canvas already faded out, so
+`#screen` and its back button go to `display: none` (not opacity — it is
+a 1200px box under a `matrix()` and would keep taking the clicks) and
+the teal desktop behind them is what is left. Start ▸ Log Off reverses
+it, which is also what makes the state testable.
+
+Two consequences elsewhere:
+
+- **`#desktop` is `100vh` until the sign-in**, because the taskbar that
+  the usual `100vh - 40px` reserves for is not there yet; at the old
+  height the strip showed bare body under the floor. The `--scene-fade`
+  hand-over for that strip still earns its keep, but only at the very
+  end of the flight, where the canvas has faded and the login box has
+  not quite reached the frame.
+- **No WebGL now has a way in.** The monitor was the only route to the
+  login, so a visitor without WebGL would have reached nothing at all.
+  `initWithoutScene` adds `no-scene` to the body and unhides `#screen`,
+  and the CSS drops its matrix and lets it fill the viewport: the same
+  login with no room around it, and the same sign-in to the same
+  desktop. The CRT variables go to their "arrived" values there, so
+  there are no scanlines on a tube that is not in the picture.
 
 `window.__flyTo(t)` parks the flight at a point of the **timeline** and
 draws it — the way to tune the head-on framing without trying to catch
@@ -632,6 +729,8 @@ scripts.
   (it only resolves if the visitor already has them), but it breaks the no-MS-fonts
   rule and needs an OFL substitute. The vendored 98.css falls back to the same
   `--font`, so fixing it fixes the login screen too — there is one knob, not two.
+  An OFL pixel face was fitted here and reverted on request; see "Typography" for
+  what fitting one costs.
 - The scene chunk is ~187 kB gzipped plus a 128 kB HDRI, all lazy-loaded after
   the desktop paints. The entry chunk is still ~2.7 kB gzipped. GSAP accounts
   for ~26 kB of the scene chunk; importing `gsap/gsap-core` rather than `gsap`

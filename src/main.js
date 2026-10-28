@@ -3,11 +3,17 @@ import './style.css';
 /* ==========================================
    WINDOW REGISTRY
    ========================================== */
+/* Add a window by adding markup in index.html *and* an entry here. The
+   `icon` is a basename in public/icons/ (see scripts/make-icons.mjs);
+   an entry whose `#window-<id>` does not exist yet is simply skipped,
+   which is what lets the desktop icons land before their windows do. */
 const WINDOWS = {
-  about:    { title: 'About Me', icon: '👤' },
-  projects: { title: 'Projects', icon: '📁' },
-  skills:   { title: 'Skills',   icon: '⚙️' },
-  contact:  { title: 'Contact',  icon: '✉️' },
+  projects: { title: 'Projects',    icon: 'projects' },
+  about:    { title: 'About Me',    icon: 'about-me' },
+  resume:   { title: 'Resume',      icon: 'resume' },
+  contact:  { title: 'Contact',     icon: 'contact' },
+  recycle:  { title: 'Recycle Bin', icon: 'recycle-bin' },
+  skills:   { title: 'Skills',      icon: 'resume' },
 };
 
 let zCounter = 100;
@@ -91,7 +97,11 @@ function updateTaskbar() {
     if (activeWindow === id && !win.classList.contains('minimized')) {
       btn.classList.add('pressed');
     }
-    btn.textContent = `${info.icon} ${info.title}`;
+    const img = document.createElement('img');
+    img.src = `/icons/${info.icon}.png`;
+    img.width = img.height = 16;
+    img.alt = '';
+    btn.append(img, info.title);
     btn.addEventListener('click', () => toggleWindow(id));
     container.appendChild(btn);
   });
@@ -225,6 +235,12 @@ function initStartMenu() {
     });
   });
 
+  document.getElementById('logoff-item')?.addEventListener('click', () => {
+    startMenu.classList.add('hidden');
+    startBtn.classList.remove('active');
+    logOff();
+  });
+
   document.getElementById('shutdown-item')?.addEventListener('click', () => {
     if (confirm('Are you sure you want to shut down?')) {
       document.body.style.background = 'black';
@@ -271,7 +287,42 @@ function initDesktopIcons() {
    monitor's screen plane with a CSS transform, and clicking it flies
    the camera in until it has the viewport. Everything here is the page
    itself; the camera work all lives in scene.js.
+
+   Signing in is the gate to the desktop: its chrome is inert and at
+   opacity 0 until `signed-in` is on the body (see "THE SIGN-IN GATE"
+   in style.css). The camera has already arrived by then and the canvas
+   is faded out, so the hand-over is pure DOM — the overlay steps aside
+   and the teal desktop behind it is what is left.
    ========================================== */
+
+/* Long enough to read as a machine doing something, short enough not
+   to be a wait. Skipped under reduced motion. */
+const SIGN_IN_MS = 550;
+
+function prefersReducedMotion() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function signedIn() {
+  return document.body.classList.contains('signed-in');
+}
+
+function signIn() {
+  if (signedIn()) return;
+  document.body.classList.add('signed-in');
+  updateTaskbar();
+}
+
+function logOff() {
+  if (!signedIn()) return;
+  document.body.classList.remove('signed-in');
+  Object.keys(WINDOWS).forEach(closeWindow);
+  const form = document.querySelector('.login-form');
+  form?.querySelectorAll('button').forEach(b => { b.disabled = false; });
+  const note = document.querySelector('.login-note');
+  if (note) note.textContent = '';
+  document.getElementById('login-user')?.focus({ preventScroll: true });
+}
 
 function initLoginScreen() {
   const form = document.querySelector('.login-form');
@@ -280,9 +331,25 @@ function initLoginScreen() {
 
   form.addEventListener('submit', e => {
     e.preventDefault();
+    if (signedIn()) return;
     const user = document.getElementById('login-user').value.trim() || 'user';
-    note.textContent = `Welcome, ${user}. Nothing to log on to — this is a portfolio.`;
+    note.textContent = `Loading personal settings for ${user}\u2026`;
+    /* A second submit mid-wait would stack another timer. */
+    form.querySelectorAll('button').forEach(b => { b.disabled = true; });
+    if (prefersReducedMotion()) signIn();
+    else setTimeout(signIn, SIGN_IN_MS);
   });
+}
+
+/* No WebGL: there is no monitor to click, so the login is shown flat
+   over the viewport instead and the desktop is reached the same way.
+   scene.js never unhid the overlay or wrote its sizes, hence both here
+   (the rest is CSS — see "NO WEBGL" in style.css). */
+function initWithoutScene() {
+  document.body.classList.add('no-scene');
+  const screen = document.getElementById('screen');
+  if (screen) screen.hidden = false;
+  document.getElementById('login-user')?.focus({ preventScroll: true });
 }
 
 /* Wired only once the scene is live, since the way back out is a camera
@@ -297,8 +364,11 @@ function initScreenControls(scene) {
   document.querySelector('.login-dialog .title-bar-controls button')
     ?.addEventListener('click', back);
 
+  /* Only while the login is what is on screen: signed in, Escape would
+     fly the camera back out from under a desktop that is still up. */
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && document.body.classList.contains('screen-focused')) {
+    if (e.key === 'Escape' && !signedIn() &&
+        document.body.classList.contains('screen-focused')) {
       back();
     }
   });
@@ -317,20 +387,20 @@ document.addEventListener('DOMContentLoaded', () => {
   updateClock();
   setInterval(updateClock, 1000);
 
-  // Open the About window on load
-  openWindow('about');
-
   initLoginScreen();
 
-  /* Three.js is lazy-loaded so the desktop paints first. */
+  /* Three.js is lazy-loaded so the page paints first. */
   const canvas = document.getElementById('scene');
   if (canvas) {
     import('./scene.js')
       .then(async scene => {
-        /* The login screen is only reachable through the 3D monitor, so
-           it stays hidden unless the scene actually came up. */
+        /* The way to the login is the 3D monitor, so the overlay stays
+           hidden unless the scene actually came up. */
         if (await scene.initScene(canvas)) initScreenControls(scene);
+        else initWithoutScene();
       })
-      .catch(() => { /* no backdrop; the flat teal desktop stands in */ });
+      .catch(initWithoutScene);
+  } else {
+    initWithoutScene();
   }
 });

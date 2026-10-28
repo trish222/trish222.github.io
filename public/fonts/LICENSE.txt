@@ -1,4 +1,31 @@
-Copyright 2017 The Playfair Display Project Authors (https://github.com/clauseggers/Playfair-Display), with Reserved Font Name "Playfair Display". PlayfairDisplay-Italic[wght].ttf: Copyright 2017 The Playfair Display Project Authors (https://github.com/clauseggers/Playfair-Display), with Reserved Font Name "Playfair Display".
+Every font in this directory is licensed under the SIL Open Font License,
+Version 1.1, whose text follows. Three families, vendored here rather than
+imported from node_modules so their URLs stay stable — index.html preloads
+one of them (see CLAUDE.md). The Win98 chrome is not among them: --font is
+a local stack, so title bars, buttons, menus and the login dialog render in
+whatever the visitor already has.
+
+playfair-display-latin-500-normal.woff2
+  Copyright 2017 The Playfair Display Project Authors
+  (https://github.com/clauseggers/Playfair-Display), with Reserved Font
+  Name "Playfair Display". Via @fontsource/playfair-display.
+  Used for: the name repeated across the 3D floor.
+
+atkinson-hyperlegible-latin-400-normal.woff2
+atkinson-hyperlegible-latin-700-normal.woff2
+  Copyright 2020 Braille Institute of America, Inc., with Reserved Font
+  Name "Atkinson Hyperlegible". Via @fontsource/atkinson-hyperlegible.
+  Used for: body copy inside windows, where the chrome face would be a
+  readability tax.
+
+departure-mono-regular.woff2
+  Copyright 2022-2024 Helena Zhang (helenazhang.com), with Reserved Font
+  Name "Departure Mono". From the v1.500 release at
+  https://github.com/rektdeckard/departure-mono - it is not on npm, so
+  this one is checked in rather than copied out of node_modules.
+  Used for: the resume and any terminal-flavoured window.
+
+-----------------------------------------------------------
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:

@@ -985,12 +985,16 @@ function buildStillMarkup(w, h) {
 async function drawStill() {
   const w = Math.round(SCREEN_BASE_W);
   const h = Math.round(SCREEN_BASE_H);
-  const svg = buildStillMarkup(w, h);
-  if (!svg) return false;
-
-  const img = new Image();
-  img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   try {
+    /* Inside the try, all of it: assembling the markup walks every
+       stylesheet in the document and runs XMLSerializer over the
+       result, and a throw out there would be an unhandled rejection
+       rather than the graceful fallback below. */
+    const svg = buildStillMarkup(w, h);
+    if (!svg) return false;
+
+    const img = new Image();
+    img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
     await img.decode();
     const canvas = document.createElement("canvas");
     canvas.width = w;
