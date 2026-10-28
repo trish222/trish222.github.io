@@ -206,6 +206,17 @@ body {
   display: flex;
   flex-direction: column;
   z-index: 10;
+  /* The widths in index.html are desktop figures — 560px of Projects on
+     a 390px phone would simply hang off the right. 100% of #desktop,
+     not of the viewport, so a maximized window still lands exactly on
+     the frame; main.js pulls the window's `left` back in to match
+     before this has to do any clamping at all. */
+  max-width: 100%;
+  /* Same again vertically — the Resume is taller than a short laptop
+     window. The body is the flex child that gives, so it scrolls and
+     the chrome stays whole; paired with the `top` clamp in main.js
+     (which can then only resolve to 0) the window always fits. */
+  max-height: 100%;
 }
 
 .window.hidden   { display: none; }
@@ -220,6 +231,10 @@ body {
   padding: 3px 4px;
   cursor: move;
   gap: 4px;
+  /* The drag is on pointer events, so a finger on the title bar has to
+     be a drag rather than a scroll — without this the browser claims
+     the gesture and the pointermove stream stops dead. */
+  touch-action: none;
 }
 
 .window.inactive .window-titlebar {
@@ -265,6 +280,46 @@ body {
   border-left: 1px solid var(--darker);
   border-right: 1px solid var(--white);
   border-bottom: 1px solid var(--white);
+}
+
+/* ================================
+   TOUCH TARGETS
+
+   Keyed off the *pointer*, not the viewport: a 1280px tablet needs
+   this and a 500px-wide desktop browser does not. 16x14 of bevel is
+   authentic and unhittable with a thumb — and on a phone the close
+   button is the first thing a visitor reaches for when they want the
+   desktop back, so it is the one control that must not be a near miss.
+   The glyph scales with the box so it does not rattle around inside it.
+   ================================ */
+@media (pointer: coarse) {
+  .win-btn {
+    width: 28px;
+    height: 26px;
+    font-size: 13px;
+  }
+
+  .window-controls { gap: 4px; }
+
+  /* The bar grows with the buttons; a little more room either side
+     keeps the title off them. */
+  .window-titlebar { padding: 4px 5px; }
+}
+
+/* No double-tap-to-zoom on anything that is a control. The gesture
+   collides with the desktop icons' double-click — which is a single tap
+   on touch anyway (see initDesktopIcons) — and on every other control
+   it only delays the tap. `manipulation` rather than `none`: panning
+   and pinch-zoom stay, it is just the double-tap shortcut that goes. */
+.desktop-icon,
+.win-btn,
+.win-button,
+.window-menubar span,
+.taskbar-item,
+#start-button,
+.start-menu-item,
+.bin-item {
+  touch-action: manipulation;
 }
 
 /* Menu bar */
@@ -694,6 +749,160 @@ body {
 }
 
 .form-field label { font-size: 11px; font-weight: bold; }
+
+/* ================================
+   RESUME CONTENT
+
+   The one place --font-mono is spent. A resume is a document, not
+   chrome and not quite prose, and the terminal face is what separates
+   it from both — so the window body's Atkinson is overridden here
+   rather than anywhere else.
+   ================================ */
+.resume {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.45;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.resume-head h1 {
+  font-size: 19px;
+  font-weight: bold;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.resume-role { color: #333; }
+.resume-meta { color: var(--dark); font-size: 12px; margin-top: 2px; }
+
+/* The rule under a heading is a border rather than a row of dashes, so
+   it stretches with the window instead of wrapping at a fixed count. */
+.resume-section h2 {
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--title-active);
+  border-bottom: 1px solid var(--dark);
+  padding-bottom: 2px;
+  margin-bottom: 8px;
+}
+
+.resume-entry + .resume-entry { margin-top: 10px; }
+
+/* Title left, dates right, wrapping to two lines rather than colliding
+   once the window is clamped to a phone's width. */
+.resume-line {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 12px;
+}
+
+.resume-when  { color: var(--dark); font-size: 12px; white-space: nowrap; }
+.resume-where { color: #333; font-size: 12px; }
+
+.resume ul {
+  list-style: square;
+  padding-left: 18px;
+  margin-top: 4px;
+}
+
+.resume li { font-size: 12px; }
+.resume-skills { font-size: 12px; }
+
+/* ================================
+   RECYCLE BIN
+
+   A detail view: three columns, a row per item. The widths are the
+   grid, so the header and the rows cannot drift apart. The two
+   right-hand columns drop off below 560px rather than squeezing the
+   name to one character a line — a viewport query and not a container
+   one because nothing here is resizable: a window's width is its
+   inline style, clamped to the desktop by `.window`'s max-width.
+   ================================ */
+.bin {
+  display: flex;
+  flex-direction: column;
+  /* A file listing is chrome, not reading matter, so it steps back out
+     of the window body's Atkinson the way the controls do — this is
+     the one window whose body is a UI rather than a document. */
+  font-family: var(--font);
+  font-size: 12px;
+}
+
+.bin-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 110px 86px;
+  gap: 8px;
+  align-items: center;
+  padding: 2px 4px;
+}
+
+.bin-head {
+  font-size: 11px;
+  border-bottom: 1px solid var(--dark);
+  padding-bottom: 3px;
+  margin-bottom: 2px;
+  color: #333;
+}
+
+.bin-list { list-style: none; }
+
+.bin-item { cursor: default; }
+.bin-item:focus-visible { outline: 1px dotted var(--black); outline-offset: -1px; }
+
+.bin-item.selected {
+  background: var(--highlight);
+  color: white;
+}
+
+.bin-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bin-origin,
+.bin-date {
+  color: var(--dark);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.bin-item.selected .bin-origin,
+.bin-item.selected .bin-date { color: #cfd8e8; }
+
+.bin-empty {
+  color: var(--dark);
+  text-align: center;
+  padding: 20px 0;
+}
+
+.bin-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--dark);
+}
+
+.bin-actions .win-button:disabled {
+  color: var(--dark);
+  text-shadow: 1px 1px 0 var(--white);
+  cursor: default;
+}
+
+@media (max-width: 560px) {
+  .bin-row { grid-template-columns: minmax(0, 1fr); }
+  .bin-origin, .bin-date { display: none; }
+}
 
 /* ================================
    THE CRT's PICTURE, AS LIVE HTML

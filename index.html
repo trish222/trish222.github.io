@@ -112,9 +112,9 @@
       <div class="window-titlebar" data-drag="window-about">
         <span class="window-title"><img src="/icons/about-me.png" width="16" height="16" alt="">About Me</span>
         <div class="window-controls">
-          <button class="win-btn minimize-btn" data-target="about">_</button>
-          <button class="win-btn maximize-btn" data-target="about">□</button>
-          <button class="win-btn close-btn" data-target="about">✕</button>
+          <button class="win-btn minimize-btn" type="button" data-target="about" aria-label="Minimize">_</button>
+          <button class="win-btn maximize-btn" type="button" data-target="about" aria-label="Maximize">□</button>
+          <button class="win-btn close-btn" type="button" data-target="about" aria-label="Close">✕</button>
         </div>
       </div>
       <div class="window-menubar">
@@ -142,9 +142,9 @@
       <div class="window-titlebar" data-drag="window-projects">
         <span class="window-title"><img src="/icons/projects.png" width="16" height="16" alt="">Projects</span>
         <div class="window-controls">
-          <button class="win-btn minimize-btn" data-target="projects">_</button>
-          <button class="win-btn maximize-btn" data-target="projects">□</button>
-          <button class="win-btn close-btn" data-target="projects">✕</button>
+          <button class="win-btn minimize-btn" type="button" data-target="projects" aria-label="Minimize">_</button>
+          <button class="win-btn maximize-btn" type="button" data-target="projects" aria-label="Maximize">□</button>
+          <button class="win-btn close-btn" type="button" data-target="projects" aria-label="Close">✕</button>
         </div>
       </div>
       <div class="window-menubar">
@@ -196,9 +196,9 @@
       <div class="window-titlebar" data-drag="window-skills">
         <span class="window-title">Skills</span>
         <div class="window-controls">
-          <button class="win-btn minimize-btn" data-target="skills">_</button>
-          <button class="win-btn maximize-btn" data-target="skills">□</button>
-          <button class="win-btn close-btn" data-target="skills">✕</button>
+          <button class="win-btn minimize-btn" type="button" data-target="skills" aria-label="Minimize">_</button>
+          <button class="win-btn maximize-btn" type="button" data-target="skills" aria-label="Maximize">□</button>
+          <button class="win-btn close-btn" type="button" data-target="skills" aria-label="Close">✕</button>
         </div>
       </div>
       <div class="window-body">
@@ -243,9 +243,9 @@
       <div class="window-titlebar" data-drag="window-contact">
         <span class="window-title"><img src="/icons/contact.png" width="16" height="16" alt="">Contact</span>
         <div class="window-controls">
-          <button class="win-btn minimize-btn" data-target="contact">_</button>
-          <button class="win-btn maximize-btn" data-target="contact">□</button>
-          <button class="win-btn close-btn" data-target="contact">✕</button>
+          <button class="win-btn minimize-btn" type="button" data-target="contact" aria-label="Minimize">_</button>
+          <button class="win-btn maximize-btn" type="button" data-target="contact" aria-label="Maximize">□</button>
+          <button class="win-btn close-btn" type="button" data-target="contact" aria-label="Close">✕</button>
         </div>
       </div>
       <div class="window-body">
@@ -276,6 +276,130 @@
         </div>
       </div>
       <div class="window-statusbar"><span>Ready</span></div>
+    </div>
+
+    <!-- ===== RESUME WINDOW =====
+
+         The one window set in Departure Mono. Everything else on this
+         desktop is chrome or copy; a resume is a *document*, and the
+         mono face is what makes it read as one rather than as another
+         panel of UI. Content is placeholder throughout — the structure
+         is the deliverable, the wording is Trish's.
+    -->
+    <div class="window hidden" id="window-resume" style="top:40px; left:360px; width:520px;">
+      <div class="window-titlebar" data-drag="window-resume">
+        <span class="window-title"><img src="/icons/resume.png" width="16" height="16" alt="">Resume</span>
+        <div class="window-controls">
+          <button class="win-btn minimize-btn" type="button" data-target="resume" aria-label="Minimize">_</button>
+          <button class="win-btn maximize-btn" type="button" data-target="resume" aria-label="Maximize">□</button>
+          <button class="win-btn close-btn" type="button" data-target="resume" aria-label="Close">✕</button>
+        </div>
+      </div>
+      <div class="window-menubar">
+        <span>File</span><span>Edit</span><span>View</span><span>Help</span>
+      </div>
+      <div class="window-body">
+        <article class="resume">
+          <header class="resume-head">
+            <h1>Trish Nguyen</h1>
+            <p class="resume-role">Software Developer</p>
+            <p class="resume-meta">hello@example.com &middot; github.com/trish222</p>
+          </header>
+
+          <section class="resume-section">
+            <h2>Experience</h2>
+            <div class="resume-entry">
+              <p class="resume-line">
+                <strong>Job Title</strong><span class="resume-when">2023 &ndash; Present</span>
+              </p>
+              <p class="resume-where">Company Name &middot; City</p>
+              <ul>
+                <li>Replace this with what you actually shipped here.</li>
+                <li>One line per thing worth knowing about.</li>
+              </ul>
+            </div>
+            <div class="resume-entry">
+              <p class="resume-line">
+                <strong>Earlier Job Title</strong><span class="resume-when">2021 &ndash; 2023</span>
+              </p>
+              <p class="resume-where">Company Name &middot; City</p>
+              <ul>
+                <li>Replace this one too.</li>
+              </ul>
+            </div>
+          </section>
+
+          <section class="resume-section">
+            <h2>Education</h2>
+            <div class="resume-entry">
+              <p class="resume-line">
+                <strong>Degree</strong><span class="resume-when">2017 &ndash; 2021</span>
+              </p>
+              <p class="resume-where">University Name</p>
+            </div>
+          </section>
+
+          <section class="resume-section">
+            <h2>Skills</h2>
+            <p class="resume-skills">JavaScript &middot; TypeScript &middot; React &middot; Node.js
+              &middot; Python &middot; PostgreSQL &middot; HTML &amp; CSS &middot; Git</p>
+          </section>
+        </article>
+      </div>
+      <div class="window-statusbar"><span>resume.txt</span></div>
+    </div>
+
+    <!-- ===== RECYCLE BIN WINDOW =====
+
+         A detail view, the way the real one opened: Name / Original
+         Location / Date Deleted, a row per item. Emptying it is wired
+         up in main.js and really does empty it — dead chrome is worse
+         than no chrome. The rows are hidden rather than removed, so
+         Start > Log Off can put them back and the state stays testable.
+    -->
+    <div class="window hidden" id="window-recycle" style="top:150px; left:420px; width:460px;">
+      <div class="window-titlebar" data-drag="window-recycle">
+        <span class="window-title"><img src="/icons/recycle-bin.png" width="16" height="16" alt="">Recycle Bin</span>
+        <div class="window-controls">
+          <button class="win-btn minimize-btn" type="button" data-target="recycle" aria-label="Minimize">_</button>
+          <button class="win-btn maximize-btn" type="button" data-target="recycle" aria-label="Maximize">□</button>
+          <button class="win-btn close-btn" type="button" data-target="recycle" aria-label="Close">✕</button>
+        </div>
+      </div>
+      <div class="window-menubar">
+        <span>File</span><span>Edit</span><span>View</span><span>Help</span>
+      </div>
+      <div class="window-body">
+        <div class="bin">
+          <div class="bin-row bin-head">
+            <span class="bin-name">Name</span>
+            <span class="bin-origin">Original Location</span>
+            <span class="bin-date">Date Deleted</span>
+          </div>
+          <ul class="bin-list" id="bin-list">
+            <li class="bin-row bin-item" tabindex="0">
+              <span class="bin-name"><img src="/icons/document.png" width="16" height="16" alt="">old-portfolio.html</span>
+              <span class="bin-origin">C:\Sites\v1</span>
+              <span class="bin-date">11/04/1998</span>
+            </li>
+            <li class="bin-row bin-item" tabindex="0">
+              <span class="bin-name"><img src="/icons/document.png" width="16" height="16" alt="">layout-tables.html</span>
+              <span class="bin-origin">C:\Sites\v1</span>
+              <span class="bin-date">03/22/1999</span>
+            </li>
+            <li class="bin-row bin-item" tabindex="0">
+              <span class="bin-name"><img src="/icons/document.png" width="16" height="16" alt="">under-construction.gif</span>
+              <span class="bin-origin">C:\Sites\v1\img</span>
+              <span class="bin-date">08/09/1999</span>
+            </li>
+          </ul>
+          <p class="bin-empty" id="bin-empty" hidden>This folder is empty.</p>
+          <div class="bin-actions">
+            <button type="button" class="win-button" id="bin-empty-btn">Empty Recycle Bin</button>
+          </div>
+        </div>
+      </div>
+      <div class="window-statusbar"><span id="bin-count">3 object(s)</span></div>
     </div>
 
   </div><!-- /#desktop -->

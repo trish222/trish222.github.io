@@ -109,7 +109,7 @@ function canvas() {
 }
 
 /* ==========================================
-   THE FIVE (AND THE START MARK)
+   THE DESKTOP SET (AND THE START MARK)
    ========================================== */
 const ICONS = {
   /* A folder, tab to the left, lit from the top. */
@@ -150,6 +150,23 @@ const ICONS = {
     }
     c.hline(9, 16, 6, "b");              // a name across the top
     c.hline(9, 13, 8, "b");
+    return c.outline("k");
+  },
+
+  /* A generic file: a plain sheet, corner folded back, ruled but
+     unnamed. The Recycle Bin's rows use this so the resume sheet above
+     keeps meaning the resume — drop real art over either and neither
+     borrows the other's meaning. */
+  "document": () => {
+    const c = canvas();
+    c.rect(7, 2, 24, 29, "w");
+    c.rect(18, 2, 24, 8, ".");           // the corner that is folded back
+    c.taper(2, 8, 18, 18, 18, 24, "w");
+    c.rect(18, 2, 24, 8, "s");           // ...and the fold itself
+    c.taper(2, 8, 25, 25, 19, 25, ".");
+    for (let i = 0; i < 6; i++) {        // ruled lines, the last one short
+      c.hline(10, i === 5 ? 17 : 21, 12 + i * 3, "g");
+    }
     return c.outline("k");
   },
 

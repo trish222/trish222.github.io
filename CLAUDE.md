@@ -410,7 +410,11 @@ so render as whatever the visitor's OS feels like. Everything that shows
 one — desktop, taskbar, Start menu, title bars — draws it with
 `image-rendering: pixelated`, at 32px on the desktop and 16px everywhere
 else. The Start button's mark is a little CRT: the machine the site is
-set inside, and nothing anyone else owns.
+set inside, and nothing anyone else owns. `document.png` is the odd one
+out — it is not a desktop icon at all but the row glyph in the Recycle
+Bin's listing, drawn separately so `resume.png` keeps meaning the
+resume and real art dropped over either does not borrow the other's
+meaning.
 
 The window registry in `main.js` carries the icon basename alongside the
 title, and skips any entry whose `#window-<id>` does not exist — which is
@@ -467,6 +471,114 @@ scripts are local-only and never committed.
 `data-drag` / `data-target` attributes, with a `WINDOWS` registry object at the top.
 Add a window by adding markup in `index.html` **and** an entry in that registry.
 
+### The windows, and the drag/focus pass
+
+Five of the six windows are static markup. The two added last are worth
+a note each:
+
+- **Resume** is the only place `--font-mono` is spent. Everything on
+  this desktop is chrome (`--font`) or copy (`--font-body`); a resume is
+  a *document*, and Departure Mono is what separates it from both. The
+  dates sit opposite the titles in a `flex` row that wraps rather than
+  collides, so the entries hold together once the window is clamped to a
+  phone.
+- **Recycle Bin** is the one window carrying state. It is a detail view
+  — Name / Original Location / Date Deleted, laid out on a `grid` so the
+  header and the rows cannot drift apart — and the two right-hand
+  columns drop out below 560px rather than squeezing the name to one
+  character a line. **Emptying it really empties it**: dead chrome is
+  worse than no chrome. The rows go `hidden` rather than being removed,
+  so `logOff` can refill them, which is what makes the state testable
+  more than once per load. The listing uses `--font`, not the body face:
+  a file list is a UI, not reading matter.
+
+The drag and focus pass that came with them:
+
+- **Drag is on pointer events with `setPointerCapture`**, not
+  mouse-move-on-`document`. That is what makes a finger work at all, and
+  the capture is what keeps a fast drag from being dropped when the
+  pointer outruns the title bar. `touch-action: none` on
+  `.window-titlebar` is required with it, or the browser claims the
+  gesture as a scroll and the `pointermove` stream stops dead.
+  `pointercancel` has to clear `dragState` too: left set, the window
+  follows the next pointer that moves.
+- **Bounds are measured off `#desktop`**, which is the window's own
+  containing block, so `left`/`top` and the limits are in the same
+  coordinates — and the answer stays right before the sign-in, when
+  `#desktop` is the whole viewport because there is no taskbar yet. The
+  old code subtracted a hard-coded 40 from `innerHeight` and was wrong
+  in exactly that state. `toggleMaximize` is `height: 100%` for the same
+  reason.
+- **Every window is clamped into view as it opens**, and again on
+  resize. The inline positions in `index.html` are desktop figures:
+  Contact opens at `left:310px`, which on a 390px phone is almost
+  entirely off-stage. `.window` carries `max-width`/`max-height: 100%`
+  as the other half of that — the clamp can only resolve to 0 if the
+  window is bigger than the frame, so the two together always fit. The
+  body is the flex child that gives, so it scrolls and the chrome stays
+  whole. Clamping has to happen *after* the unhide: a `display: none`
+  window measures 0 and would clamp itself into the corner.
+- **`focusWindow` leaves early if the window is already on top.** Every
+  `pointerdown` inside a window arrives there, and it rebuilds the
+  taskbar's DOM — without the guard, clicking into a text field rebuilt
+  the taskbar under it on every click.
+- **Closing or minimizing hands focus down** to the topmost window left
+  (`focusTopmost`, off the inline `zIndex`), and **clicking bare desktop
+  drops it** (`blurWindows`). Windows live inside `#desktop`, so their
+  clicks bubble to that handler and have to be filtered out; the taskbar
+  and Start menu are outside it, which is why clicking those correctly
+  does nothing.
+
+### Touch, and why a phone gets a different interaction model
+
+Measured on a 390x844 phone, the desktop metaphor had already stopped
+paying for itself: the icon column is 72x395, the first window opened
+390x525 at y=40, and that left **24px of one icon** visible and none of
+the five whole. A window is the full width of the frame there whatever
+you do — `max-width` clamps it and `left` can then only resolve to 0 —
+so what the floating model actually bought was a window that covered
+the icons *and* left a dead strip under itself.
+
+So below `PHONE` (`max-width: 560px`) **windows open maximized**, and
+the taskbar is the switcher. The implementation detail that matters is
+`dataset.autoMax`: it marks a window maximized *by the viewport* rather
+than by someone pressing the button, so crossing the breakpoint back to
+a desktop width un-maximizes exactly those and leaves a deliberate press
+alone. `toggleMaximize` deletes the flag — a press owns the state from
+then on. `fitWindow` is the one place that decides, and both `openWindow`
+and the resize handler go through it.
+
+Two consequences fall out, both intended: a maximized window does not
+drag (the `pointerdown` handler returns early), so on a phone the title
+bar is a label rather than a handle; and the Resume gets the full 804px
+instead of scrolling inside a 525px box.
+
+The touch affordances that came with it:
+
+- **`.win-btn` goes to 28x26 under `(pointer: coarse)`.** At 16x14 the
+  close button is authentic and unhittable with a thumb — and on a phone
+  it is the first thing a visitor reaches for when they want the desktop
+  back, so it is the one control that must not be a near miss. Keyed off
+  the *pointer*, not the viewport: a 1280px tablet needs it and a 500px
+  desktop browser window does not.
+- **Desktop icons open on one tap.** Double-tap is a desktop idiom —
+  there is no hover to preview with, so the first tap has nothing else to
+  mean. The decision reads `e.pointerType` off the last `pointerdown`
+  rather than a media query, because a laptop with a touchscreen answers
+  yes to `(pointer: coarse)` and is still being driven by a mouse; what
+  matters is which input is in use right now.
+- **`touch-action: manipulation` on every control.** It kills
+  double-tap-to-zoom, which otherwise both collides with the icon
+  gesture and adds the ~300ms click delay everywhere else.
+  `manipulation`, not `none` — panning and pinch stay.
+
+**Testing any of this needs `hasTouch` *and* `isMobile` on the Playwright
+context.** `(pointer: coarse)` describes the input, not the viewport, so
+a plain 390px context still reports a fine pointer and none of the touch
+rules apply — the run looks green while testing nothing. `_step3.mjs`
+reads the facts back (`coarse`, the computed button size, `touch-action`)
+rather than trusting the stylesheet, for exactly that reason.
+
 ### Visual checks
 
 `_review.mjs` is the one to use: `npm run preview` in one shell, `node _review.mjs` in
@@ -479,6 +591,25 @@ no-WebGL pass stubs `getContext('webgl*')` to `null`; `scene: "fallback"` there 
 `window.__flyTo` through the run and shoots each stop; `_flycheck.mjs` clicks the
 screen for real, fills the form and clicks back, on mobile and under reduced
 motion. Both are `_`-prefixed, so local-only.
+
+`_step3.mjs` covers the desktop itself, and the two variants are
+deliberately *different runs*, because the two viewports are now
+different interaction models — mouse / double-click / floating windows
+against touch / one tap / maximized. Shared: open both windows, empty
+the bin, close the active one and check focus fell to the next, cross
+the `PHONE` breakpoint in both directions and check the maximize undid
+itself, log off and check the bin refilled. Desktop-only: raise the
+window behind, drag it, drag it far past the corner and check it
+clamped, click bare desktop and check focus dropped. Mobile-only: open
+by a single `tap`, check the window is `MAX(auto)`, and check the title
+bar is inert.
+
+Two things about it are worth knowing before editing it. The mobile
+context needs `hasTouch` and `isMobile` (see the touch section above).
+And the Recycle Bin is reached with `focusBin`, not a bare taskbar
+click: the taskbar button is a **toggle**, so pressing it on the window
+that already has the focus minimizes it — correct behaviour that reads
+as a test failure.
 
 `_perfcheck.mjs` is the frame-rate probe: `npm run dev` in one shell,
 `node _perfcheck.mjs` in another (optionally with a url and
@@ -732,7 +863,7 @@ scripts.
   An OFL pixel face was fitted here and reverted on request; see "Typography" for
   what fitting one costs.
 - The scene chunk is ~187 kB gzipped plus a 128 kB HDRI, all lazy-loaded after
-  the desktop paints. The entry chunk is still ~2.7 kB gzipped. GSAP accounts
+  the desktop paints. The entry chunk is still ~3.6 kB gzipped. GSAP accounts
   for ~26 kB of the scene chunk; importing `gsap/gsap-core` rather than `gsap`
   keeps CSSPlugin out and saves ~7 kB of that.
 - No tests, no linter, no README. Don't assume a test command exists.
