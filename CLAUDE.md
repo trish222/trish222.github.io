@@ -101,12 +101,16 @@ design-references/  local mood board (CRT monitor photos, isometric angles) — 
 ### The scene
 
 `src/scene.js`, `src/computer.js` and `src/desk.js` are the only modules that
-import three. Orthographic camera **20° down / 37° around**. The elevation comes from a CAD
+import three. Perspective camera on a **20° vertical FOV**, **20° down / 37°
+around** — see "Perspective, and what it replaced" below; it was orthographic
+until the orbit leash reached 2°. The elevation comes from a CAD
 axis tripod, where the two ground axes fall ~18-19° below the horizon either
 side of a vertical z. For an orthographic camera at a symmetric 45° azimuth
 (which is where this started, after `design-references/isometric-angle.webp`)
 that on-screen slope is `atan(sin(elevation))`, which puts the elevation at 20°
-— much flatter than the 35° it began at.
+— much flatter than the 35° it began at. That derivation is the orthographic
+limit and is still what the two angles mean: a narrow FOV reproduces it closely
+at the target and diverges either side, which is the whole point of the change.
 
 The azimuth then came off that symmetry by 8°, on request, to turn more picture
 toward the viewer. The screen looks down world +Z and the camera sits in the
@@ -118,8 +122,11 @@ itself; nothing was hand-retuned. Keep any further swing slight: past ~30° the
 side vents leave the shot and the view stops reading as isometric.
 
 Flattening the camera is not a one-line change, because three things are sized
-against how much floor the frame sees (`frustum / sin(elevation)`, so 2.9 world
-units of depth per unit of screen height at 20° against 1.7 at 35°):
+against how much floor the frame sees. Under the orthographic camera that was
+`frustum / sin(elevation)` — 2.9 world units of depth per unit of screen height
+at 20° against 1.7 at 35°; under a perspective one the frame reaches the
+horizon instead and the fog is what ends the ground, so the first of these is
+far less delicate than it was:
 
 - **`FLOOR_SIZE`** — at 70 the plane's far edge came into frame across the top
   corners, showing scene background either side of it. 160 held at 20°; it is
@@ -137,8 +144,10 @@ units of depth per unit of screen height at 20° against 1.7 at 35°):
 stand on the floor, so the frame only had to hold 6.5 units of monitor; it now
 stands on a 9-unit desk and the assembly reaches ~20.6 units from the desk's
 near-bottom corner to the top of the tube. That is the *only* camera constant
-the desk moved — both angles, `CAM_DIST` and the whole orbit leash are
-untouched, so the home framing is the same shot from further back. `ISO_TARGET`
+the desk moved — both angles and the whole orbit leash are untouched, so the
+home framing is the same shot from further back. (`CAM_DIST` was the third such
+constant and is gone: the distance is derived from the frustum now. See
+"Perspective, and what it replaced".) `ISO_TARGET`
 rose with it, from the origin to `(0, 7.05, 0)`: at the origin the assembly sat
 in the top half of the frame with bare floor underneath.
 
@@ -155,10 +164,29 @@ pedestal's drawer front is still in shot, and is as far as this should go —
 every unit of it costs the machine, which is the thing a visitor has to find
 and press.
 
+**Both are then scaled by `HOME_ZOOM`, which is 1.10.** It is the one
+knob for how much air there is around the furniture, and it exists
+because at 1.0 the desk's near foot sat 2% off the bottom edge on a
+desktop frame — the assembly filled the shot rather than standing in a
+room. At 1.10 that margin is 12%, at 1.15 it is 16%; both were shot and
+either is defensible, so the constant is a single number to change
+rather than two. It multiplies the *frustum*, not the distance: under a
+perspective camera those are the same zoom only because `distFor`
+derives one from the other.
+
+Nothing else moves with it, and that is checked rather than assumed —
+the fly-in's destination is `SCREEN_TARGET` and `screenFrustum`, both
+read off the screen mesh, and the leash's limits are angular offsets
+from home. At 1.00, 1.10 and 1.15 the arrival pose is identical to four
+decimal places and all three limit pairs are unchanged, on both
+viewports.
+
 `window.__fit()` reports where the furniture lands in the frame, in NDC, and is
 what those two numbers are set against: "does the desk fit" is a question about
 eight projected corners, not something to judge off a screenshot.
-`_deskfit.mjs` is the pass that reads it on both viewports.
+`_deskfit.mjs` is the pass that reads it on both viewports, and
+`_zoomshots.mjs` is the one that reads it against the `HOME_ZOOM`
+candidates.
 
 **The floor is its own module, `src/floor.js`.** Its colour, its size, the
 fog that ends it and the wordmark drawn across it all live there; `scene.js`
@@ -906,6 +934,15 @@ the azimuth clamp is ±90° off the monitor's *front*) are profiles of
 the desk's two flanks. **Shoot both of those after moving anything on
 the desk**: the first version's monitor overhung the back edge, and
 only a side view showed it.
+
+`_zoomshots.mjs` shoots the establishing shot at each `HOME_ZOOM`
+candidate on both viewports, chrome hidden, printing `window.__fit`'s
+NDC box and a frame margin beside each — which is the number the
+candidates are actually being compared on. It shoots the flat clamp at
+each as well, because pulling the camera back is the one change that
+could put the floor plane's own far edge into a 2° view. It drives
+`window.__zoom(f)`, so all the candidates come off one page rather than
+one build each.
 
 `_lowshots.mjs` shoots the room from straight in front of the monitor at
 four elevations — 2° (the flat clamp), 10°, 20° (home) and 30° (the steep

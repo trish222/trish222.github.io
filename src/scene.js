@@ -162,6 +162,17 @@ const FRUSTUM = 24;
    is as far as this should go — every unit of it costs the machine,
    which is the thing the visitor has to find and press. */
 const FRUSTUM_MOBILE = 37;
+/* Both of those are scaled by one knob, so the establishing shot can be
+   pulled back without the two viewports drifting apart. 1.10 is a
+   deliberate 10% of air added around the furniture: the desk and the
+   machine keep their proportions and their place in the frame and
+   simply sit in more room. It is the only thing that moves — the two
+   angles, the leash and the fly-in's destination are all expressed
+   somewhere this does not reach, so the shot pulls back and nothing
+   else changes. Note it multiplies the *frustum*, not the distance:
+   under a perspective camera those are the same zoom only because
+   distFor derives one from the other. */
+const HOME_ZOOM = 1.1;
 const MOBILE_BP = 760;
 
 /* How the two floor axes land on screen at this camera angle. The text
@@ -205,6 +216,11 @@ const AMBIENT_WITH_ENV = 0.5;
 const HEMI_WITH_ENV = 0.3;
 
 const GTAO_BLEND = 1.0; // deep enough that the creases actually darken
+/* How far past the furniture the AO is allowed to reach. See
+   buildComposer: everything outside this box is taken to be unoccluded,
+   which on open floor it is. Wide enough that the fade lands well clear
+   of the desk's feet and their contact shadows. */
+const GTAO_BOX_MARGIN = 8;
 const HOVER_RATE = 7; // hover easing, per second
 /* Base intensity of the point light spilling off the screen onto its own
    bezel; the loop scales it with the picture brightness. */
@@ -518,8 +534,16 @@ function isMobile() {
   return window.innerWidth < MOBILE_BP;
 }
 
+/* How much wider than the authored framing the establishing shot is
+   taken. 1 is FRUSTUM / FRUSTUM_MOBILE exactly; above that the camera
+   stands further back and the furniture keeps the same share of the
+   frame on both viewports, so the extra view is margin around the
+   desk rather than a recentring. `window.__zoom(f)` switches it on a
+   live page — see setHomeZoom. */
+let homeZoom = HOME_ZOOM;
+
 function frustumFor() {
-  return isMobile() ? FRUSTUM_MOBILE : FRUSTUM;
+  return (isMobile() ? FRUSTUM_MOBILE : FRUSTUM) * homeZoom;
 }
 
 /* The establishing shot's distance — whatever frames the home frustum
@@ -885,7 +909,7 @@ const CAM_NEAR = 0.5;
    `window.__fov` can move it either way. Re-asserted by `setFov` for
    that reason. */
 function camFar() {
-  return FLOOR_SIZE / 2 + distFor(FRUSTUM_MOBILE) + 100;
+  return FLOOR_SIZE / 2 + distFor(FRUSTUM_MOBILE * homeZoom) + 100;
 }
 
 function buildCamera() {
@@ -1186,27 +1210,47 @@ function initOrbit() {
 }
 
 /* ==========================================
-   SWITCHING THE FIELD OF VIEW
+   RE-FRAMING THE ESTABLISHING SHOT
 
-   `window.__fov(deg)` on a live page, which is how the candidate angles
-   get compared without three builds — see `_persp.mjs`.
+   Two debug handles share one body. `window.__fov(deg)` switches the
+   field of view, which is how the candidate angles got compared
+   without three builds (`_persp.mjs`); `window.__zoom(f)` scales the
+   home frustum, which is how HOME_ZOOM got picked (`_zoomshots.mjs`).
 
-   Everything derived from the FOV has to be re-derived, and the list is
-   longer than it looks because the FOV sets the *distance*: the
-   projection, the far plane, the fog (whose range is an offset from
-   that distance), every knot of the fly-in spline, and the orbit's
-   radius and home pose.
-
-   The camera comes back to home. A swing in progress is therefore
-   lost, which is the right trade for a debug handle: the alternative is
-   reseeding the leash from a pose measured at the old distance, and the
-   leash's elevation limits are offsets from home's polar angle.
+   The camera comes back to home in both cases. A swing in progress is
+   therefore lost, which is the right trade for a debug handle: the
+   alternative is reseeding the leash from a pose measured at the old
+   radius, and the leash's elevation limits are offsets from home's
+   polar angle.
    ========================================== */
 function setFov(deg) {
   if (!camera || !canvasEl) return;
   fov = THREE.MathUtils.clamp(Number(deg) || FOV_DEFAULT, 5, 80);
   tanHalfFov = Math.tan(THREE.MathUtils.degToRad(fov) / 2);
+  reframeHome();
+}
 
+/* Scales the establishing shot's frustum and re-derives everything
+   downstream — `window.__zoom(f)`, which is how the candidates for
+   HOME_ZOOM get compared on one page rather than one build each. See
+   `_zoomshots.mjs`.
+
+   It reaches one thing setFov does not: the floor. The FOV does not
+   change `frustumFor()`, so the wordmark's size and row count stay put
+   across a setFov; this *is* that number, so the type has to be laid
+   out again or it keeps the size it had at the old framing. */
+function setHomeZoom(f) {
+  if (!camera || !canvasEl) return;
+  homeZoom = THREE.MathUtils.clamp(Number(f) || HOME_ZOOM, 0.5, 3);
+  reframeHome();
+}
+
+/* The shared re-derive. Everything below the FOV and the home frustum
+   has to be rebuilt, and the list is longer than it looks because both
+   of them set the camera's *distance*: the far plane, the fog (whose
+   range is an offset from that distance), every knot of the fly-in
+   spline, the floor's type, and the orbit's radius and home pose. */
+function reframeHome() {
   const width = canvasEl.clientWidth;
   const height = canvasEl.clientHeight;
   camera.near = CAM_NEAR;
@@ -1238,6 +1282,7 @@ function setFov(deg) {
     controls.minPolarAngle = orbitHome.phi - ORBIT_UP;
     controls.maxPolarAngle = orbitHome.phi + ORBIT_DOWN;
   }
+  fitFloor(floorView(width, height));
   updateScreenOverlay();
   render();
 }
@@ -1490,6 +1535,28 @@ function buildComposer(width, height) {
   const gtao = new GTAOPass(scene, camera, width, height);
   gtao.output = GTAOPass.OUTPUT.Default;
   gtao.blendIntensity = GTAO_BLEND;
+  /* **The AO is bounded to the furniture, and the perspective camera is
+     why.** GTAO decides occlusion by stepping `radius` world units
+     along the screen and asking whether what it lands on is within
+     `thickness` of where the surface should be. On a plane seen at a
+     grazing angle that test answers yes to the plane itself, so the
+     floor shades itself — and a perspective camera at the flat end of
+     the leash sees the floor run all the way to a horizon, which an
+     orthographic one never did. The result was a band of false
+     occlusion across the haze above the desk, ending in a hard line
+     where the plane's far edge stopped supplying it: ~10% down against
+     a background it is supposed to dissolve into.
+
+     Outside this box the shader takes AO to be 1 over a `radius`-wide
+     fade and then stops sampling altogether. That is not a
+     compromise — open floor *is* unoccluded, and the AO was only ever
+     paying for the creases on the desk and the machine. The box is
+     their world bounds plus GTAO_BOX_MARGIN, so the fade lands on bare
+     ground well clear of the feet. */
+  const clip = new THREE.Box3().setFromObject(desk.root);
+  clip.union(new THREE.Box3().setFromObject(computer.root));
+  clip.expandByScalar(GTAO_BOX_MARGIN);
+  gtao.setSceneClipBox(clip);
   gtao.updateGtaoMaterial({
     radius: 1.15, // world units — keep it to creases, not the whole floor
     distanceExponent: 1.4,
@@ -2138,6 +2205,12 @@ export async function initScene(canvas) {
     if (deg !== undefined) setFov(deg);
     return { fov, dist: camDist(), frustum: frustumFor() };
   };
+  /* Scales the establishing shot and re-derives everything downstream
+     of it — see setHomeZoom. No argument just reports. */
+  window.__zoom = (f) => {
+    if (f !== undefined) setHomeZoom(f);
+    return { zoom: homeZoom, dist: camDist(), frustum: frustumFor() };
+  };
   /* "current" starts the flight from wherever the camera has been
      swung to; "home" walks it back first. See FLY_FROM. */
   window.__flyFrom = (mode) => {
@@ -2328,6 +2401,7 @@ export function disposeScene() {
   flyFrom = FLY_FROM;
   fov = FOV_DEFAULT;
   tanHalfFov = Math.tan(THREE.MathUtils.degToRad(fov) / 2);
+  homeZoom = HOME_ZOOM;
   document.getElementById("orbit-hint")?.setAttribute("hidden", "");
   perf?.dispose();
   perf = null;
