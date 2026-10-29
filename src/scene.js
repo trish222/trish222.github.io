@@ -33,6 +33,7 @@ import {
   fitFloor,
   FLOOR_SIZE,
   loadFloorFont,
+  setFogRange,
 } from "./floor.js";
 /* Playfair is declared in src/style.css and preloaded from index.html,
    so the fetch starts with the entry stylesheet rather than waiting for
@@ -44,8 +45,10 @@ import {
    Owns one <canvas id="scene">. The only module that imports three
    besides computer.js, desk.js and floor.js.
 
-   Camera: orthographic, 20° down / 37° around — see
-   design-references/isometric-angle.webp.
+   Camera: perspective on a narrow FOV, 20° down / 37° around — see
+   design-references/isometric-angle.webp. It was orthographic; see
+   "Perspective, and what replaced the frustum" below for what the
+   switch cost and what it bought.
    Floor: src/floor.js. Everything about what the ground *is* — its
    colour, its size, the fog that ends it, the name repeated across it
    after design-references/floor-text.png — lives there; this module
@@ -60,7 +63,10 @@ import {
    horizon either side of a vertical z. For an orthographic camera at a
    symmetric 45° azimuth that screen slope is atan(sin(elevation)), so
    18.9° on screen is 20° of elevation — a much flatter read than the
-   35° this started at.
+   35° this started at. That derivation is the orthographic limit, and
+   it is still what these two numbers mean: a narrow FOV reproduces it
+   closely at the target and diverges either side of it, which is the
+   whole point of the change below.
 
    The azimuth is then swung 8° off that symmetry, toward the side the
    screen faces (the machine's glass looks down world +Z, and the camera
@@ -72,7 +78,68 @@ import {
    go out of shot and the view stops reading as isometric. */
 const ELEVATION = THREE.MathUtils.degToRad(20);
 const AZIMUTH = THREE.MathUtils.degToRad(37);
-const CAM_DIST = 60;
+
+/* --- Perspective, and what replaced the frustum -----------
+   The camera is a PerspectiveCamera on a narrow vertical FOV. It used
+   to be orthographic, and the flat end of the orbit leash is why it is
+   not: an orthographic projection has no vanishing point, so dropping
+   to 2° above the floor gave a flat elevation — the desk's parallel
+   edges still parallel, the drawer fronts the same size at both ends,
+   and no depth in the room at all.
+
+   A narrow FOV is the whole trick. Everything in this file is still
+   specified as a **frustum height at the target** — world units of
+   vertical view at whatever the camera is looking at — which is
+   exactly what the orthographic frustum was. The camera is then stood
+   far enough back that a cone of FOV degrees subtends that height:
+
+       dist = frustum / (2 * tan(fov / 2))
+
+   so FRUSTUM, FRUSTUM_MOBILE, `monitorFrustum`, `screenFrustum` and
+   the fly-in's log-space zoom curve all keep their old values and
+   their old meanings, and nothing about the floor's type sizing had to
+   change — `fitFloor` is handed the frustum at the target, and that is
+   still the number it was. What stops being a constant is the
+   *distance*: `CAM_DIST` is gone, and the radius is derived from the
+   framing rather than chosen. At 20° the establishing shot stands 68
+   units out where the orthographic one stood at 60.
+
+   Narrower is more isometric, and the trade is legible across the
+   subject: the desk spans about ±12 units of view depth, so its near
+   and far ends differ in size by ~1.30x at 15°, ~1.43x at 20° and
+   ~1.57x at 25°. `window.__fov(deg)` switches it on a live page, which
+   is what `_persp.mjs` shoots the candidates with.
+
+   Three things that were true only of the orthographic camera are now
+   wrong. All three are handled where they live rather than here:
+
+   - **The screen overlay is a homography, not an affine matrix.** The
+     image of a plane under a pinhole camera keystones, so three
+     projected corners no longer determine the transform. See
+     `updateScreenOverlay`.
+   - **`near` is positive again.** A perspective frustum is a pyramid
+     in front of the eye, so the flat view's bottom edge is floor some
+     40 units *ahead* of the camera rather than behind it — the entire
+     reason the orthographic near plane had to be negative is gone. See
+     `buildCamera`.
+   - **A low view has a horizon**, which an orthographic one cannot.
+     The fog already hides it: the floor is fully fogged to the
+     background colour well before it, so ground and backdrop meet with
+     no line between them. That the fog is in `CREAM` was load-bearing
+     before and is more so now — see `buildFog` in src/floor.js, whose
+     range is an offset from the camera's distance for the same reason
+     CAM_DIST is gone. */
+const FOV_DEFAULT = 20;
+let fov = FOV_DEFAULT;
+let tanHalfFov = Math.tan(THREE.MathUtils.degToRad(fov) / 2);
+
+/* The distance that frames `frustum` world units of vertical view at
+   the target. This one equation is what the whole conversion rests on:
+   every framing in this file is still written as a frustum height, and
+   this is where one becomes a pose. */
+function distFor(frustum) {
+  return frustum / (2 * tanHalfFov);
+}
 /* World units of vertical view. These went up with the desk: the
    machine used to stand on the floor, so the frame only had to hold
    6.5 units of monitor; it now stands on a 9-unit desk, and the
@@ -103,8 +170,16 @@ const MOBILE_BP = 760;
    ground rather than floating over it. Off the symmetric azimuth the two
    no longer match: the baselines lie flatter and the stack climbs more
    steeply, so type size comes down a touch and the row count goes up.
-   Both fall out of these two numbers, so nothing needs hand-retuning. */
-const PROJ_X = Math.cos(AZIMUTH); // screen x per unit along +X
+   Both fall out of these two numbers, so nothing needs hand-retuning.
+
+   These are the *orthographic* foreshortening factors, and they stay
+   that way deliberately. Under a perspective camera the screen extent
+   per world unit varies with depth, so there is no single pair of
+   numbers; these are the pair that holds at the target, which is where
+   the type the floor draws is being sized to sit. A narrow FOV keeps
+   the error small, and the alternative — re-deriving them per row —
+   would mean redrawing the floor texture whenever the camera moved. */
+const PROJ_X = Math.cos(AZIMUTH); // screen x per unit along +X, at the target
 const PROJ_Z = Math.sin(ELEVATION) * Math.sin(AZIMUTH); // screen y per unit along +Z
 
 /* --- Where the machine is set down ------------------------
@@ -193,21 +268,31 @@ const ORBIT_SWING = THREE.MathUtils.degToRad(90);
    against 10° of rise.
 
    Flatter used to be the expensive direction, and the reason is worth
-   keeping: the frame reads `frustum / sin(elevation)` of floor depth,
-   which at 2° is about 690 world units on a desktop frame and 1060 on a
-   portrait one, against the 70 the establishing shot sees. Three things
-   had to grow with it, and all three are now sized for 2° rather than
-   for 16°:
+   keeping — though the perspective camera has changed what it costs.
+   Under the orthographic one the frame read `frustum / sin(elevation)`
+   of floor depth, about 690 world units on a desktop frame at 2° and
+   1060 on a portrait one, against the 70 the establishing shot sees;
+   under a perspective one the frame reaches the *horizon* instead, and
+   what used to be a very long floor is now a fade into the backdrop
+   that the fog was already doing. Of the three things that had to grow
+   for the flat view, two are now belt-and-braces and the third has
+   reversed:
 
    - **FLOOR_SIZE** (see src/floor.js) — 1700, so the plane's own edge
      is off-frame at the flattest view on the deepest viewport, with the
      fog dissolving its far reaches into the background either way.
-   - **The camera's near plane**, which is *negative*. At 2° the camera
-     eye is only ~9 units off the ground and the bottom of the frame is
-     ground behind it; at near = 0.1 that was clipped away and the
-     bottom of the frame showed bare background.
-   - **The camera's far plane**, which has to reach the far edge of the
-     plane rather than the old 160-unit one.
+   - **The camera's near plane**, which is *positive again*. Under the
+     orthographic camera the view volume was a box and the bottom of
+     the frame at 2° was ground *behind* the eye — 270 units of it on a
+     portrait viewport — which a positive near plane clipped away. A
+     perspective frustum is a pyramid in front of the eye: the bottom
+     edge of the flat frame is now floor about 40 units ahead, and
+     there is no ground behind the camera in shot anywhere on the
+     leash. See `buildCamera`.
+   - **The camera's far plane**, which still reaches the far edge of
+     the plane rather than the old 160-unit one — though everything
+     past the fog's far end is already the background colour, so it is
+     the fog and not this that decides where the ground stops.
 
    The key light's shadow box did *not* need to grow, which is not
    obvious: a shadow map lives in the light's space, and the light has
@@ -269,7 +354,9 @@ const FLY_FROM = "current";
 
    It is the angle off the glass's own normal, so elevation counts
    toward it as well as azimuth — at the +10° rise the azimuth cutoff
-   comes in a degree or so earlier, which is correct. */
+   comes in a degree or so earlier, which is correct. Under the
+   perspective camera it is measured against the line of sight *to the
+   glass* rather than the camera's axis; see `screenFacing`. */
 const FACE_MIN = 0.17; // ~80° off the normal
 
 /* ==========================================
@@ -297,9 +384,12 @@ const FACE_MIN = 0.17; // ~80° off the normal
    design-references/crt-computer.png, then the push-in — is preserved
    rather than re-invented.
 
-   The frustum rides the same spline, in log space: for an orthographic
-   camera the frustum height *is* the zoom, so lerping it linearly
-   reads as a lurch.
+   The frustum rides the same spline, in log space, and under the
+   perspective camera it drives the *radius* — the frustum height is
+   still how a framing is specified, and `distFor` turns it into a
+   distance. Log space is what keeps the push-in even: the arrival is an
+   eighth of the establishing shot's frustum, so lerping it linearly
+   reads as a lurch either way round.
    ========================================== */
 const FLY_S = 1.6; // seconds, the whole camera move
 /* The canvas-out / page-in crossfade, overlapping the tail of the
@@ -375,7 +465,11 @@ let controls = null;
 /* The pose applyFly(0) produced, in the controls' own terms. Filled in
    by initOrbit; the leash and the walk home are both expressed against
    it, so nothing here restates ELEVATION or AZIMUTH. */
-const orbitHome = { theta: 0, phi: 0, radius: CAM_DIST };
+/* radius is filled in by initOrbit from the pose applyFly(0) produced.
+   There is no constant to seed it with any more: under perspective the
+   distance is derived from the framing, so it differs between the two
+   viewports and moves with the FOV. */
+const orbitHome = { theta: 0, phi: 0, radius: 0 };
 const orbitSpherical = new THREE.Spherical();
 let orbitTween = null; // the walk home, while one is running
 let orbitDragging = false;
@@ -428,6 +522,17 @@ function frustumFor() {
   return isMobile() ? FRUSTUM_MOBILE : FRUSTUM;
 }
 
+/* The establishing shot's distance — whatever frames the home frustum
+   on this viewport at the current FOV. It is also the orbit's radius,
+   and what the fog's range is offset from.
+
+   Note it is viewport-dependent, which the orthographic CAM_DIST was
+   not: a portrait frame wants FRUSTUM_MOBILE, so the camera stands
+   half again as far back there. */
+function camDist() {
+  return distFor(frustumFor());
+}
+
 /* What the floor needs to know about the frame it is being seen in.
    The two foreshortening factors are the camera's, not the floor's, so
    they are handed over rather than recomputed there — which is what
@@ -449,7 +554,7 @@ function buildScene() {
      the background's, so the plane dissolves into the backdrop instead
      of ending at an edge. With this and FLOOR_SIZE together there is no
      floor edge and no horizon line anywhere on the orbit leash. */
-  s.fog = buildFog();
+  s.fog = buildFog(camDist());
 
   s.add(buildFloor(renderer.capabilities.getMaxAnisotropy()));
 
@@ -532,13 +637,21 @@ function buildScene() {
 
    The camera does not *travel* on an orbit, though: the flight
    interpolates a spline fitted through those poses. See applyFly.
+
+   Under the perspective camera the frustum height in that quadruple is
+   what sets the *distance* rather than the projection — see `distFor`
+   above — so a "pose" is still four numbers and still means the same
+   framing. What changed is that the four knots no longer sit at one
+   radius: the orthographic path was a constant-radius arc with the
+   zoom carried separately, and the zoom is now the radius.
    ========================================== */
-function applyCameraSize(cam, width, height, f = frustumFor()) {
-  const aspect = width / height;
-  cam.left = (-f * aspect) / 2;
-  cam.right = (f * aspect) / 2;
-  cam.top = f / 2;
-  cam.bottom = -f / 2;
+/* The projection is only the FOV and the aspect now. The zoom is not
+   in here any more — it is the camera's distance, which applyFly sets —
+   so this no longer takes a frustum height. Where a framing still has
+   to become a pose it goes through `distFor`. */
+function applyCameraSize(cam, width, height) {
+  cam.aspect = width / height;
+  cam.fov = fov;
   cam.updateProjectionMatrix();
 }
 
@@ -559,7 +672,7 @@ const flyTarget = new THREE.Vector3();
    the camera actually did rather than restating the constants. There are
    no angles to report any more — the camera rides a spline, not an
    orbit. */
-const flyPose = { frustum: FRUSTUM };
+const flyPose = { frustum: FRUSTUM, dist: 0 };
 
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
 /* The cubic the legacy two-phase path was shaped with. Only the knot
@@ -576,7 +689,13 @@ function monitorFrustum(aspect) {
 
 /* ...and the one at which the picture covers the viewport. `min`, not
    `max`: the screen is 4:3-ish and the viewport rarely is, so covering
-   means cropping the other axis rather than letterboxing it. */
+   means cropping the other axis rather than letterboxing it.
+
+   Both of these are unchanged by the perspective camera, and that is
+   the point of specifying framings as frustum heights: the relationship
+   between a height at the target, the aspect and what fills the frame
+   is the same for either projection. Only the step from a height to a
+   camera position is new. */
 function screenFrustum(aspect) {
   return Math.min(
     SCREEN_H * SCREEN_INNER,
@@ -587,8 +706,17 @@ function screenFrustum(aspect) {
 /* The two-phase turn-then-zoom path the fly-in used to run on. It is no
    longer what the camera follows — it is sampled at FLY_KNOTS to build
    the spline that replaced it, which is how the arc that was
-   art-directed here survives the rebuild. Aspect-independent in
-   position and target; only the frustum needs the viewport. */
+   art-directed here survives the rebuild.
+
+   The position is no longer aspect-independent, and that is the one
+   thing the perspective camera changed in here. The frustum is worked
+   out first and the distance comes off it, because under perspective
+   the zoom *is* the radius: where the orthographic path was a
+   constant-radius arc around a moving target with the zoom carried
+   separately, this one spirals in. The angles and the target are
+   untouched, so the arc the knots describe is still the one that was
+   art-directed here — only its radius profile is new, and it has to
+   be. */
 const legacyPose = { position: new THREE.Vector3(), target: new THREE.Vector3(), frustum: 0 };
 
 function samplePose(p, aspect) {
@@ -599,17 +727,18 @@ function samplePose(p, aspect) {
   legacyPose.target.lerp(SCREEN_TARGET, zoom);
   const azimuth = AZIMUTH * (1 - turn);
   const elevation = ELEVATION * (1 - turn);
-  legacyPose.position.set(
-    legacyPose.target.x + CAM_DIST * Math.cos(elevation) * Math.sin(azimuth),
-    legacyPose.target.y + CAM_DIST * Math.sin(elevation),
-    legacyPose.target.z + CAM_DIST * Math.cos(elevation) * Math.cos(azimuth),
-  );
   legacyPose.frustum = Math.exp(
     lerp(
       lerp(Math.log(frustumFor()), Math.log(monitorFrustum(aspect)), turn),
       Math.log(screenFrustum(aspect)),
       zoom,
     ),
+  );
+  const dist = distFor(legacyPose.frustum);
+  legacyPose.position.set(
+    legacyPose.target.x + dist * Math.cos(elevation) * Math.sin(azimuth),
+    legacyPose.target.y + dist * Math.sin(elevation),
+    legacyPose.target.z + dist * Math.cos(elevation) * Math.cos(azimuth),
   );
   return legacyPose;
 }
@@ -622,9 +751,13 @@ function samplePose(p, aspect) {
 
    The frustum is a curve too, carrying log(height) in x: reusing
    three's Catmull-Rom for it guarantees it is parameterised identically
-   to the other two, where a separate scalar easing would drift.
+   to the other two, where a separate scalar easing would drift. Under
+   the perspective camera it is no longer read as a projection — see
+   applyFly, which takes the *direction* from the position curve and the
+   *radius* from this one.
 
-   Rebuilt on resize, because the frustum knots depend on the aspect. */
+   Rebuilt on resize, because the frustum knots depend on the aspect —
+   and so, now, do the position knots. */
 let flyPath = null;
 
 function buildFlyPath(width, height) {
@@ -662,6 +795,11 @@ function buildFlyPath(width, height) {
 }
 
 const flyPoint = new THREE.Vector3();
+/* The camera's offset from the target, and a throwaway for reading the
+   log-frustum curve — which used to borrow flyPoint, back when the
+   position it held had already been copied into the camera by then. */
+const flyOffset = new THREE.Vector3();
+const flyScratch = new THREE.Vector3();
 
 /* The single source of truth for where the camera is. Linear in p — the
    easing lives on the GSAP timeline, so `__flyTo(0.5)` is the
@@ -673,19 +811,39 @@ function applyFly(p, width, height) {
 
   flyPath.position.getPoint(u, flyPoint);
   flyPath.target.getPoint(u, flyTarget);
-  camera.position.copy(flyPoint);
-  camera.lookAt(flyTarget);
-  camera.updateMatrixWorld();
 
   const f = Math.exp(
     THREE.MathUtils.clamp(
-      flyPath.frustum.getPoint(u, flyPoint).x,
+      flyPath.frustum.getPoint(u, flyScratch).x,
       flyPath.fMin,
       flyPath.fMax,
     ),
   );
-  applyCameraSize(camera, width, height, f);
+  /* **Direction off the position spline, radius off the zoom curve.**
+     The split is what keeps both halves of the art direction intact
+     under perspective. The spline still decides where the camera
+     swings to — its angular path through the knots is the one that was
+     art-directed — while the clamped log-space curve still decides how
+     close it is, which is now the same statement as how big the
+     picture is. Left to the spline alone, a radius that dipped past
+     the arrival and came back would read as exactly the bounce that
+     clamp exists to prevent.
+
+     The two agree exactly at both endpoints, because each knot's
+     position was placed at distFor(its own frustum) — so the
+     establishing shot and the arrival are still the framings they were
+     specified as, and applyFly(0) is still the only definition of
+     home. */
+  const dist = distFor(f);
+  flyOffset.copy(flyPoint).sub(flyTarget);
+  const len = flyOffset.length() || 1;
+  camera.position.copy(flyTarget).addScaledVector(flyOffset, dist / len);
+  camera.lookAt(flyTarget);
+  camera.updateMatrixWorld();
+
+  applyCameraSize(camera, width, height);
   flyPose.frustum = f;
+  flyPose.dist = dist;
 
   /* GTAO's radius is in world units, tuned against the isometric
      framing. Six times closer in it is no longer sampling creases, so
@@ -694,26 +852,44 @@ function applyFly(p, width, height) {
   return f;
 }
 
-/* Position, orientation and frustum all come from applyFly.
+/* Position, orientation and aspect all come from applyFly; the clip
+   planes are set here and only move with the FOV.
 
-   **`near` is negative, and has to be.** For an orthographic camera the
-   view volume is a box, and `near` is simply where its front face sits
-   along the view axis — nothing stops it being behind the eye. At the
-   flat end of the orbit leash the eye is ~9 units above the ground and
-   looking 2° down, so the bottom of the frame is floor *behind* the
-   camera: 270 units of it on a portrait viewport. At the old near = 0.1
-   that floor was clipped and the bottom of the frame showed background.
+   **`near` is positive again**, and the note it replaces is worth
+   keeping in mind because it was the subtlest thing about the
+   orthographic camera. There the view volume was a box and `near` was
+   just where its front face sat along the view axis, so nothing stopped
+   it being *behind* the eye — and at the flat end of the leash it had
+   to be, because the bottom of the frame was 270 units of floor behind
+   the camera. A perspective frustum is a pyramid in front of the eye.
+   There is no ground behind the camera in shot at any point of the
+   leash, and the flat view's bottom edge is floor about 40 units ahead.
 
-   `far` reaches the far edge of the plane (FLOOR_SIZE / 2 plus the
-   camera's own distance from the target) for the same reason at the
-   other end. The depth buffer is linear for an orthographic projection,
-   so spending ~1950 units on the range costs about 1.2e-4 of precision
-   per unit — nothing against GTAO's 1.15-unit radius. */
+   What `near` has to clear instead is the closest the camera ever gets
+   to anything, which is the arrival: distFor(screenFrustum) is ~6.7
+   units in front of the glass at a 25° FOV and ~11 at 15°, so half a
+   unit is a wide margin. `far` reaches the far edge of the floor plane
+   from the furthest the camera ever stands — a portrait viewport at the
+   narrowest FOV worth shooting.
+
+   Depth is distributed hyperbolically now rather than linearly, so the
+   figure that matters is `near` and not the span: at 0.5 against a
+   ~1090 far, precision at the establishing shot's ~70 units is ~6e-4 of
+   a world unit, which is nothing against GTAO's 1.15-unit radius. The
+   floor is a lone plane with nothing coplanar to fight, so the ~0.09 of
+   a unit out at its far edge costs nothing either. */
+const CAM_NEAR = 0.5;
+
+/* Derived from the live FOV, because the distance is: at 20° the
+   deepest viewport stands 105 units out and at 15° it is 140, and
+   `window.__fov` can move it either way. Re-asserted by `setFov` for
+   that reason. */
+function camFar() {
+  return FLOOR_SIZE / 2 + distFor(FRUSTUM_MOBILE) + 100;
+}
+
 function buildCamera() {
-  const cam = new THREE.OrthographicCamera();
-  cam.near = -(FLOOR_SIZE / 2 - CAM_DIST) - 60;
-  cam.far = FLOOR_SIZE / 2 + CAM_DIST + 100;
-  return cam;
+  return new THREE.PerspectiveCamera(fov, 1, CAM_NEAR, camFar());
 }
 
 /* ==========================================
@@ -753,11 +929,14 @@ function cameraMoving() {
 }
 
 /* Poses the camera from a pair of orbit angles around the controls'
-   target. The radius never changes: zoom is off, and for an
-   orthographic camera the distance along the view axis makes no
-   difference to the framing anyway. camera.up is +Y and the controls
-   are not re-basing it, so a plain spherical is exactly what
-   OrbitControls would compute. */
+   target. The radius never changes, and under perspective that is
+   load-bearing rather than incidental: the distance *is* the framing
+   now, so holding it fixed is what makes the leash a rotation instead
+   of a rotation plus a zoom. (Under the orthographic camera the
+   distance along the view axis made no difference to the picture at
+   all, which is why `enableZoom = false` used to be a matter of taste.)
+   camera.up is +Y and the controls are not re-basing it, so a plain
+   spherical is exactly what OrbitControls would compute. */
 function setOrbitAngles(theta, phi) {
   orbitSpherical.set(orbitHome.radius, phi, theta);
   camera.position.setFromSpherical(orbitSpherical).add(controls.target);
@@ -928,11 +1107,27 @@ function enterScreen() {
 function initOrbit() {
   controls = new OrbitControls(camera, canvasEl);
   controls.target.copy(ISO_TARGET);
+  /* **Resync the controls' own spherical before anything reads it.**
+     OrbitControls' constructor ends with an `update()`, and that ran
+     with `target` still at its default origin — so the cached spherical
+     it left behind is the camera's angles measured about (0,0,0), not
+     about ISO_TARGET. `getPolarAngle()` returns that cache rather than
+     re-deriving, so without this line `orbitHome.phi` below is seeded
+     6° steeper than the pose applyFly(0) actually produced, and then
+     the first idle walk home quietly takes the camera *to* that wrong
+     pose three seconds after the page loads — carrying the whole
+     elevation leash with it.
+
+     It has to happen here and not later: every number in this function
+     is read off the controls, and the limits are offsets from them. */
+  controls.update();
   controls.enablePan = false;
-  /* No wheel zoom: the frustum is the fly-in's business, and a
-     scrolled-in establishing shot has nothing behind it. With zoom off
-     OrbitControls returns from the wheel handler before it would
-     preventDefault, so the page is left to scroll as it likes. */
+  /* No wheel zoom: the framing is the fly-in's business, and a
+     scrolled-in establishing shot has nothing behind it. Under
+     perspective this also pins the radius, which is the same statement
+     — see setOrbitAngles. With zoom off OrbitControls returns from the
+     wheel handler before it would preventDefault, so the page is left
+     to scroll as it likes. */
   controls.enableZoom = false;
   controls.rotateSpeed = ORBIT_SPEED;
   /* Inertia is precisely what a reduced-motion visitor has asked not
@@ -991,39 +1186,182 @@ function initOrbit() {
 }
 
 /* ==========================================
+   SWITCHING THE FIELD OF VIEW
+
+   `window.__fov(deg)` on a live page, which is how the candidate angles
+   get compared without three builds — see `_persp.mjs`.
+
+   Everything derived from the FOV has to be re-derived, and the list is
+   longer than it looks because the FOV sets the *distance*: the
+   projection, the far plane, the fog (whose range is an offset from
+   that distance), every knot of the fly-in spline, and the orbit's
+   radius and home pose.
+
+   The camera comes back to home. A swing in progress is therefore
+   lost, which is the right trade for a debug handle: the alternative is
+   reseeding the leash from a pose measured at the old distance, and the
+   leash's elevation limits are offsets from home's polar angle.
+   ========================================== */
+function setFov(deg) {
+  if (!camera || !canvasEl) return;
+  fov = THREE.MathUtils.clamp(Number(deg) || FOV_DEFAULT, 5, 80);
+  tanHalfFov = Math.tan(THREE.MathUtils.degToRad(fov) / 2);
+
+  const width = canvasEl.clientWidth;
+  const height = canvasEl.clientHeight;
+  camera.near = CAM_NEAR;
+  camera.far = camFar();
+  setFogRange(scene.fog, camDist());
+  /* The stored start pose was a pair of angles at the old radius, and
+     the path is about to be rebuilt from home anyway. */
+  flyStart = null;
+  buildFlyPath(width, height);
+  applyFly(fly.value, width, height);
+
+  if (controls) {
+    killReturn();
+    orbitIdleAt = 0;
+    controls.target.copy(ISO_TARGET);
+    /* Same resync initOrbit needs, and for the same reason: the cached
+       spherical still describes wherever the camera was before
+       applyFly re-posed it. Here the clamps have to come off to do it,
+       because `update()` applies them and the ones in force are the
+       stale pair about to be replaced — left in place they drag the
+       camera to the edge of the *old* leash and that becomes the new
+       home. */
+    controls.minPolarAngle = 0;
+    controls.maxPolarAngle = Math.PI;
+    spendGlide();
+    orbitHome.theta = controls.getAzimuthalAngle();
+    orbitHome.phi = controls.getPolarAngle();
+    orbitHome.radius = camera.position.distanceTo(controls.target);
+    controls.minPolarAngle = orbitHome.phi - ORBIT_UP;
+    controls.maxPolarAngle = orbitHome.phi + ORBIT_DOWN;
+  }
+  updateScreenOverlay();
+  render();
+}
+
+/* ==========================================
    THE LIVE PAGE ON THE GLASS
 
    #screen is a DOM box that gets laid onto the screen plane with a CSS
-   matrix(). The camera is orthographic, so the projection of a plane
-   is affine: three projected corners determine the transform exactly,
-   with none of the matrix3d homography a perspective camera would
-   need, and the same two lines hold at every point of the fly-in.
+   transform every frame. The camera is a pinhole, so the image of that
+   plane is a **homography**: the quad keystones, and the three
+   projected corners that used to determine the transform exactly no
+   longer do. All four are projected and the 3x3 that maps the box onto
+   them is solved in closed form, then written as a `matrix3d` carrying
+   the perspective row.
+
+   It still collapses to the old affine matrix wherever the quad is a
+   parallelogram, and `quadTransform` takes that branch deliberately
+   rather than letting the w row sit at floating-point noise — because
+   the arrival is exactly that case. Head-on and centred is the one
+   framing where the perspective camera and the orthographic one agree,
+   so the transform at rest on the login is the same string this wrote
+   before, down to the digits.
    ========================================== */
 const screenCorner = new THREE.Vector3();
-const TL = [0, 0];
-const TR = [0, 0];
-const BL = [0, 0];
+const cornerView = new THREE.Vector3();
+/* Four corners now, not three: top-left, top-right, bottom-right,
+   bottom-left, which is the winding `quadTransform` expects. */
+const QUAD = [
+  [0, 0],
+  [0, 0],
+  [0, 0],
+  [0, 0],
+];
 
+/* Projects a corner of the screen plane into CSS pixels. False if it is
+   not in front of the eye: `project()` divides by w, and a corner at or
+   behind the camera comes back as a large finite number rather than as
+   an error — which would be a transform, just not a sane one. Nothing
+   on the leash puts the glass that close (the camera is never nearer
+   than distFor(screenFrustum), and FACE_MIN has stood the overlay down
+   long before the plane could reach the eye), but the check is two
+   lines and the failure mode is a login smeared across the viewport. */
 function projectCorner(x, y, width, height, out) {
-  screenCorner
-    .set(x, y, 0)
-    .applyMatrix4(computer.screen.matrixWorld)
-    .project(camera);
+  screenCorner.set(x, y, 0).applyMatrix4(computer.screen.matrixWorld);
+  /* View-space depth, before the projection divides by it. */
+  cornerView.copy(screenCorner).applyMatrix4(camera.matrixWorldInverse);
+  if (-cornerView.z <= camera.near) return false;
+  screenCorner.project(camera);
   out[0] = (screenCorner.x * 0.5 + 0.5) * width;
   out[1] = (-screenCorner.y * 0.5 + 0.5) * height;
+  return true;
 }
 
 /* How squarely the glass is turned toward the camera: 1 head-on, 0
-   edge-on, negative seen from behind. The view *direction* is what
-   counts, not the camera's position — this camera is orthographic, so
-   every point of the frame is viewed along the same axis. */
+   edge-on, negative seen from behind.
+
+   This is the line of sight *to the glass* — the camera's position
+   against the screen's own centre. Under the orthographic camera it was
+   the camera's view direction instead, and had to be: every point of an
+   orthographic frame is viewed along the same axis, so the position
+   vector would have been the wrong question. With a pinhole the two
+   differ by up to half the FOV, and it is the ray that actually reaches
+   the glass that decides whether the glass is edge-on. */
 const screenNormal = new THREE.Vector3();
 const viewDir = new THREE.Vector3();
 
 function screenFacing() {
   screenNormal.set(0, 0, 1).transformDirection(computer.screen.matrixWorld);
-  camera.getWorldDirection(viewDir);
+  viewDir.copy(SCREEN_TARGET).sub(camera.position).normalize();
   return -screenNormal.dot(viewDir);
+}
+
+/* The 3x3 that maps the overlay box onto the projected quad, as a CSS
+   transform. Closed form rather than an 8x8 solve: for a *rectangular*
+   source the unknowns separate, which is Heckbert's construction for
+   the unit square in "Fundamentals of Texture Mapping and Image
+   Warping" — the two in-plane columns are then divided by the box's own
+   size to take it from the unit square to pixels.
+
+   CSS matrix3d is column-major and the box is flat in z, so the only
+   entries that do anything are the two in-plane columns and the w row:
+
+       x' = a*X + b*Y + e     y' = c*X + d*Y + f     w = g*X + h*Y + 1
+
+   Returns null if the quad has collapsed to a line, which `FACE_MIN`
+   reaches first in practice. */
+function quadTransform(boxW, boxH) {
+  const [[x0, y0], [x1, y1], [x2, y2], [x3, y3]] = QUAD;
+  /* How far the quad is from being a parallelogram, in pixels. */
+  const sx = x0 - x1 + x2 - x3;
+  const sy = y0 - y1 + y2 - y3;
+  const span = Math.abs(x1 - x0) + Math.abs(y3 - y0) + 1;
+
+  /* Affine while the keystone is under a hundredth of a pixel across
+     the whole box — the head-on framings, the arrival among them. Not
+     an optimisation: it is what keeps those writing the exact 2D
+     `matrix()` they wrote before the camera changed, rather than one
+     with a w row of rounding noise. */
+  if (Math.abs(sx) + Math.abs(sy) < span * 1e-5) {
+    const a = (x1 - x0) / boxW;
+    const c = (y1 - y0) / boxW;
+    const b = (x3 - x0) / boxH;
+    const d = (y3 - y0) / boxH;
+    return `matrix(${a},${c},${b},${d},${x0},${y0})`;
+  }
+
+  const dx1 = x1 - x2;
+  const dy1 = y1 - y2;
+  const dx2 = x3 - x2;
+  const dy2 = y3 - y2;
+  const den = dx1 * dy2 - dy1 * dx2;
+  if (!den) return null;
+  const g = (sx * dy2 - dx2 * sy) / den;
+  const h = (dx1 * sy - sx * dy1) / den;
+  const a = (x1 - x0 + g * x1) / boxW;
+  const c = (y1 - y0 + g * y1) / boxW;
+  const b = (x3 - x0 + h * x3) / boxH;
+  const d = (y3 - y0 + h * y3) / boxH;
+  return (
+    `matrix3d(${a},${c},0,${g / boxW},` +
+    `${b},${d},0,${h / boxH},` +
+    `0,0,1,0,` +
+    `${x0},${y0},0,1)`
+  );
 }
 
 /* The live HTML comes off the glass for two unrelated reasons — the
@@ -1055,22 +1393,34 @@ function updateScreenOverlay() {
 
   const hw = (SCREEN_W * SCREEN_INNER) / 2;
   const hh = (SCREEN_H * SCREEN_INNER) / 2;
-  projectCorner(-hw, hh, width, height, TL);
-  projectCorner(hw, hh, width, height, TR);
-  projectCorner(-hw, -hh, width, height, BL);
-
-  const ax = (TR[0] - TL[0]) / SCREEN_BASE_W;
-  const ay = (TR[1] - TL[1]) / SCREEN_BASE_W;
-  const bx = (BL[0] - TL[0]) / SCREEN_BASE_H;
-  const by = (BL[1] - TL[1]) / SCREEN_BASE_H;
-  screenEl.style.transform = `matrix(${ax},${ay},${bx},${by},${TL[0]},${TL[1]})`;
+  const front =
+    projectCorner(-hw, hh, width, height, QUAD[0]) &&
+    projectCorner(hw, hh, width, height, QUAD[1]) &&
+    projectCorner(hw, -hh, width, height, QUAD[2]) &&
+    projectCorner(-hw, -hh, width, height, QUAD[3]);
+  const transform = front ? quadTransform(SCREEN_BASE_W, SCREEN_BASE_H) : null;
+  if (!transform) {
+    /* A corner behind the eye, or a quad collapsed to a line. There is
+       no transform to write, so stand the overlay down exactly as the
+       edge-on case does and leave the 3D texture showing the tube — it
+       carries the same picture at the same angle. */
+    screenAway = true;
+    syncScreenVisibility();
+    return;
+  }
+  screenEl.style.transform = transform;
 
   /* Scanline pitch and CRT softness are authored in the box's own
      pixels but want to be constant in *device* pixels, so both are
-     divided by however much the matrix is currently shrinking it.
+     divided by however much the transform is currently shrinking it.
+     The top edge is what that is measured off — under a homography the
+     scale varies across the box, and the top edge is the same proxy the
+     affine matrix's first basis vector was.
      Clamped: at the isometric framing the box is five times smaller
      than it draws, and an unclamped pitch would out-run the picture. */
-  const scale = Math.hypot(ax, ay) || 1;
+  const scale =
+    Math.hypot(QUAD[1][0] - QUAD[0][0], QUAD[1][1] - QUAD[0][1]) /
+      SCREEN_BASE_W || 1;
   const set = (k, v) => screenEl.style.setProperty(k, v);
   set("--zoom", fly.value.toFixed(4));
 
@@ -1229,14 +1579,17 @@ function setFly(p) {
 }
 
 /* Where the camera ends up, so the framing can be tuned by hand. The
-   frustum height is the zoom — this camera is orthographic, so the
-   distance along the view axis makes no difference to the framing. */
+   frustum height is still what the arrival is *specified* as; the
+   distance beside it is what that works out to at this FOV, and is the
+   number the projection actually uses. */
 function logArrival() {
   const round = (v) => Math.round(v * 1000) / 1000;
   console.log("[scene] arrived at the screen", {
     position: camera.position.toArray().map(round),
     target: flyTarget.toArray().map(round),
     frustumHeight: round(flyPose.frustum),
+    fov,
+    dist: round(flyPose.dist),
   });
 }
 
@@ -1763,6 +2116,28 @@ export async function initScene(canvas) {
       },
     };
   };
+  /* The camera itself, in the terms the perspective conversion is
+     argued in: what the FOV is, how far back that stands the camera,
+     and what frustum height it therefore frames at the target. `_persp.mjs`
+     prints it beside each shot. */
+  window.__cam = () => ({
+    kind: `persp ${fov}°`,
+    fov,
+    near: camera.near,
+    far: camera.far,
+    dist: camera.position.distanceTo(flyTarget),
+    eyeY: camera.position.y,
+    frustum: 2 * camera.position.distanceTo(flyTarget) * tanHalfFov,
+    homeDist: camDist(),
+    homeFrustum: frustumFor(),
+    fog: scene.fog ? [scene.fog.near, scene.fog.far] : null,
+  });
+  /* Switches the field of view and re-derives everything downstream of
+     it — see setFov. No argument just reports. */
+  window.__fov = (deg) => {
+    if (deg !== undefined) setFov(deg);
+    return { fov, dist: camDist(), frustum: frustumFor() };
+  };
   /* "current" starts the flight from wherever the camera has been
      swung to; "home" walks it back first. See FLY_FROM. */
   window.__flyFrom = (mode) => {
@@ -1799,7 +2174,12 @@ export async function initScene(canvas) {
     return {
       position: camera.position.toArray(),
       target: flyTarget.toArray(),
-      frustumHeight: camera.top - camera.bottom,
+      /* Read back off the pose rather than off the projection: there is
+         no camera.top to subtract from any more, and the frustum height
+         a perspective camera frames is its distance times the FOV. */
+      frustumHeight: 2 * camera.position.distanceTo(flyTarget) * tanHalfFov,
+      dist: camera.position.distanceTo(flyTarget),
+      fov,
       fade: flyState.fade,
     };
   };
@@ -1811,8 +2191,14 @@ export async function initScene(canvas) {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_DPR));
     renderer.setSize(width, height, false);
     composer?.setSize(width, height);
+    /* The camera's distance is derived from the frustum, which crosses
+       the mobile breakpoint — so the fog, whose range is an offset from
+       that distance, crosses with it. near/far are plain uniforms; this
+       costs no shader recompile. */
+    setFogRange(scene.fog, camDist());
     /* The spline's frustum knots are framings, so they move with the
-       aspect: the path has to be rebuilt, not just re-sampled. */
+       aspect — and so, under perspective, do its position knots: the
+       path has to be rebuilt, not just re-sampled. */
     buildFlyPath(width, height);
     /* Re-derived from fly.value rather than reset, so a resize part-way
        through the fly-in — or while the login page is up — keeps the
@@ -1940,6 +2326,8 @@ export function disposeScene() {
   orbitChangedAt = -Infinity;
   flyStart = null;
   flyFrom = FLY_FROM;
+  fov = FOV_DEFAULT;
+  tanHalfFov = Math.tan(THREE.MathUtils.degToRad(fov) / 2);
   document.getElementById("orbit-hint")?.setAttribute("hidden", "");
   perf?.dispose();
   perf = null;

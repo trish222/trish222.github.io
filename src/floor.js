@@ -78,21 +78,44 @@ const FLOOR_SPIN = 0;
    frame on a tall viewport, where it only happens to be invisible
    because the fogged floor and the background are the same colour.
 
-   Two consequences in `scene.js`, both of which go with this number:
-   the camera's `far` has to reach the far edge, and its `near` has to
-   be *negative* enough to keep the ground behind the camera — which at
-   2° is the bottom of the frame — from being clipped away. */
+   One consequence in `scene.js` goes with this number: the camera's
+   `far` has to reach the far edge. The other one used to be that its
+   `near` had to be *negative* enough to keep the ground behind the
+   camera — which at 2° was the bottom of an orthographic frame — from
+   being clipped away. That is gone: a perspective frustum is a pyramid
+   in front of the eye, so there is no ground behind the camera in shot
+   and `near` is positive again.
+
+   The whole number is less delicate than it was, for the same reason:
+   a perspective frame reaches the horizon rather than a fixed depth, so
+   what ends the ground is the fog, and the plane only has to outlast
+   it. 1700 does that several times over at every framing. */
 export const FLOOR_SIZE = 1700;
 
 /* Fog in the floor's own colour, which is also the scene background's:
    the far reaches of the plane dissolve into the backdrop instead of
-   ending at a line. Linear, and NEAR sits well past the furniture — the
-   camera stays `CAM_DIST` from whatever it is looking at, so nothing on
-   the desk is ever inside the fade, at any point of the orbit or the
-   fly-in. Note there is no tone mapping on either render path, so a
-   fully-fogged fragment resolves to exactly the clear colour. */
-const FOG_NEAR = 140;
-const FOG_FAR = 460;
+   ending at a line. Note there is no tone mapping on either render
+   path, so a fully-fogged fragment resolves to *exactly* the clear
+   colour.
+
+   Both ends are offsets from the camera's own distance rather than
+   absolutes, because that distance stopped being a constant when the
+   camera became a perspective one: it is derived from the framing now,
+   so it differs between the desktop and portrait viewports and moves
+   with the field of view. FOG_FROM is the clearance past whatever the
+   camera is looking at — enough that the far corner of the desk is
+   never inside the fade at any point of the orbit — and FOG_SPAN is the
+   fade itself. At the orthographic camera's old 60-unit distance these
+   reproduce the 140 and 460 this used to hard-code.
+
+   Under perspective the fog does one job more than it used to. A low
+   view now has a **horizon**, which an orthographic one could not; the
+   floor is fully fogged to the background colour well before it, so the
+   ground and the backdrop meet with nothing between them. The plane's
+   own far edge is past that, which is why FLOOR_SIZE stopped being the
+   delicate number below. */
+const FOG_FROM = 80;
+const FOG_SPAN = 320;
 
 const TEX_W = 2048;
 const TEX_W_MOBILE = 1024;
@@ -228,8 +251,25 @@ export function fitFloor(view) {
 
 /* The fog belongs to the floor, not to the camera — it is how the plane
    ends. Handed back for the scene to install. */
-export function buildFog() {
-  return new THREE.Fog(new THREE.Color(CREAM), FOG_NEAR, FOG_FAR);
+export function buildFog(dist) {
+  const fog = new THREE.Fog(new THREE.Color(CREAM), 0, 0);
+  setFogRange(fog, dist);
+  return fog;
+}
+
+/* Called again whenever the camera's distance changes — a viewport
+   crossing the mobile breakpoint, or the FOV being switched. `near` and
+   `far` are plain uniforms, so this costs no shader recompile.
+
+   It takes the *establishing shot's* distance and not the live one,
+   deliberately. The fly-in pushes the camera in to a tenth of it, which
+   only moves everything further inside FOG_NEAR and is harmless;
+   re-deriving the range mid-flight would instead drag the fade inward
+   over a floor that is still in frame. */
+export function setFogRange(fog, dist) {
+  if (!fog) return;
+  fog.near = dist + FOG_FROM;
+  fog.far = dist + FOG_FROM + FOG_SPAN;
 }
 
 export function buildFloor(maxAnisotropy = 1) {

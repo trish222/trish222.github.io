@@ -909,11 +909,14 @@ body {
 
    #screen is a plain DOM box of a fixed base size (set from JS, so the
    aspect matches SCREEN_W/SCREEN_H in computer.js exactly) that
-   scene.js maps onto the monitor's screen plane with a CSS matrix()
-   every frame. The camera is orthographic, so the projection of a
-   plane is affine — three projected corners give the transform with no
-   perspective homography needed, and the same code holds all the way
-   through the fly-in.
+   scene.js maps onto the monitor's screen plane with a CSS transform
+   every frame. The camera is a perspective one, so the image of that
+   plane keystones: four projected corners and a `matrix3d` carrying
+   the w row, not the three corners and plain `matrix()` an
+   orthographic camera needed. Head-on — the arrival, chiefly — the
+   quad is a parallelogram and scene.js writes the 2D `matrix()`
+   again, which is why `transform-origin: 0 0` below has to hold for
+   both.
 
    It is mapped onto the *inner* rectangle of the picture, inside the
    black overscan border the 3D texture draws. The bezel lip overhangs
