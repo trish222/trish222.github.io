@@ -1,0 +1,16 @@
+desk-wood-512.jpg
+desk-wood-rough-512.jpg
+
+"Wood Table 001" by Rob Tuytel / Poly Haven
+https://polyhaven.com/a/wood_table_001
+License: CC0 1.0 (public domain dedication)
+
+Derived from the 1k JPEG release (Diffuse and Rough), downsampled to
+512x512. The diffuse also has a per-channel gamma lift applied
+(r 0.613, g 0.538, b 0.504): the scan is a dark stained walnut and the
+desk wants a warm *medium* tone, which puts the channel means on
+roughly #6b4a33. The grain runs up the image; the material rotates the
+UVs a quarter turn so it runs along the desk's length instead.
+
+Both are only ever seen at a few hundred pixels across, so 512 costs
+nothing visually and ~390 kB of page weight against the 1k originals.

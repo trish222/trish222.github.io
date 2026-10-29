@@ -24,8 +24,11 @@ stays out of the bundle), `@fontsource/playfair-display` (OFL-1.1, vendored into
 `98.css` (MIT, build-time only — see below),
 `public/fonts/departure-mono-regular.woff2` — Departure Mono by Helena
 Zhang, OFL-1.1, checked in from its GitHub release because it is not on
-npm, and `public/env/studio-small-09-256.hdr` — "Studio Small 09" by Sergej
-Majboroda via Poly Haven, CC0 (see `public/env/LICENSE.txt`). Desktop icons are
+npm, `public/env/studio-small-09-256.hdr` — "Studio Small 09" by Sergej
+Majboroda via Poly Haven, CC0 (see `public/env/LICENSE.txt`), and
+`public/textures/desk-wood-*.jpg` — "Wood Table 001" by Rob Tuytel via
+Poly Haven, CC0, the desk's walnut top (see `public/textures/LICENSE.txt`
+for what was done to it). Desktop icons are
 our own pixel art, drawn from primitives by `scripts/make-icons.mjs` — not
 Microsoft artwork, and no longer emoji either. Every 3D object is built from
 primitives in code; nothing is an imported model.
@@ -80,7 +83,9 @@ index.html        all markup — canvas, windows, taskbar, Start menu, drag hint
 src/main.js       window manager: focus/open/close/minimize/maximize, drag, taskbar, clock
 src/scene.js      camera, floor, lighting, env map, AO, hover, the orbit, the fly-in
 src/computer.js   the CRT machine, built from primitives
+src/desk.js       the steel tanker desk it stands on, likewise
 public/env/       CC0 studio HDRI used as the environment map
+public/textures/  CC0 walnut scan for the desk top, vendored and relit
 src/style.css     Win95 design tokens (:root vars) + all component CSS
 src/perf.js       dev-only stats.js FPS meter; never reaches production
 src/vendor/       98.scoped.css — generated, see "98.css" above
@@ -94,8 +99,8 @@ design-references/  local mood board (CRT monitor photos, isometric angles) — 
 
 ### The scene
 
-`src/scene.js` and `src/computer.js` are the only modules that import three.
-Orthographic camera **20° down / 37° around**. The elevation comes from a CAD
+`src/scene.js`, `src/computer.js` and `src/desk.js` are the only modules that
+import three. Orthographic camera **20° down / 37° around**. The elevation comes from a CAD
 axis tripod, where the two ground axes fall ~18-19° below the horizon either
 side of a vertical z. For an orthographic camera at a symmetric 45° azimuth
 (which is where this started, after `design-references/isometric-angle.webp`)
@@ -123,6 +128,33 @@ units of depth per unit of screen height at 20° against 1.7 at 35°):
   nearly four times the ground.
 - **`FILL_DEPTH`** — see below; the old value left the type a band across the top
   with bare floor under it.
+
+**`FRUSTUM` is 24 (portrait: 37), and the desk is why.** The machine used to
+stand on the floor, so the frame only had to hold 6.5 units of monitor; it now
+stands on a 9-unit desk and the assembly reaches ~20.6 units from the desk's
+near-bottom corner to the top of the tube. That is the *only* camera constant
+the desk moved — both angles, `CAM_DIST` and the whole orbit leash are
+untouched, so the home framing is the same shot from further back. `ISO_TARGET`
+rose with it, from the origin to `(0, 7.05, 0)`: at the origin the assembly sat
+in the top half of the frame with bare floor underneath.
+
+Nothing about the floor wordmark needed re-tuning for that, and this is worth
+knowing before touching either number — `LINE_FILL` sizes the type as a share
+of the *viewport* and `FILL_DEPTH` sets the row count as a share of the visible
+floor depth, so both scale with the frustum and the type lands at the same size
+in the frame as it did at 18.
+
+Portrait deliberately **crops the desk's ends** rather than framing the whole
+of it: a 19-unit desk across a 390px frame would want a frustum near 50 and
+leave the CRT a tenth of the picture. 37 is the point at which the far
+pedestal's drawer front is still in shot, and is as far as this should go —
+every unit of it costs the machine, which is the thing a visitor has to find
+and press.
+
+`window.__fit()` reports where the furniture lands in the frame, in NDC, and is
+what those two numbers are set against: "does the desk fit" is a question about
+eight projected corners, not something to judge off a screenshot.
+`_deskfit.mjs` is the pass that reads it on both viewports.
 
 The floor is a plain light-grey plane whose texture is drawn with canvas 2D: the name
 repeated in deep blue Playfair Display, rows tightly leaded and staggered, after
@@ -256,6 +288,16 @@ three curves — position, look-at target, and log-frustum — through four
 poses **sampled off that old path** at `FLY_KNOTS`, so the arc it was
 art-directed into survives the rebuild instead of being re-invented.
 `samplePose` is that old path, kept solely as the knot source.
+
+**The three poses the path is built from all moved when the machine went
+up onto the desk, and none of them needed hand-editing to.** The
+establishing shot is `ISO_TARGET`, which rose with the frame (see "The
+scene"); `MONITOR_TARGET` is written as `DESK_TOP_Y + MON_Y` at
+`COMPUTER_Z`, because `MON_Y` is in the machine's own space and that
+space now starts at the desk top; and the arrival is `SCREEN_TARGET`,
+which has always been read off the screen mesh's world matrix and so
+followed the machine on its own. Nothing in the spline, the timeline or
+the overlay matrix is aware the desk exists.
 
 All three curves share one parameterisation, which is what keeps
 position, target and zoom locked to each other. The frustum is a curve
@@ -770,6 +812,18 @@ no-WebGL pass stubs `getContext('webgl*')` to `null`; `scene: "fallback"` there 
 screen for real, fills the form and clicks back, on mobile and under reduced
 motion. Both are `_`-prefixed, so local-only.
 
+`_deskfit.mjs` answers "does the desk fit in frame", by reading
+`window.__fit` on both viewports rather than by looking at a
+screenshot: it prints the NDC box of the desk, the machine and the two
+together, where ±1 is the frame edge. It is what `FRUSTUM`,
+`FRUSTUM_MOBILE` and `ISO_TARGET` are set against. `_deskshots.mjs`
+shoots the room with the Win95 chrome hidden from the three framings
+worth looking at — home, and the two ends of the leash, which (because
+the azimuth clamp is ±90° off the monitor's *front*) are profiles of
+the desk's two flanks. **Shoot both of those after moving anything on
+the desk**: the first version's monitor overhung the back edge, and
+only a side view showed it.
+
 `_orbit.mjs` covers the camera leash, on desktop / mobile / reduced
 motion. It drags with real pointer events so everything goes through
 OrbitControls, and reads the results back off `window.__orbit` rather
@@ -1000,6 +1054,128 @@ it now, but if anything ever animates the machine again it has to move `lift`:
 moving `root` takes the contact shadows up with it, and they float over the floor
 as a detached grey blob.
 
+### The desk
+
+`src/desk.js` builds a 1950s-60s double-pedestal steel "tanker" desk from
+primitives, after `design-references/desk.png`. Taken from the reference: the
+cream enamel carcase and drawer fronts with the paint worn through here and
+there, the curved chrome pulls, the shallow locking centre drawer bridging the
+knee hole, and the short feet. The desk in the photograph has a dark linoleum
+top; this one gets a thick walnut slab instead, overhanging the steel on three
+sides.
+
+Local space matches the computer's — **+Z is the front**, origin on the floor at
+the centre of the desk — and `DESK_TOP_Y` is exported because it is what
+everything standing on the desk is placed against.
+
+**Which pedestal is which is stated in screen terms, not the desk's own.** The
+camera is in the +X/+Z octant, so +X is screen right; the reference's left
+pedestal (the single deep file drawer) is therefore at -X and its right
+pedestal (the stack of three) at +X, which also puts the more interesting of
+the two on the near corner rather than behind the monitor.
+
+Four things there are less obvious than they look.
+
+- **The plan is set by what stands on it, and the depth was measured rather than
+  estimated.** The CRT's funnel runs 4.8 units back from the stand and the
+  keyboard 2.6 forward of it, so the kit occupies very nearly 12 units of depth.
+  The first pass used a guess of 3 for the funnel and made the desk 10.5 deep;
+  the monitor then hung over the back edge, which was invisible at the home
+  framing and obvious the moment the camera swung to a side view. `COMPUTER_Z`
+  in `scene.js` now carries the figures `window.__fit("computer")` reports, and
+  its front figure is the front of the keyboard's painted *contact shadow* — a
+  quad lying on the desk, which would otherwise hang off it in mid-air.
+- **`DESK_TOP_Y` is 9, and true to scale it would be about 11.4.** A real
+  29-inch desk under a 17-inch CRT is nearly two-thirds desk, and at that ratio
+  the machine is a detail on top of a cabinet — and the frame would have to pull
+  back far enough to shrink the CRT, the thing a visitor is meant to click, by
+  about a fifth.
+- **The drawer fronts are overlay fronts and the pedestal carcase stops short of
+  the front to make room for them**, with a dark panel closing it. That is what
+  makes a reveal a gap you can see into. The first version stood the fronts 0.05
+  off a full-depth shell and it failed twice: the reveals showed cream, so a
+  stack read as one panel with scratches on it; and a front 0.03 clear of the
+  face behind it is far inside one texel of a shadow map spread over 160 world
+  units, so the contact came back as a dotted line of acne down every edge.
+- **The knee hole is a hole.** There is floor visible under the modesty panel,
+  and that gap is most of what says the desk stands on the ground rather than
+  being drawn onto it. The first version filled the opening with a solid panel
+  and it read as a block of grey between two cabinets. What closes it is the
+  modesty panel at the back and the apron at the top; the pedestals' inner walls
+  are already there and only need skinning in `INTERIOR`, which is far darker
+  than it "should" be as paint — the key never reaches in there, but ambient
+  plus hemisphere fill still lift a cream interior to within a shade of the lit
+  outside.
+
+**Every painted part is a plain `BoxGeometry`.** `RoundedBoxGeometry` gives a
+fillet whose UVs collapse to a sliver, so a texture carrying per-texel noise is
+minified to nothing across it, and what comes out of the anisotropic filter is a
+regular bead of highlights running down every corner — the desk looked riveted.
+Nothing here is round enough at the size it renders for the fillet to be worth
+that. The wood slab is the exception and keeps its `RoundedBoxGeometry`: its
+edges are genuinely soft, and its map is a photograph with no white noise in it
+to alias.
+
+#### The paint, and the wood
+
+**The wear needs two textures because it is two different problems.** The shells
+want a *tiling* field so a large flat panel is not one dead colour; the drawer
+fronts want a *per-face* one, because wear on a sixty-year-old desk collects
+where hands and chair arms reach — along the edges, around the pull, along the
+bottom lip — and a tiling texture cannot know where its edges are. Both come out
+of one draw as an albedo/roughness pair, the same trick `plasticTextures` plays
+in `computer.js` and for the same reason: on real paint the chipped patches are
+also the duller ones, and roughness alone is invisible on a surface this matt.
+
+Three figures in there were found the hard way and are easy to get wrong again:
+
+- **Chips are sized against how big the face renders, not how big the texture
+  is.** A drawer front is about ninety screen pixels across at the establishing
+  shot, so a chip two texels wide is a fifth of a pixel. The first pass drew them
+  at r = 1.6-4.8 and they were invisible; the second overcorrected to 4.5-9.5 and
+  several per face, which read as mould. Two or three at four-ish texels is the
+  band where they are legible and still small.
+- **Scuffs are banded by height but not by width.** Weighting them toward the two
+  ends as well put a column of short strokes down each vertical edge, and once a
+  stroke ran off the texture the clipped remains read as a dotted seam — like
+  stitching down the side of every drawer.
+- **Repeat is a trade and both ends have been seen.** Tile the shell field often
+  and each lattice cell lands small but the *tile* repeats visibly — at six
+  across a pedestal end it read as a quilted diamond grid. Tile it rarely and one
+  cell spreads into a damp patch. Two tiles over ten world units, ten cells in
+  each.
+
+**The shells get their chips as decals**, not in their texture, for the reason
+above: "near the edges and the handles" is a statement about where a panel ends.
+A handful of small quads on the faces the camera sees, biased to the perimeter.
+`size` there is in world units and the default is not a guess — the chip fills a
+little under half its texture, so a quad much under a third of a unit lands at
+two or three screen pixels and is simply not there.
+
+**`ENAMEL` is darker than it needs to be at the home framing, because of the ends
+of the orbit leash.** A pedestal end is a large flat panel whose normal points
+along -X and the key rakes in from almost exactly there, so it takes about four
+times the direct light the floor does (N·L of 0.88 against sin 13°). At the
+brighter value the whole panel clipped to white at the left clamp and lost every
+chip and scuff on it.
+
+The top is Poly Haven's CC0 "Wood Table 001", vendored to `public/textures/` at
+512 with its provenance beside it — the same reasoning as the HDRI and the
+fonts. The scan is a dark stained walnut and the brief asked for a warm *medium*
+tone, so it carries a per-channel gamma lift baked in at vendor time, which puts
+the channel means on roughly `#6b4a33`. In the material, the grain runs *up* the
+file, so the UVs are turned a quarter turn to put it along the desk's length as
+a solid slab's would be; and the repeat is set from the desk's own dimensions
+rather than left at 1, so the grain keeps the same physical scale on the top,
+the edges and the ends instead of stretching to fit whichever face it lands on.
+`roughness` is 1.9 because it *multiplies* the map, whose own range sits around
+0.24 — the product is a satin 0.4-0.55.
+
+The desk is grounded with painted contact shadows under each pedestal, for
+exactly the reason the computer's are: the key's shadow map covers ±80 world
+units, so a texel is ~0.08 across and the gap under a 0.55-unit foot never lands
+on one.
+
 ### Frame rate, and what holds it at 60
 
 `src/perf.js` is a stats.js panel plus a rolling log of frame deltas
@@ -1014,7 +1190,11 @@ zoom-out ran at a **33ms median on desktop and 57ms on a phone-sized
 viewport**, with half the frames over two frame-times. It is now a flat
 16.7ms median on both, worst frame 17.8ms, zero janky frames in either
 direction. Re-measured after the orbit went in, unchanged: desktop
-16.7 / 20.6 worst / 0 janky, mobile 16.7 / 18.6 / 0. What got it there,
+16.7 / 20.6 worst / 0 janky, mobile 16.7 / 18.6 / 0. Re-measured again
+after the desk went in, unchanged once more: desktop 16.7 / 19.2 / 0,
+mobile 16.7 / 18.3 / 0. The desk is static geometry under a frozen
+shadow map, so it costs one shadow pass at startup and nothing per
+frame. What got it there,
 in order of how much each was worth:
 
 1. **The live HTML coming off the glass** — see "the still" above. This
@@ -1067,8 +1247,8 @@ or the file is fetched twice.
   conversion the renderer would otherwise do, so the lighting calibration below
   holds on both paths.
 
-`window.__scene` and `window.__composer` are debug handles for the review
-scripts.
+`window.__scene`, `window.__composer` and `window.__fit` are debug handles for
+the review scripts.
 
 ## Notes / known rough edges
 
@@ -1079,8 +1259,8 @@ scripts.
   `--font`, so fixing it fixes the login screen too — there is one knob, not two.
   An OFL pixel face was fitted here and reverted on request; see "Typography" for
   what fitting one costs.
-- The scene chunk is ~195 kB gzipped plus a 128 kB HDRI, all lazy-loaded after
-  the desktop paints. The entry chunk is still ~3.8 kB gzipped. GSAP accounts
+- The scene chunk is ~198 kB gzipped plus a 128 kB HDRI and ~106 kB of walnut
+  for the desk top, all lazy-loaded after the desktop paints. The entry chunk is still ~3.8 kB gzipped. GSAP accounts
   for ~26 kB of the scene chunk; importing `gsap/gsap-core` rather than `gsap`
   keeps CSSPlugin out and saves ~7 kB of that. OrbitControls is ~8 kB of it.
 - No tests, no linter, no README. Don't assume a test command exists.

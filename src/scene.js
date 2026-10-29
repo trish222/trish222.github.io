@@ -21,6 +21,7 @@ import {
   SCREEN_H,
   OVERSCAN,
 } from "./computer.js";
+import { buildDesk, disposeDesk, DESK_TOP_Y } from "./desk.js";
 /* Playfair is declared in src/style.css and preloaded from index.html,
    so the fetch starts with the entry stylesheet rather than waiting for
    this chunk to load. Nothing to import here — just await it below. */
@@ -90,8 +91,28 @@ const ROW_INDENT = [0.03, 0.1, 0.04, 0.11, 0.06];
 const ELEVATION = THREE.MathUtils.degToRad(20);
 const AZIMUTH = THREE.MathUtils.degToRad(37);
 const CAM_DIST = 60;
-const FRUSTUM = 18; // world units of vertical view
-const FRUSTUM_MOBILE = 31; // pull back on narrow screens so the keyboard clears the edge
+/* World units of vertical view. These went up with the desk: the
+   machine used to stand on the floor, so the frame only had to hold
+   6.5 units of monitor; it now stands on a 9-unit desk, and the
+   assembly reaches ~20.6 units from the desk's near-bottom corner to
+   the top of the tube. At 24 that fills about five-sixths of the frame
+   height, which leaves the near foot clear of the bottom edge without
+   stranding the desk in floor. It is the only camera constant the desk moved — the two
+   angles, the distance and the whole leash are untouched, so the home
+   framing is the same shot further back.
+
+   The floor wordmark does not need re-tuning for this: LINE_FILL sizes
+   the type as a share of the *viewport*, and FILL_DEPTH sets the row
+   count as a share of the visible floor depth, so both scale with the
+   frustum and the type lands at the same size in the frame as before. */
+const FRUSTUM = 24;
+/* Portrait deliberately crops the desk's ends rather than framing the
+   whole of it: fitting a 19-unit desk across a 390px frame would need a
+   frustum near 50 and leave the CRT a tenth of the picture. 37 is the
+   point at which the far pedestal's drawer front is still in shot, and
+   is as far as this should go — every unit of it costs the machine,
+   which is the thing the visitor has to find and press. */
+const FRUSTUM_MOBILE = 37;
 const MOBILE_BP = 760;
 
 /* How the two floor axes land on screen at this camera angle. The text
@@ -109,6 +130,23 @@ const FLOOR_SPIN = 0;
 
 const PROJ_X = Math.cos(AZIMUTH); // screen x per unit along +X
 const PROJ_Z = Math.sin(ELEVATION) * Math.sin(AZIMUTH); // screen y per unit along +Z
+
+/* --- Where the machine is set down ------------------------
+   The computer is modelled with its origin on its own ground plane and
+   its kit laid out forward of that, so the group is not centred on the
+   origin and has to be shifted back to sit square on the desk.
+
+   These two are **measured, not estimated** — `window.__fit("computer")`
+   reports the group's world box, and the figures below are its local z
+   extents. That matters: an estimate of -3 for the back put the CRT's
+   funnel over the back edge of the desk, which nothing at the home
+   framing showed and the first side view made obvious. The front
+   figure likewise is not the keyboard's front edge (6.2) but the front
+   of its painted contact shadow, which is a quad lying on the desk and
+   would otherwise hang off it in mid-air. */
+const KIT_Z_MIN = -4.77;   // the back of the funnel
+const KIT_Z_MAX = 7.2;     // the front of the keyboard's contact shadow
+const COMPUTER_Z = -(KIT_Z_MIN + KIT_Z_MAX) / 2;
 
 /* --- Floor ----------------------------------------------- */
 /* Generously past the viewport on all sides. It has to grow as the
@@ -334,6 +372,7 @@ let camera = null;
 let floorMat = null;
 let composer = null;
 let computer = null;
+let desk = null;
 let envMap = null;
 let hover = { target: 0, value: 0 };
 let fillLights = null;
@@ -539,8 +578,18 @@ function buildScene() {
 
   s.add(buildFloor());
 
+  /* The desk, and the machine standing on it. The computer is built in
+     its own local space with the origin on *its* ground plane, so the
+     whole group simply rises by the height of the desk top — including
+     the contact-shadow blobs under the stand, the keyboard and the
+     mouse, which then land on the wood rather than on the floor. */
+  desk = buildDesk();
+  desk.root.name = "desk";
+  s.add(desk.root);
+
   computer = buildComputer();
   computer.root.name = "computer";
+  computer.root.position.set(0, DESK_TOP_Y, COMPUTER_Z);
   s.add(computer.root);
 
   /* One low directional light — the shallow angle is what stretches the
@@ -602,9 +651,16 @@ function applyCameraSize(cam, width, height, f = frustumFor()) {
   cam.updateProjectionMatrix();
 }
 
-const ISO_TARGET = new THREE.Vector3(0, 0, 0);
-/* The whole monitor, square to the camera — the turn's resting place. */
-const MONITOR_TARGET = new THREE.Vector3(0, MON_Y, 0);
+/* The establishing shot's pivot — and the orbit's. It sits at the
+   middle of the desk in plan and a little over a third of the way up
+   the assembly, which is what centres desk-plus-machine in the frame;
+   at the old (0,0,0) the whole thing now sat in the top half of it with
+   bare floor underneath. */
+const ISO_TARGET = new THREE.Vector3(0, 7.05, 0);
+/* The whole monitor, square to the camera — the turn's resting place.
+   MON_Y is in the machine's own space, which now starts at the desk
+   top, and COMPUTER_Z is where the machine was set down on it. */
+const MONITOR_TARGET = new THREE.Vector3(0, DESK_TOP_Y + MON_Y, COMPUTER_Z);
 /* Filled in from the screen mesh once the machine is built. */
 const SCREEN_TARGET = new THREE.Vector3();
 const flyTarget = new THREE.Vector3();
@@ -1723,6 +1779,30 @@ export async function initScene(canvas) {
   window.__scene = scene;
   window.__composer = composer;
   window.__stillReady = () => !!stillCanvas;
+  /* Where the furniture lands in the frame, in NDC — ±1 is the edge.
+     This is the knob FRUSTUM and ISO_TARGET are set against: "does the
+     desk fit" is a question about eight projected corners, not
+     something to judge off a screenshot. `_deskfit.mjs` is the pass
+     that reads it on both viewports. */
+  window.__fit = (...names) => {
+    const box = new THREE.Box3();
+    for (const n of names.length ? names : ["desk", "computer"]) {
+      const o = scene.getObjectByName(n);
+      if (o) box.union(new THREE.Box3().setFromObject(o));
+    }
+    const v = new THREE.Vector3();
+    const out = { x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity };
+    for (const x of [box.min.x, box.max.x])
+      for (const y of [box.min.y, box.max.y])
+        for (const z of [box.min.z, box.max.z]) {
+          v.set(x, y, z).project(camera);
+          out.x0 = Math.min(out.x0, v.x);
+          out.x1 = Math.max(out.x1, v.x);
+          out.y0 = Math.min(out.y0, v.y);
+          out.y1 = Math.max(out.y1, v.y);
+        }
+    return { world: [box.min.toArray(), box.max.toArray()], ndc: out };
+  };
   /* Parks or reads the orbit, for the review scripts: no argument
      reports where the camera is and what the leash allows, a pair of
      degrees poses it. The arguments are relative to **home**, so
@@ -1959,6 +2039,9 @@ export function disposeScene() {
   disposables.forEach((d) => d.dispose());
   disposables = [];
   disposeComputer();
+  disposeDesk();
+  computer = null;
+  desk = null;
   floorMat = null;
   texState = { rows: 0, texW: 0, ratio: 1 };
   flyTl?.kill();
