@@ -616,6 +616,31 @@ export function buildDesk() {
   const backZ = baseZ - BASE_D / 2;
   const underside = DESK_TOP_Y - TOP_THICK;
 
+  /* --- What the low end of the orbit leash can see --------
+     The camera can now drop to 2° above the floor, which puts the eye
+     at y ≈ 9.1 — a seventh of a unit above this desk's own surface. At
+     that framing the slab's underside is still (just) turned away, so
+     none of this is visible at the clamp itself; it is here because a
+     seventh of a unit is not a margin. Move ISO_TARGET, CAM_DIST or
+     ORBIT_DOWN at all and the eye goes under the slab, and what it
+     would find there is lit walnut and a cream box bottom — the two
+     surfaces on this desk that were never meant to be looked at.
+
+     Both are plates rather than re-modelled parts: inset from the
+     silhouette so they change nothing at any framing that was already
+     right, and thin enough that where they *do* show at a grazing view
+     they read as the shadow line under an overhang, which is what a
+     slab on a steel carcase actually has. */
+  const UNDER_INSET = 0.04;
+  const UNDER_THICK = 0.05;
+  const underShade = new THREE.Mesh(
+    track(new THREE.BoxGeometry(
+      DESK_W - 2 * UNDER_INSET, UNDER_THICK, DESK_D - 2 * UNDER_INSET)),
+    interior);
+  underShade.position.set(0, underside - UNDER_THICK / 2, 0);
+  underShade.receiveShadow = true;
+  root.add(underShade);
+
   const pedX = (BASE_W - PED_W) / 2;  // centre of each pedestal
 
   for (const sx of [-1, 1]) {
@@ -636,6 +661,18 @@ export function buildDesk() {
     back.position.set(sx * pedX, baseY, frontZ - FRONT_SET + 0.03);
     back.receiveShadow = true;
     root.add(back);
+
+    /* The box bottom, for the same reason as the slab's underside: it
+       faces nothing but floor, so it only ever catches fill, and at
+       cream it reads as a lit panel floating over the shadow between
+       the feet. */
+    const bottom = new THREE.Mesh(
+      track(new THREE.BoxGeometry(
+        PED_W - 2 * UNDER_INSET, UNDER_THICK, BASE_D - FRONT_SET - 2 * UNDER_INSET)),
+      interior);
+    bottom.position.set(sx * pedX, FOOT_H + UNDER_THICK / 2, baseZ - FRONT_SET / 2);
+    bottom.receiveShadow = true;
+    root.add(bottom);
 
     /* Feet. Short, tapered, one under each corner of each pedestal, and
        just inboard of the shell so they read as feet rather than as the

@@ -22,6 +22,18 @@ import {
   OVERSCAN,
 } from "./computer.js";
 import { buildDesk, disposeDesk, DESK_TOP_Y } from "./desk.js";
+/* The ground is its own module — colour, size, fog and the wordmark
+   drawn across it all live there, so it can be swapped whole without
+   touching the camera. */
+import {
+  buildFloor,
+  buildFog,
+  CREAM,
+  disposeFloor,
+  fitFloor,
+  FLOOR_SIZE,
+  loadFloorFont,
+} from "./floor.js";
 /* Playfair is declared in src/style.css and preloaded from index.html,
    so the fetch starts with the entry stylesheet rather than waiting for
    this chunk to load. Nothing to import here — just await it below. */
@@ -29,48 +41,18 @@ import { buildDesk, disposeDesk, DESK_TOP_Y } from "./desk.js";
 /* ==========================================
    ISOMETRIC INTRO SCENE
 
-   Owns one <canvas id="scene">. The only module that imports three.
+   Owns one <canvas id="scene">. The only module that imports three
+   besides computer.js, desk.js and floor.js.
 
-   Camera: orthographic, 35° down / 45° around — see
+   Camera: orthographic, 20° down / 37° around — see
    design-references/isometric-angle.webp.
-   Floor: cream plane carrying the name as repeated deep-blue Playfair
-   Display, after design-references/floor-text.png. A single low
-   directional light rakes a long soft shadow across the letters.
+   Floor: src/floor.js. Everything about what the ground *is* — its
+   colour, its size, the fog that ends it, the name repeated across it
+   after design-references/floor-text.png — lives there; this module
+   only tells it what frame it is being seen in.
+   A single low directional light rakes a long soft shadow across the
+   letters.
    ========================================== */
-
-/* --- Look ------------------------------------------------ */
-const CREAM = "#dcdee0";
-const BLUE = "#1b47a3";
-
-const NAME = "Trish Nguyen"; // the floor wordmark
-
-/* How much of the viewport width one line's horizontal extent covers.
-   Under 1, so a whole name sits inside the frame with cream around it. */
-const LINE_FILL = 0.62;
-/* How much of the texture width that line occupies. Kept well under 1 so
-   the texture keeps a cream border: the floor is larger than the texture,
-   and ClampToEdge then stretches cream rather than smearing a sliced
-   glyph into a streak across the ground. */
-const LINE_IN_TEX = 0.82;
-const MARGIN_X = 0.14; // left margin before a row's indent
-/* Rows nearly touch in the reference — leading is well under the em. */
-const LEADING = 0.74;
-/* Share of the visible floor depth the rows should cover — the knob for
-   row count. At 16:9 this works out to 8 rows. Portrait gets its own
-   value: a phone frame is far deeper in floor terms, so the desktop
-   figure would leave the type a small patch adrift in cream.
-   The figure went up with the flatter camera: at 20° of elevation the
-   frame sees two-thirds more floor depth than it did at 35°, and the
-   old value left the type a band across the top with bare floor under
-   it. */
-const FILL_DEPTH = 0.4;
-const FILL_DEPTH_MOBILE = 0.55;
-const ROWS_MIN = 4;
-const ROWS_MAX = 24;
-
-/* Per-row indent as a fraction of texture width, after floor-text.png —
-   rows are staggered, and the line runs off the right edge. */
-const ROW_INDENT = [0.03, 0.1, 0.04, 0.11, 0.06];
 
 /* --- Camera ----------------------------------------------
    Elevation follows the axis tripod in the CAD screenshot the angle was
@@ -122,12 +104,6 @@ const MOBILE_BP = 760;
    no longer match: the baselines lie flatter and the stack climbs more
    steeply, so type size comes down a touch and the row count goes up.
    Both fall out of these two numbers, so nothing needs hand-retuning. */
-/* In-plane spin of the floor texture, in quarter turns of the ground
-   plane: which floor axis the baselines run along. At 0 the baselines
-   run down-right along +X and the glyph tops point up-right along -Z,
-   which is the upright reading of flat text at this camera. */
-const FLOOR_SPIN = 0;
-
 const PROJ_X = Math.cos(AZIMUTH); // screen x per unit along +X
 const PROJ_Z = Math.sin(ELEVATION) * Math.sin(AZIMUTH); // screen y per unit along +Z
 
@@ -147,16 +123,6 @@ const PROJ_Z = Math.sin(ELEVATION) * Math.sin(AZIMUTH); // screen y per unit alo
 const KIT_Z_MIN = -4.77;   // the back of the funnel
 const KIT_Z_MAX = 7.2;     // the front of the keyboard's contact shadow
 const COMPUTER_Z = -(KIT_Z_MIN + KIT_Z_MAX) / 2;
-
-/* --- Floor ----------------------------------------------- */
-/* Generously past the viewport on all sides. It has to grow as the
-   camera flattens: at 20° of elevation the frame reaches about 2.9 world
-   units of floor depth per unit of screen height, so a plane that cleared
-   the frame at 35° now shows its far edge across the top corners. */
-const FLOOR_SIZE = 160;
-const TEX_W = 2048;
-const TEX_W_MOBILE = 1024;
-const TEX_H_MAX = 4096;
 
 /* Lighting once the HDRI is in play — see the note on the PI factor below. */
 const ENV_INTENSITY = 0.7;
@@ -220,13 +186,33 @@ const MAX_DPR = 1.5;
    At the clamps themselves the glass is exactly edge-on, which is what
    FACE_MIN below is now actually for. */
 const ORBIT_SWING = THREE.MathUtils.degToRad(90);
-/* Elevation gets a far shorter leash than azimuth, and an asymmetric
-   one. Steeper is free; flatter is not — the frame sees
-   frustum/sin(elevation) of floor depth, so dropping the camera
-   reaches for the edge of FLOOR_SIZE and of the key light's shadow
-   box. At 16° a portrait phone frame already reads ~±56 world units
-   of floor against a ±80 plane, which is as close as it should get. */
-const ORBIT_DOWN = THREE.MathUtils.degToRad(4); // flatter than home
+/* Elevation is still measured off home, and is still asymmetric — but
+   the flat end now goes all the way down to **2° above the floor**, so
+   the visitor can drop to the desk's own height and look at the screen
+   and the drawer fronts square on. Home is 20°, so this is 18° of drop
+   against 10° of rise.
+
+   Flatter used to be the expensive direction, and the reason is worth
+   keeping: the frame reads `frustum / sin(elevation)` of floor depth,
+   which at 2° is about 690 world units on a desktop frame and 1060 on a
+   portrait one, against the 70 the establishing shot sees. Three things
+   had to grow with it, and all three are now sized for 2° rather than
+   for 16°:
+
+   - **FLOOR_SIZE** (see src/floor.js) — 1700, so the plane's own edge
+     is off-frame at the flattest view on the deepest viewport, with the
+     fog dissolving its far reaches into the background either way.
+   - **The camera's near plane**, which is *negative*. At 2° the camera
+     eye is only ~9 units off the ground and the bottom of the frame is
+     ground behind it; at near = 0.1 that was clipped away and the
+     bottom of the frame showed bare background.
+   - **The camera's far plane**, which has to reach the far edge of the
+     plane rather than the old 160-unit one.
+
+   The key light's shadow box did *not* need to grow, which is not
+   obvious: a shadow map lives in the light's space, and the light has
+   not moved. See the measurement where the box is set up. */
+const ORBIT_DOWN = THREE.MathUtils.degToRad(18); // flatter than home
 const ORBIT_UP = THREE.MathUtils.degToRad(10); // steeper than home
 /* Weighted rather than sticky: the drag keeps gliding for a few frames
    after the pointer stops. */
@@ -369,7 +355,6 @@ let screenEl = null;
 /* value: 0 isometric, 1 arrived. dir: -1 / 0 / +1 while moving. */
 let fly = { value: 0, dir: 0 };
 let camera = null;
-let floorMat = null;
 let composer = null;
 let computer = null;
 let desk = null;
@@ -420,11 +405,6 @@ let screenHidden = ""; // last value written to the overlay's visibility
 /* Dev-only stats.js panel; null in a production build — see src/perf.js. */
 let perf = null;
 
-/* Width of NAME at font-size 1, measured once the webfont is resident. */
-let nameRatio = 5.3;
-/* What the current floor texture was built for. */
-let texState = { rows: 0, texW: 0, ratio: 1 };
-
 /* WebGL may be absent (old browser, blocklisted driver, or _review.mjs
    stubbing getContext). Caller falls back to the plain CSS desktop. */
 function supportsWebGL() {
@@ -448,135 +428,30 @@ function frustumFor() {
   return isMobile() ? FRUSTUM_MOBILE : FRUSTUM;
 }
 
-function fillDepthFor() {
-  return isMobile() ? FILL_DEPTH_MOBILE : FILL_DEPTH;
-}
-
-function fontSpec(size) {
-  return `500 ${size}px "Playfair Display", Georgia, serif`;
-}
-
-function measureNameRatio() {
-  const ctx = document.createElement("canvas").getContext("2d");
-  ctx.font = fontSpec(100);
-  nameRatio = ctx.measureText(NAME).width / 100;
-}
-
-/* ==========================================
-   FLOOR TEXTURE
-
-   Drawn with canvas 2D rather than extruded as geometry: the shadow then
-   falls across the letters as one continuous surface, which is what the
-   reference does.
-
-   How many rows to draw depends on the viewport. The line always spans
-   the viewport width, so on a narrow screen each row is small in world
-   units and more of them are needed to cover the floor.
-   ========================================== */
-
-function layoutFor(width, height) {
-  const frustum = frustumFor();
-  const visibleWidth = frustum * (width / height);
-
-  /* A line runs diagonally, so what has to span the viewport is its
-     horizontal screen extent, not its world length. */
-  const lineWorld = (visibleWidth * LINE_FILL) / PROJ_X;
-  const leadingWorld = (lineWorld / nameRatio) * LEADING;
-
-  /* Likewise the stack climbs the screen at PROJ_Z per world unit. */
-  const rows = THREE.MathUtils.clamp(
-    1 + Math.round((fillDepthFor() * frustum) / (PROJ_Z * leadingWorld)),
-    ROWS_MIN,
-    ROWS_MAX,
-  );
-  return { rows, texWorldX: lineWorld / LINE_IN_TEX };
-}
-
-function drawFloorTexture(rows) {
-  const texW = isMobile() ? TEX_W_MOBILE : TEX_W;
-  const size = (texW * LINE_IN_TEX) / nameRatio;
-  const leading = size * LEADING;
-  /* Pad past the ascenders and descenders so the border stays clean. */
-  const texH = Math.min(
-    Math.round((rows - 1) * leading + size * 1.6),
-    TEX_H_MAX,
-  );
-
-  const c = document.createElement("canvas");
-  c.width = texW;
-  c.height = texH;
-  const ctx = c.getContext("2d");
-
-  ctx.fillStyle = CREAM;
-  ctx.fillRect(0, 0, texW, texH);
-
-  ctx.font = fontSpec(size);
-  ctx.fillStyle = BLUE;
-  ctx.textBaseline = "middle";
-  const top = (texH - (rows - 1) * leading) / 2;
-  for (let i = 0; i < rows; i++) {
-    ctx.fillText(
-      NAME,
-      texW * (MARGIN_X - ROW_INDENT[i % ROW_INDENT.length]),
-      top + i * leading,
-    );
-  }
-
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
-  tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
-
-  texState = { rows, texW, ratio: texH / texW };
-  return tex;
-}
-
-/* Rebuild the texture when the row count or resolution tier changes, then
-   scale it onto the floor so one line spans the viewport width. */
-function fitFloor(width, height) {
-  if (!floorMat) return;
-  const { rows, texWorldX } = layoutFor(width, height);
-
-  if (
-    rows !== texState.rows ||
-    (isMobile() ? TEX_W_MOBILE : TEX_W) !== texState.texW
-  ) {
-    const old = floorMat.map;
-    floorMat.map = drawFloorTexture(rows);
-    floorMat.needsUpdate = true;
-    if (old) {
-      disposables = disposables.filter((d) => d !== old);
-      old.dispose();
-    }
-    disposables.push(floorMat.map);
-  }
-
-  const tex = floorMat.map;
-  const rx = FLOOR_SIZE / texWorldX;
-  const ry = FLOOR_SIZE / (texWorldX * texState.ratio);
-  tex.repeat.set(rx, ry);
-  tex.offset.set(-(rx - 1) / 2, -(ry - 1) / 2);
-}
-
-function buildFloor() {
-  const geo = new THREE.PlaneGeometry(FLOOR_SIZE, FLOOR_SIZE);
-  floorMat = new THREE.MeshStandardMaterial({ roughness: 0.95, metalness: 0 });
-  const floor = new THREE.Mesh(geo, floorMat);
-  floor.rotation.x = -Math.PI / 2;
-  /* Only an in-plane spin, to pick which floor axis the baselines run
-     along. The type stays aligned with the ground plane, so it
-     foreshortens with it. */
-  floor.rotation.z = FLOOR_SPIN;
-  floor.receiveShadow = true;
-  disposables.push(geo, floorMat);
-  return floor;
+/* What the floor needs to know about the frame it is being seen in.
+   The two foreshortening factors are the camera's, not the floor's, so
+   they are handed over rather than recomputed there — which is what
+   keeps src/floor.js free of any knowledge of the camera. */
+function floorView(width, height) {
+  return {
+    frustum: frustumFor(),
+    aspect: width / height,
+    projX: PROJ_X,
+    projZ: PROJ_Z,
+    mobile: isMobile(),
+  };
 }
 
 function buildScene() {
   const s = new THREE.Scene();
   s.background = new THREE.Color(CREAM);
+  /* The floor's own fade-out, in the floor's own colour — which is also
+     the background's, so the plane dissolves into the backdrop instead
+     of ending at an edge. With this and FLOOR_SIZE together there is no
+     floor edge and no horizon line anywhere on the orbit leash. */
+  s.fog = buildFog();
 
-  s.add(buildFloor());
+  s.add(buildFloor(renderer.capabilities.getMaxAnisotropy()));
 
   /* The desk, and the machine standing on it. The computer is built in
      its own local space with the origin on *its* ground plane, so the
@@ -605,11 +480,27 @@ function buildScene() {
   key.shadow.blurSamples = 16;
   key.shadow.bias = 0; // VSM wants no depth bias
   key.shadow.normalBias = 0.02;
-  /* The box has to bound every bit of floor in frame, not just the
-     machine: anything outside it loses its shadow on a straight line,
-     which at this flatter camera cut the cast shadow off mid-frame.
-     Widening it spreads the same map over more ground, so the blur
-     radius comes down to keep the edge from going to mush. */
+  /* The box has to bound the caster set **and the shadow it throws**,
+     and the measurement is worth writing down because the number this
+     was first set against was the wrong one.
+
+     The box is in the *light's* space, and the light never moves. So
+     dropping the camera to 2° does not reach for its edges, however
+     much more floor comes into frame: what the box has to cover is the
+     desk, the machine, and where they land on the ground along the
+     light direction — nothing camera-dependent at all. Measured against
+     the two world boxes, that union occupies **±9.7 of light-space
+     lateral and 21 to 123 of light-space depth**. At ±80 / 1..220 the
+     box already clears it by about 8x laterally, so the flat view did
+     not need it widened, and widening it anyway is not free: it spreads
+     the same 2048² map over more ground, and the drawer-front contacts
+     are already at the resolution where a 0.03-unit step was enough to
+     produce acne (see desk.js).
+
+     Outside the box three's shadow lookup returns "lit" rather than
+     clamping the map's border, so the far reaches of the 1700-unit
+     plane simply have no shadow — which is correct, because no shadow
+     reaches them. There is no edge to see. */
   const cam = key.shadow.camera;
   cam.left = -80;
   cam.right = 80;
@@ -803,11 +694,25 @@ function applyFly(p, width, height) {
   return f;
 }
 
-/* Position, orientation and frustum all come from applyFly. */
+/* Position, orientation and frustum all come from applyFly.
+
+   **`near` is negative, and has to be.** For an orthographic camera the
+   view volume is a box, and `near` is simply where its front face sits
+   along the view axis — nothing stops it being behind the eye. At the
+   flat end of the orbit leash the eye is ~9 units above the ground and
+   looking 2° down, so the bottom of the frame is floor *behind* the
+   camera: 270 units of it on a portrait viewport. At the old near = 0.1
+   that floor was clipped and the bottom of the frame showed background.
+
+   `far` reaches the far edge of the plane (FLOOR_SIZE / 2 plus the
+   camera's own distance from the target) for the same reason at the
+   other end. The depth buffer is linear for an orthographic projection,
+   so spending ~1950 units on the range costs about 1.2e-4 of precision
+   per unit — nothing against GTAO's 1.15-unit radius. */
 function buildCamera() {
   const cam = new THREE.OrthographicCamera();
-  cam.near = 0.1;
-  cam.far = 400;
+  cam.near = -(FLOOR_SIZE / 2 - CAM_DIST) - 60;
+  cam.far = FLOOR_SIZE / 2 + CAM_DIST + 100;
   return cam;
 }
 
@@ -1747,14 +1652,11 @@ export async function initScene(canvas) {
   renderer.shadowMap.autoUpdate = false;
   renderer.shadowMap.needsUpdate = true;
 
-  /* The floor is drawn with canvas 2D, so the webfont has to be resident
-     before the first paint or it silently falls back to Georgia. */
-  try {
-    await document.fonts.load(fontSpec(100));
-  } catch {
-    /* fall back to the serif stack */
-  }
-  measureNameRatio();
+  /* The floor's type is drawn with canvas 2D, so the webfont has to be
+     resident before the first paint or it silently falls back to
+     Georgia. The floor module owns both the load and the measurement. */
+  await loadFloorFont();
+
 
   scene = buildScene();
   camera = buildCamera();
@@ -1763,7 +1665,12 @@ export async function initScene(canvas) {
   scene.updateMatrixWorld(true);
   computer.screen.getWorldPosition(SCREEN_TARGET);
   applyFly(0, w, h);
-  fitFloor(w, h);
+  fitFloor(floorView(w, h));
+  /* Re-asserted now that the scene (and the key light's shadow camera)
+     actually exists. `autoUpdate` is off, so this is the one pass that
+     ever renders the map: anything that changes a caster or the shadow
+     camera has to set it again. */
+  renderer.shadowMap.needsUpdate = true;
 
   if (!isMobile() && !prefersReducedMotion()) {
     try {
@@ -1918,7 +1825,7 @@ export async function initScene(canvas) {
        establishing shot is home — and the visitor may have swung it
        off. A resize is not a reason to take that away. */
     if (keep) setOrbitAngles(keep.theta, keep.phi);
-    fitFloor(width, height);
+    fitFloor(floorView(width, height));
     updateScreenOverlay();
     if (!frame && fly.value < 1) render();
   };
@@ -2042,8 +1949,7 @@ export function disposeScene() {
   disposeDesk();
   computer = null;
   desk = null;
-  floorMat = null;
-  texState = { rows: 0, texW: 0, ratio: 1 };
+  disposeFloor();
   flyTl?.kill();
   flyTl = null;
   flyState.p = flyState.fade = 0;

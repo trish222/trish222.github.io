@@ -81,7 +81,8 @@ Regenerate after bumping the dependency; never hand-edit the output.
 ```
 index.html        all markup — canvas, windows, taskbar, Start menu, drag hint (static, no templating)
 src/main.js       window manager: focus/open/close/minimize/maximize, drag, taskbar, clock
-src/scene.js      camera, floor, lighting, env map, AO, hover, the orbit, the fly-in
+src/scene.js      camera, lighting, env map, AO, hover, the orbit, the fly-in
+src/floor.js      the ground: its colour, its size, its fog, the wordmark on it
 src/computer.js   the CRT machine, built from primitives
 src/desk.js       the steel tanker desk it stands on, likewise
 public/env/       CC0 studio HDRI used as the environment map
@@ -121,11 +122,14 @@ against how much floor the frame sees (`frustum / sin(elevation)`, so 2.9 world
 units of depth per unit of screen height at 20° against 1.7 at 35°):
 
 - **`FLOOR_SIZE`** — at 70 the plane's far edge came into frame across the top
-  corners, showing scene background either side of it. Now 160.
+  corners, showing scene background either side of it. 160 held at 20°; it is
+  now **1700**, which is what the orbit's 2° floor needs — see "An endless
+  floor" below.
 - **The key light's shadow camera** — outside its box a surface simply has no
   shadow, so at ±42 the cast shadow stopped dead on a straight line mid-frame.
   Now ±80, with `shadow.radius` down from 5 to 3 since the same map now covers
-  nearly four times the ground.
+  nearly four times the ground. It has not had to grow since, and the reason
+  is in "An endless floor".
 - **`FILL_DEPTH`** — see below; the old value left the type a band across the top
   with bare floor under it.
 
@@ -155,6 +159,17 @@ and press.
 what those two numbers are set against: "does the desk fit" is a question about
 eight projected corners, not something to judge off a screenshot.
 `_deskfit.mjs` is the pass that reads it on both viewports.
+
+**The floor is its own module, `src/floor.js`.** Its colour, its size, the
+fog that ends it and the wordmark drawn across it all live there; `scene.js`
+asks for a mesh, hands `fitFloor` the viewport facts the type is sized against
+(frustum, aspect, `PROJ_X`, `PROJ_Z`, which resolution tier), and disposes it.
+That hand-over is the point: the floor knows nothing about the camera and the
+camera knows nothing about the type, so swapping the name for a different
+ground means rewriting `drawFloorTexture` and `layoutFor` and nothing else.
+Two of its exports do reach back into `scene.js` — `CREAM`, which is also the
+scene background and must match `--scene-floor` in `src/style.css`, and
+`FLOOR_SIZE`, which the camera's near and far planes are derived from.
 
 The floor is a plain light-grey plane whose texture is drawn with canvas 2D: the name
 repeated in deep blue Playfair Display, rows tightly leaded and staggered, after
@@ -202,12 +217,74 @@ constant alone does not control how grey the floor reads.
 
 One `DirectionalLight` sits ~13° above the floor — the shallow angle is what makes
 the shadow long and diagonal — plus ambient and hemisphere fill. Its shadow camera
-is ±80: a surface outside that box has no shadow at all, so the box has to bound
-the whole visible floor, not just the machine. **Light
+is ±80, which bounds the caster set and the shadow it throws with room to spare —
+see "An endless floor" for the measurement, and for why that box is not
+camera-dependent however much floor comes into frame. **Light
 intensities look ~3x too high because three's physical lighting divides them by
 PI.** They are tuned so the lit ground lands on `CREAM` and the shadowed ground sits at
 ~0.72 of it, matching the tonal drop in the reference. Changing one means re-checking
 the others.
+
+### An endless floor, and what the 2° view costs
+
+The orbit can be dropped to **2° above the floor** (see "Looking around"),
+and the frame reads `frustum / sin(elevation)` of floor depth: ~690 world
+units on a desktop frame at 2°, ~1060 on a portrait one, against the 70 the
+establishing shot sees. Four things were sized for that, and only the first
+is the one people expect:
+
+- **`FLOOR_SIZE` is 1700.** Big enough that the plane's own edge is off-frame
+  at the flattest view on the deepest viewport. It costs two triangles and
+  nothing per frame; the text is unaffected, because the texture's UV
+  derivative per world unit is `repeat / FLOOR_SIZE`, which does not move
+  when both do.
+- **`scene.fog` is linear fog in `CREAM`** — the floor's own colour, which
+  is also the background's — built by `buildFog()` in `floor.js`, 140 to 460.
+  The far reaches of the plane dissolve into the backdrop instead of ending
+  at a line. Both halves are needed: the plane alone would have to be
+  enormous for every future camera, and fog alone leaves a real edge in frame
+  on a tall viewport that only *happens* to be invisible because the two
+  colours match. `FOG_NEAR` sits well past the furniture — the camera is
+  always `CAM_DIST` from what it looks at — so nothing on the desk is ever
+  inside the fade, at any point of the orbit or the flight. There is no tone
+  mapping on either render path, so a fully-fogged fragment resolves to
+  exactly the clear colour.
+- **The camera's `near` is negative.** This is the one that is easy to miss.
+  For an orthographic camera the view volume is a box and `near` is just
+  where its front face sits along the view axis; nothing requires it to be in
+  front of the eye. At 2° the eye is ~9 units off the ground looking 2° down,
+  so the bottom of the frame is floor *behind* the camera — 270 units of it
+  on a portrait viewport. At the old `near = 0.1` that floor was clipped and
+  the bottom of the frame showed bare background. `far` reaches the far edge
+  of the plane for the same reason at the other end. Ortho depth is linear,
+  so spending ~1950 units on the range costs ~1.2e-4 of precision per unit,
+  nothing against GTAO's 1.15-unit radius.
+- **The key light's shadow camera did *not* have to grow**, and that is worth
+  writing down because the number it was first set against was the wrong one.
+  A shadow map lives in the *light's* space, and the light never moves — so
+  dropping the camera does not reach for the box's edges however much more
+  floor comes into frame. What the box has to cover is the desk, the machine
+  and where they land on the ground along the light direction. Measured
+  against the two world boxes, that union occupies **±9.7 of light-space
+  lateral and 21 to 123 of light-space depth**; at ±80 / 1..220 the box
+  clears it by about 8x laterally. Widening it anyway is not free — it
+  spreads the same 2048² map over more ground, and the drawer-front contacts
+  are already at the resolution where a 0.03-unit step produced acne. Outside
+  the box three's shadow lookup returns "lit" rather than clamping the map's
+  border, so the far reaches of the plane simply have no shadow, which is
+  correct, because no shadow reaches them.
+
+One thing the 2° view does cost, and it is inherent: **the wordmark aliases
+at a grazing angle.** The type is a high-contrast serif drawn into a texture,
+and looking along the ground at 2° minifies it along one axis far harder than
+mipmaps plus 16x anisotropy can resolve — on a portrait viewport it breaks up
+into speckle. Nothing is misconfigured (the texture has mipmaps,
+`LinearMipmapLinear` and the driver's maximum anisotropy); it is what drawing
+text on a floor and then lying down on it looks like. The row count is
+deliberately *not* re-derived from the live elevation either — `FILL_DEPTH`
+is read against the home framing, because no row count covers 690 units of
+depth and redrawing the texture mid-drag to chase it would only make a
+larger band of edge-on type.
 
 ### The live page on the glass, and the fly-in
 
@@ -478,10 +555,16 @@ that is the thing to understand before touching them:
   is therefore the full half-turn the machine can be seen from: a
   profile of one flank round to a profile of the other.
 - **Elevation is measured off home**, where `ORBIT_UP` / `ORBIT_DOWN`
-  give 10° steeper and only 4° flatter. That asymmetry is the floor:
-  the frame reads `frustum / sin(elevation)` of floor depth, so dropping
-  the camera reaches for the edge of `FLOOR_SIZE` and of the key light's
-  shadow box, while raising it costs nothing.
+  give 10° steeper and **18° flatter** — home is 20°, so the flat end is
+  2° above the floor. That is the desk's own height: the eye lands at
+  y ≈ 9.1 against a 9.0 desk top, which is the framing where the screen
+  and the drawer fronts are both seen square on. It is still asymmetric,
+  but no longer because flat is expensive — the frame reads
+  `frustum / sin(elevation)` of floor depth, ~690 units at 2°, and the
+  plane, the fog and the camera's near and far planes are all sized for
+  that now. See "An endless floor" for what each of them had to become,
+  and for why the shadow box was not one of them. Steeper than +10° is
+  simply not interesting: it walks toward a plan view of a desk.
 
 **Home is not the middle of the azimuth range, and is not meant to be.**
 It is 37° round from the front, so the swing runs −127° one way and +53°
@@ -824,11 +907,21 @@ the desk's two flanks. **Shoot both of those after moving anything on
 the desk**: the first version's monitor overhung the back edge, and
 only a side view showed it.
 
+`_lowshots.mjs` shoots the room from straight in front of the monitor at
+four elevations — 2° (the flat clamp), 10°, 20° (home) and 30° (the steep
+clamp) — plus the flat clamp at the home azimuth, on both viewports, with
+the Win95 chrome hidden. It prints `window.__fit`'s NDC box beside each, so
+"does it still fit" is answered off the eight projected corners rather than
+off the picture. Shoot it after touching anything the flat view can see: the
+floor's size or fog, the camera's near and far planes, or the desk's
+undersides. The front-on swing is −37 because home is 37° round from the
+front.
+
 `_orbit.mjs` covers the camera leash, on desktop / mobile / reduced
 motion. It drags with real pointer events so everything goes through
 OrbitControls, and reads the results back off `window.__orbit` rather
 than trusting the constants: that azimuth clamps at ±90° off the
-monitor's front (−127/+53 off home) and the rise at −4/+10, that the
+monitor's front (−127/+53 off home) and the rise at −18/+10, that the
 login comes off the glass at both clamps and is back well inside them,
 that a drag on the monitor rotates and a 3px press flies in, that the
 camera walks home and does *not* under reduced motion, that the hint
@@ -1170,6 +1263,21 @@ rather than left at 1, so the grain keeps the same physical scale on the top,
 the edges and the ends instead of stretching to fit whichever face it lands on.
 `roughness` is 1.9 because it *multiplies* the map, whose own range sits around
 0.24 — the product is a satin 0.4-0.55.
+
+**Two dark plates finish what the flat end of the orbit leash can nearly
+see.** At 2° above the floor the eye sits at y ≈ 9.1 — a seventh of a unit
+above this desk's own surface — so the slab's underside and the pedestals'
+box bottoms are still (just) turned away, and neither plate is visible at the
+clamp itself. They are there because a seventh of a unit is not a margin:
+move `ISO_TARGET`, `CAM_DIST` or `ORBIT_DOWN` at all and the eye goes under
+the slab, and what it would find is lit walnut and a cream box bottom, the
+two surfaces on this desk that were never meant to be looked at. Both are
+plates rather than re-modelled parts — inset 0.04 from the silhouette so they
+change nothing at any framing that was already right, and thin enough that at
+a grazing view they read as the shadow line under an overhang, which is what
+a slab on a steel carcase actually has. The slab's plate also closes the one
+real gap in the knee hole's ceiling, between the back of the apron and the
+apron face.
 
 The desk is grounded with painted contact shadows under each pedestal, for
 exactly the reason the computer's are: the key's shadow map covers ±80 world
