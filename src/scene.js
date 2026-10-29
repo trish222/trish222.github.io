@@ -22,6 +22,10 @@ import {
   OVERSCAN,
 } from "./computer.js";
 import { buildDesk, disposeDesk, DESK_TOP_Y } from "./desk.js";
+/* The brick-built cherry blossom treehouse standing on the desk. Its
+   own module for the same reason the desk is: it is a self-contained
+   object with its own origin on the surface it stands on. */
+import { buildTreehouse, disposeTreehouse } from "./treehouse.js";
 /* The ground is its own module — colour, size, fog and the wordmark
    drawn across it all live there, so it can be swapped whole without
    touching the camera. */
@@ -209,6 +213,39 @@ const PROJ_Z = Math.sin(ELEVATION) * Math.sin(AZIMUTH); // screen y per unit alo
 const KIT_Z_MIN = -4.77;   // the back of the funnel
 const KIT_Z_MAX = 7.2;     // the front of the keyboard's contact shadow
 const COMPUTER_Z = -(KIT_Z_MIN + KIT_Z_MAX) / 2;
+
+/* --- Where the treehouse is set down ---------------------
+   On the desk to the **right of the monitor as the home view sees
+   it**, which is +X: the camera sits in the +X/+Z octant, so screen
+   right is desk right (the same convention desk.js states for its
+   pedestals).
+
+   Both figures are set against what is already on that half of the
+   desk. The mouse's painted contact shadow runs x 3.5..5.7 over
+   z 2.0..4.6 and its cord crosses x 1.5..4.5 over z 0.4..2.6, so the
+   base's 1.64-unit radius has to clear both: at (6.9, -2.1) it reaches
+   z = -0.46 against the cord's 0.4 and never gets near the mouse's x
+   at all.
+
+   The depth is the less obvious half. Screen x is roughly
+   `0.8x - 0.6z` at this azimuth and depth toward the camera is
+   `0.57x + 0.75z`, so a model placed level with the monitor would sit
+   screen-right of it *and in front of it* — the canopy would cross the
+   bezel. Pushing it back to z = -2.1 trades a little of that screen
+   separation for 1.6 units of depth behind the glass, and
+   `window.__fit("treehouse", "computer")` is how the pair was checked
+   rather than the screenshot. */
+const TREEHOUSE_X = 6.9;
+const TREEHOUSE_Z = -2.1;
+/* Turned to put the house's front — the door, the porch — toward the
+   viewer, and its windowed flank into the light, without facing dead
+   on. AZIMUTH is the yaw at which the model's +Z looks straight down
+   the lens, so the offset *is* the three-quarter angle: at 0.50 rad
+   the front sits 29 degrees off the camera and the +X side 61, which
+   is the same read the machine gets. The first pass was 0.14 and was
+   effectively a front elevation — the flank, and with it the round
+   window, was edge-on. */
+const TREEHOUSE_FACING = AZIMUTH - 0.50;
 
 /* Lighting once the HDRI is in play — see the note on the PI factor below. */
 const ENV_INTENSITY = 0.7;
@@ -464,6 +501,7 @@ let camera = null;
 let composer = null;
 let computer = null;
 let desk = null;
+let treehouse = null;
 let envMap = null;
 let hover = { target: 0, value: 0 };
 let fillLights = null;
@@ -595,6 +633,20 @@ function buildScene() {
   computer.root.name = "computer";
   computer.root.position.set(0, DESK_TOP_Y, COMPUTER_Z);
   s.add(computer.root);
+
+  /* The treehouse, likewise built with its origin on the surface it
+     stands on, so it only has to be lifted by the desk's height. */
+  treehouse = buildTreehouse();
+  treehouse.root.name = "treehouse";
+  treehouse.root.position.set(TREEHOUSE_X, DESK_TOP_Y, TREEHOUSE_Z);
+  treehouse.root.rotation.y = TREEHOUSE_FACING;
+  /* Its falling petals are the only moving thing in the room, and the
+     only thing stepping them is the render loop below — which reduced
+     motion never starts. Hidden here rather than at that early return,
+     so the one static frame is drawn without them instead of being
+     drawn with them and then redrawn. */
+  treehouse.drift.group.visible = !prefersReducedMotion();
+  s.add(treehouse.root);
 
   /* One low directional light — the shallow angle is what stretches the
      shadow out long and diagonal across the letters.
@@ -1555,6 +1607,7 @@ function buildComposer(width, height) {
      ground well clear of the feet. */
   const clip = new THREE.Box3().setFromObject(desk.root);
   clip.union(new THREE.Box3().setFromObject(computer.root));
+  clip.union(new THREE.Box3().setFromObject(treehouse.root));
   clip.expandByScalar(GTAO_BOX_MARGIN);
   gtao.setSceneClipBox(clip);
   gtao.updateGtaoMaterial({
@@ -2305,7 +2358,9 @@ export async function initScene(canvas) {
   });
 
   /* Reduced motion: one static frame and no loop. The screen is still
-     clickable — the fly-in just arrives instead of flying. */
+     clickable — the fly-in just arrives instead of flying. The
+     treehouse's falling petals go with the loop; they were hidden back
+     in buildScene, before the first frame was drawn. */
   if (prefersReducedMotion()) return true;
 
   /* Vite folds `import.meta.env.DEV` to `false` when building, so this
@@ -2338,6 +2393,10 @@ export async function initScene(canvas) {
     /* The controls own the camera at the establishing shot and nowhere
        else, so this is a no-op from the moment a flight starts. */
     tickOrbit(dt);
+    /* The treehouse's falling petals — the only thing in the room that
+       moves on its own. They do not cast, so the frozen shadow map is
+       untouched by them; see buildDrift in treehouse.js. */
+    treehouse.drift.update(dt);
     const k = 1 - Math.exp(-HOVER_RATE * dt);
     hover.value += (hover.target - hover.value) * k;
     computer.setScreen(hover.value);
@@ -2409,6 +2468,7 @@ export function disposeScene() {
   disposables = [];
   disposeComputer();
   disposeDesk();
+  disposeTreehouse();
   computer = null;
   desk = null;
   disposeFloor();

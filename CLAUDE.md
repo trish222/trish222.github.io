@@ -31,7 +31,9 @@ Poly Haven, CC0, the desk's walnut top (see `public/textures/LICENSE.txt`
 for what was done to it). Desktop icons are
 our own pixel art, drawn from primitives by `scripts/make-icons.mjs` — not
 Microsoft artwork, and no longer emoji either. Every 3D object is built from
-primitives in code; nothing is an imported model.
+primitives in code; nothing is an imported model — the brick-built
+treehouse on the desk added no dependency and no asset at all, since
+a stud is a cylinder and a brick is a bevelled box.
 
 ## Stack
 
@@ -999,6 +1001,40 @@ click: the taskbar button is a **toggle**, so pressing it on the window
 that already has the focus minimizes it — correct behaviour that reads
 as a test failure.
 
+`_thshot.mjs` shoots the treehouse at the home framing plus a crop of
+just the model, taken off its own NDC box so the crop follows it as it
+grows, and prints `window.__fit` for the model, the machine and the
+desk. `_thdebug.mjs` is the magnifier, and it exists because the home
+framing cannot do this job: the model is a tenth of that frame at a
+fixed three-quarter angle, so a wall that is *missing* and a wall that
+is merely *in shadow* look identical. It parks the model at the
+camera's own target, winds the frustum to the orbit's minimum, hides
+the desk and the machine, and turns it face by face. It leaves the page
+mangled, which is fine — every run reloads.
+
+`_drift.mjs` checks the falling petals off the **scene graph** rather
+than off a picture: that they actually move, that nothing in the model
+casts a shadow it should not (60 of 63 meshes cast; the three that do
+not are the two drift meshes and the contact-shadow quad), and that
+reduced motion gets the tree without the fall.
+
+`_finalshots.mjs` shoots the four framings the finished model has to
+hold up in — home, eye level (the flat clamp, 2° above the floor), and
+a profile of each flank — on both viewports, with `window.__fit` beside
+each. Note the model's NDC box runs a little past the frame edge on a
+phone at home; that is the **contact shadow's** rotated corner, which
+is transparent, not geometry.
+
+`_probe.mjs` builds the treehouse in plain node with a stubbed
+`document` and prints the throw. It is the fastest way to find a build
+error in the model, and it earned its place: a refactor deleted a
+function from `treehouse.js`, the scene threw, and `main.js` was
+swallowing that in `.catch(initWithoutScene)` — so the page silently
+became the no-WebGL fallback, which looks exactly like a machine
+without WebGL. That catch now logs the error before falling back.
+`_err.mjs` is the browser-side half: page errors, unhandled rejections,
+and whether `window.__fit` ever appeared.
+
 `_perfcheck.mjs` is the frame-rate probe: `npm run dev` in one shell,
 `node _perfcheck.mjs` in another (optionally with a url and
 `desktop`/`mobile` to limit it). It flies in and out for real and prints
@@ -1321,6 +1357,117 @@ exactly the reason the computer's are: the key's shadow map covers ±80 world
 units, so a texel is ~0.08 across and the gap under a 0.55-unit foot never lands
 on one.
 
+### The treehouse
+
+`src/treehouse.js` builds an original brick-built cherry blossom
+treehouse standing on the desk to the right of the monitor, from boxes
+and round studs. No logos on the studs, no minifigures, nothing
+imported. Local space matches the desk's and the computer's — +Z is the
+front — with the origin on the **desk top**, so `scene.js` only lifts
+the group by `DESK_TOP_Y`.
+
+**`STUD` is 0.3, which is double scale, and that is the decision
+everything else hangs off.** A desk unit here is a shade over two
+inches, so a true-scale brick would have a 0.15 pitch — and at the home
+framing that is a five-pixel stud and a five-pixel 1x1. The model would
+read as a speckled blob. At 0.3 a stud is about ten pixels and a course
+can be counted. When the model was later taken down by a fifth, the
+pitch deliberately did *not* move: every figure that is a **count** of
+bricks came down instead — the trunk from nine courses to seven, its
+root from 4x4 studs to 3x3, the branch sections one size each, the
+reaches scaled with them. Same bricks, fewer of them. Keep it that way;
+shrinking the pitch is the one change this model cannot afford.
+
+**Everything goes through a batching kit**, keyed by shape *and*
+colour, and nothing reaches the scene until `bake`. Repeated pieces
+come out as one `InstancedMesh` per batch — the base plate's studs
+alone are about 180 instances in one draw call, and the canopy's ~320
+flowers are six. Two consequences worth knowing: footprints are
+canonicalised, so a 4x2 brick and a 2x4 brick are one geometry and a
+right angle; and studs are not part of a brick, so every stud of a
+given colour in the whole model is one batch whatever it sits on.
+**Scale lives in the instance matrix, not in the batch key** — a large
+blossom and a small one are the same geometry — which is what lets the
+canopy vary freely in size without splitting a draw call.
+
+Placement is `TREEHOUSE_X` / `TREEHOUSE_Z` in `scene.js`, at (6.9,
+-2.1), and both are set against what is already on that half of the
+desk rather than by eye: the mouse's painted contact shadow runs x
+3.5..5.7 over z 2.0..4.6 and its cord crosses x 1.5..4.5 over z
+0.4..2.6. The depth is the less obvious half — screen x is roughly
+`0.8x - 0.6z` at this azimuth and depth toward the camera is
+`0.57x + 0.75z`, so a model placed level with the monitor sits
+screen-right of it *and in front of it*, and the canopy crosses the
+bezel. `TREEHOUSE_FACING` is `AZIMUTH - 0.50`: AZIMUTH is the yaw at
+which the model's +Z looks straight down the lens, so the offset *is*
+the three-quarter angle. At 0.14 — the first value — it was a front
+elevation and the round window was edge-on.
+
+Four things in the build cost a round trip and are worth knowing:
+
+- **The roof is slope bricks, not stepped courses.** It was stepped
+  first, on the reasoning that stepping is the honest brick way to make
+  a diagonal. It is, at a large enough scale. Over a five-stud span it
+  is two steps, and two steps are a ziggurat from the gable end and a
+  plain grey box as deep as the house from the flank. A slope brick is
+  every bit as standard an element. The **gable** under it is plates,
+  and its widths are derived by `gableRows` rather than written down —
+  it is a statement about the roof, so a hand-kept list silently starts
+  poking through the slope the moment the pitch changes.
+- **The round window's frame is a torus.** The first version used a
+  cylinder, which is a solid disc: it covered its own glass and the
+  window rendered as a blank white dot.
+- **The four canopy branches are paired to the flanks, not splayed
+  round the compass.** Evenly splayed, one bough goes through the front
+  wall and another through the back, and a branch through a wall with
+  no notch cut for it reads as a mistake. They bow out *below* the deck
+  and then climb: 0.06 or more outside the deck's 0.75 edge at deck
+  height, 0.18 clear of the roof's 0.87 overhang at the eave. Those two
+  clearances are what the control points are set against — move
+  `HOUSE_W`, `ROOF_OVER` or the deck and they have to be re-checked.
+- **The sprays exist because the blossom has to get above the roof.**
+  Raising the four branch tips was tried first and fails on a geometry
+  the house already imposed: a branch that climbs faster reaches the
+  eave's height at a smaller `t`, which is further down its own bow and
+  therefore further *in*, so every raised tip had to be paid for by
+  pushing the control point out until the bough overhung the lawn. A
+  spray starts where the verified curve ends and leaves every clearance
+  alone.
+
+`branchCurve(i, lawnY)` is the single source for a branch's path —
+`buildBranches`, the swing and the canopy all call it, so re-aiming a
+branch carries what hangs off it rather than leaving a swing adrift
+from a remembered copy of the maths.
+
+**The canopy is a shell, not a ball**, with cluster centres sampled
+between 0.62 and 1.0 of an ellipsoid radius and biased upward: a solid
+canopy is thousands of blossoms nobody can see, and the ones inside
+cost what the ones outside do. A **keep-out box** written against the
+roof's own half span and apex stops it growing through the house, and
+clusters also go on the wood — the outer half of each bough, the whole
+of each spray — so the mass is visibly carried rather than hovering.
+The flowers face **outward from the canopy's centre, not up**: a field
+of blossom all facing the sky is a lawn; what makes it read as a tree
+is that every flower underneath is looking down at you.
+
+**The drifting petals are the only moving thing in the room**, and
+`castShadow = false` on them is load-bearing — see the shadow-map note
+under "Frame rate" below. They fade by **shrinking, not by alpha**: a
+petal is about two pixels across at the home framing, where the two are
+indistinguishable, and a transparent material would mean depth-sorting
+a dozen moving quads against three hundred blossoms for nothing. They
+spawn outside the canopy's keep-out radius and sway too little to
+wander back over the roof, so petals fall *around* the house and there
+is no case to handle. `frustumCulled` is off on them: three caches an
+`InstancedMesh`'s bounding sphere the first time it needs one, and
+these instances move every frame, so the cache would describe where the
+petals used to be.
+
+Under `prefers-reduced-motion` there is no render loop, so nothing
+steps the fall. The group is hidden — in `buildScene`, before the one
+static frame is drawn, rather than at the reduced-motion return where
+it would be drawn with petals and then redrawn without them.
+
 ### Frame rate, and what holds it at 60
 
 `src/perf.js` is a stats.js panel plus a rolling log of frame deltas
@@ -1339,19 +1486,42 @@ direction. Re-measured after the orbit went in, unchanged: desktop
 after the desk went in, unchanged once more: desktop 16.7 / 19.2 / 0,
 mobile 16.7 / 18.3 / 0. The desk is static geometry under a frozen
 shadow map, so it costs one shadow pass at startup and nothing per
-frame. What got it there,
+frame.
+
+**After the treehouse, mobile is still a flat 16.7 median with zero
+janky frames. Desktop is not, and the treehouse is not why** — this is
+worth stating carefully because the obvious reading is wrong. Measured
+A/B on one machine in one sitting (`_perfcheck.mjs ... desktop notree`
+hides the model and re-measures), the treehouse costs about **1 ms a
+frame**: 26.4 ms median flying in with it against 25.3 without. But
+*both* arms sit far off the 16.7 above, and so does the current `main`
+code with no treehouse in it at all — 24.0 / 22.7 at HEAD on the same
+run. So the desktop regression is **pre-existing on this branch**, it
+arrived with something between the desk and this work (the perspective
+camera is the obvious suspect: it is the change that put a floor
+running to the horizon in front of a full-screen GTAO pass), and it
+wants its own investigation. Do not compare a frame time against a
+figure written down weeks ago and call it a regression; the `notree`
+A/B exists so the attribution can be made on one machine in one
+sitting.
+
+What got it to 16.7 in the first place,
 in order of how much each was worth:
 
 1. **The live HTML coming off the glass** — see "the still" above. This
    was nearly all of it.
 2. **The shadow map is rendered once and frozen.** Nothing in the scene
-   ever casts a different shadow: the light is fixed and the machine
-   does not move. `renderer.shadowMap.autoUpdate = false` plus one
+   ever casts a different shadow: the light is fixed and nothing that
+   casts one moves. `renderer.shadowMap.autoUpdate = false` plus one
    `needsUpdate = true` saves re-rendering a 2048² VSM depth pass with
-   16 blur samples on every frame. **If anything is ever animated back
-   into the scene, this is what has to be reverted.** The orbit is not
-   that: it moves the *camera*, and a shadow map is in the light's
-   space, not the camera's.
+   16 blur samples on every frame. **Anything animated back into the
+   scene has to either not cast, or this has to be reverted.** Two
+   things already live inside that rule. The orbit moves the *camera*,
+   and a shadow map is in the light's space, not the camera's. And the
+   treehouse's drifting petals move every frame with `castShadow =
+   false`, which keeps them out of the shadow pass entirely — a moving
+   caster would bake its shadow into that one frame and then drag the
+   stale print around the floor for the rest of the session.
 3. **`MAX_DPR` is 1.5, not 2.** The scene shades through GTAO on a
    full-screen composite, so cost goes with the square of this; on a 2x
    display the difference is not visible on matt plastic and a blurred
@@ -1359,6 +1529,12 @@ in order of how much each was worth:
 4. **`--scan` and `--blur` are snapped to a coarse grid mid-flight** —
    again, see above. Snapped while the camera is *orbiting* too, for
    the same reason: see `cameraMoving` under "Looking around".
+
+A fourth thing: **`notree` as an extra argument hides the treehouse
+before measuring.** An A/B on one machine in one sitting is the only
+way to attribute a frame-time change to it — see "Frame rate" above for
+why comparing against a figure written down weeks ago compares two
+machines as much as two scenes.
 
 `_perfcheck.mjs` measures the flight only. The orbit itself is not in
 those numbers — it adds one `controls.update()` and one overlay matrix
@@ -1404,8 +1580,8 @@ the review scripts.
   `--font`, so fixing it fixes the login screen too — there is one knob, not two.
   An OFL pixel face was fitted here and reverted on request; see "Typography" for
   what fitting one costs.
-- The scene chunk is ~198 kB gzipped plus a 128 kB HDRI and ~106 kB of walnut
-  for the desk top, all lazy-loaded after the desktop paints. The entry chunk is still ~3.8 kB gzipped. GSAP accounts
+- The scene chunk is ~206 kB gzipped plus a 128 kB HDRI and ~106 kB of walnut
+  for the desk top, all lazy-loaded after the desktop paints. The entry chunk is still ~3.9 kB gzipped. The treehouse is ~8 kB of the scene chunk and no asset at all. GSAP accounts
   for ~26 kB of the scene chunk; importing `gsap/gsap-core` rather than `gsap`
   keeps CSSPlugin out and saves ~7 kB of that. OrbitControls is ~8 kB of it.
 - No tests, no linter, no README. Don't assume a test command exists.

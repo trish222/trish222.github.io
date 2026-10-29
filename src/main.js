@@ -695,7 +695,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (await scene.initScene(canvas)) initScreenControls(scene);
         else initWithoutScene();
       })
-      .catch(initWithoutScene);
+      /* A throw anywhere in the scene's build lands here and the page
+         quietly becomes the no-WebGL fallback — which looks exactly
+         like a machine without WebGL, and cost a long hunt once. The
+         fallback still happens; it just says why first. */
+      .catch((e) => { console.error('scene failed to start', e); initWithoutScene(); });
   } else {
     initWithoutScene();
   }
