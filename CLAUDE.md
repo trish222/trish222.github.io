@@ -1014,16 +1014,48 @@ mangled, which is fine — every run reloads.
 
 `_drift.mjs` checks the falling petals off the **scene graph** rather
 than off a picture: that they actually move, that nothing in the model
-casts a shadow it should not (60 of 63 meshes cast; the three that do
-not are the two drift meshes and the contact-shadow quad), and that
-reduced motion gets the tree without the fall.
+casts a shadow it should not (50 of 53 meshes cast; the three that do
+not are the two drift meshes and the contact-shadow quad — it is the
+*three*, not the totals, that is the invariant, since the mesh count
+moves with the palette), and that reduced motion gets the tree without
+the fall.
 
 `_finalshots.mjs` shoots the four framings the finished model has to
 hold up in — home, eye level (the flat clamp, 2° above the floor), and
 a profile of each flank — on both viewports, with `window.__fit` beside
-each. Note the model's NDC box runs a little past the frame edge on a
-phone at home; that is the **contact shadow's** rotated corner, which
-is transparent, not geometry.
+each. Note the model's NDC box runs past the frame edge on a phone at
+home. Part of that is the **contact shadow's** rotated corner, which is
+transparent, and part of it is the conservative box `_canopyfit.mjs`
+also reads (see below) — but since the canopy went lopsided to the
+back-right, the picture really is cropped there by a little. The desk's
+own ends are cropped on a portrait frame by design; this is the same
+trade, and it is the price of the asymmetry.
+
+`_canopyfit.mjs` answers the two questions the canopy can quietly get
+wrong, and answers both off numbers rather than off a picture: **does
+it stay on the desk** (the model's world box against the desk's, with
+a margin printed per edge — the +x edge is the one that binds, at
+0.58) and **does it stay off the glass** (the live overlay's client
+rect *is* the screen plane's on-screen quad, so its right edge against
+the model's NDC box is the real answer; 47px clear at 1440x900). Note
+the world box it reads is `Box3.setFromObject`, which for an
+`InstancedMesh` takes the AABB of a *rotated* AABB — so with the model
+yawed 8.4 degrees the figure is conservative by about 0.4 on the +x
+edge. Treat it as the check rather than the truth: it is the one the
+model has to pass, and it fails safe. It
+also prints the top of the tree as a height above the desk top, which
+is what the three-quarters figure is checked against, and the instance
+and mesh counts. Run it after anything that moves the canopy outward or
+upward.
+
+`_treeshot.mjs` shoots **the tree with the house hidden**, which the
+home framing cannot do: the trunk's S runs up behind exactly where the
+house hangs, so while the two are being reshaped there is no camera
+angle that shows the wood. It hides every mesh whose material is one
+of the house's seven colours. Colour is a sound handle rather than a
+hack — the kit batches by shape *and* colour, so the planks, trim,
+glass and shingle are already their own meshes and nothing else in the
+model uses them.
 
 `_probe.mjs` builds the treehouse in plain node with a stubbed
 `document` and prints the throw. It is the fastest way to find a build
@@ -1366,107 +1398,244 @@ imported. Local space matches the desk's and the computer's — +Z is the
 front — with the origin on the **desk top**, so `scene.js` only lifts
 the group by `DESK_TOP_Y`.
 
+The model was rebuilt against `design-references/cherryblossom.png` —
+a bonsai cherry: a flared root ball, a strong S-curved trunk exposed
+for the lower half, two bare low branches with a puff of blossom
+apiece, and one broad asymmetric cloud above. What survived the
+rebuild is the brick kit, the batching, the clump machinery and the
+house; what changed is the trunk, the house's size and seat, and the
+whole shape and palette of the crown.
+
 **`STUD` is 0.3, which is double scale, and that is the decision
 everything else hangs off.** A desk unit here is a shade over two
 inches, so a true-scale brick would have a 0.15 pitch — and at the home
 framing that is a five-pixel stud and a five-pixel 1x1. The model would
 read as a speckled blob. At 0.3 a stud is about ten pixels and a course
-can be counted. When the model was later taken down by a fifth, the
-pitch deliberately did *not* move: every figure that is a **count** of
-bricks came down instead — the trunk from nine courses to seven, its
-root from 4x4 studs to 3x3, the branch sections one size each, the
-reaches scaled with them. Same bricks, fewer of them. Keep it that way;
-shrinking the pitch is the one change this model cannot afford.
+can be counted. The model has been taken down three times and the pitch
+has not moved on any of them: every figure that is a **count** of bricks
+comes down instead — the trunk from nine courses to seven, then four,
+then three; its root from 4x4 studs to 3x3; the house from five studs
+square to four and then to three; the branch sections one size each,
+the reaches scaled with them. Same bricks, fewer of them. Keep it that
+way; shrinking the pitch is the one change this model cannot afford.
+
+**The whole model is sized against the monitor, not the desk.** The
+machine stands 6.60 above the desk top. The model reached 6.25 of that
+once — level with it, which read as a second object competing with the
+thing a visitor is meant to press — then 4.75, and a flat 15% pass took
+it to **3.95, about 60%**, which is where it still is after the
+rebuild. `_canopyfit.mjs` prints the figure and it is the one number to
+hold.
+
+#### The trunk
+
+**It is a curve, not a stack of courses**, and that is the change the
+rebuild hangs off. Three bonded courses with a yaw per course can lean
+and can twist, but cannot bend back: a stack of axis-aligned footprints
+has no way to make the reference's S, where the trunk goes out one way
+low down, crosses back through its own axis and leans the other way
+under the crown. So `TRUNK_SPINE` is six points, `TRUNK_CURVE` a
+Catmull-Rom through them, and the bricks are stepped along it the way a
+branch's are — each turned so its own up axis runs along the tangent.
+
+- **The taper is in the footprints** (`TRUNK_SIZES`: 4x4 at the foot,
+  then 3x3, 3x2, 2x2 at the fork), not in a scale. A scaled brick is
+  not a brick.
+- **The twist per piece does the work the bond used to do.** Stacked
+  courses got their knuckles from alternating the long axis; a swept
+  trunk gets them from rolling each piece further round, so the corners
+  stagger down the silhouette instead of lining up into four long
+  edges.
+- **The overlap is tighter than a branch's** — 1.08 of the step against
+  1.3 — because the trunk wants its course lines to read where a branch
+  wants to be smooth. Both are options on `buildBranch`, which is
+  curve-driven now (`step`, `overlap`, `twist`, `bands`, `shade`).
+- **`TRUNK_TOP_Y` is 2.35**, and it is what makes the brief's "exposed
+  for the lower half" true: the tree tops out at 3.73 above the lawn,
+  so a fork there leaves the trunk the lower half and the crown the
+  upper.
+
+**The roots are short branches, not a plinth**, and they have to leave
+the trunk *part way up it*. The first pass started all five at the lawn
+and ran them outward along the ground, which is a ring of planks lying
+on the grass; what makes a root ball read is wood coming **down** out
+of the trunk to meet the plate. They leave between y 0.24 and 0.46
+(`ROOT_PLAN`) at five uneven angles and reaches, and the flare itself
+is the trunk's own 4x4 bottom piece — the roots break its outline up.
+
+**The S moved out of X and into Z up top, and that is not cosmetic.**
+Screen-x is roughly `0.8x - 0.6z` at this camera, so +x and -z both go
+screen right: the spine's upper extreme reads identically at (0.26,
+-0.52) as it did at (0.44, -0.22) — travel 0.97 on screen against 0.94
+— while the trunk now stays inside the house's footprint instead of
+bursting out of a wall or a roof slope. See the house below for why
+that mattered.
+
+**The two low branches are bare and are not a mirrored pair.** The -X
+one leaves lower (`t` 0.30) and dips at its tip, the +X one leaves
+higher (0.54) and lifts. A matched pair reads as a crossbar through the
+trunk. `lowBranchCurve(i, lawnY)` is the single source for each, the
+same way `limbCurve` is for a canopy limb: the swing hangs off the +X
+one and a blossom cluster off both, and neither may hold a private copy
+of where the branch went.
+
+#### The house
+
+Three studs square, two wall courses, deck at y 0.80 and ridge at 2.29
+— under the canopy floor at 2.42, with the trunk running on past it to
+the fork. It came down from four studs and three courses (2.15 tall
+from the deck) to **1.49**, which is what let it move off the fork and
+onto the exposed trunk.
+
+- **The door is one stud wide, not two.** On a three-stud wall a
+  two-stud door leaves half a stud either side and reads as a missing
+  panel; 0.3 x 0.72 is a door's own proportion.
+- **The round window is applied to the flank, not punched through it.**
+  At a one-stud plan the opening is 0.3 by 0.36, whose diagonal is
+  bigger than any frame small enough to suit a house this size — so a
+  hole shows notches at its corners. The ring standing proud still
+  throws the shadow line, which was the only thing the hole was ever
+  for.
+- **The rail is two newel posts with plate caps.** A one-stud porch has
+  no run between post and wall for a side rail.
+- Every literal `2` in `buildHouse` was a statement about a five-stud
+  plan, so the wall lines are derived: `WALL_X`, `WALL_Z`,
+  `DECK_FRONT`. The bond, the doorway, the gable, the rail and the
+  strut feet all read off them.
+
+**The house straddles the trunk, and that was forced rather than
+chosen.** A 0.9-wide house cannot clear a 0.9-wide trunk on a 2.68
+lawn: every "beside the trunk" placement was worked out — both pockets
+of the S, on either low branch, in front of it in +Z — and each one
+puts the deck or the ladder's foot off the plate. So the house sits on
+the trunk and the trunk rises behind its back wall, which the Z-shifted
+S is what makes possible. No notch is needed; checked from front, flank
+and back.
+
+#### The canopy
+
+**One broad, layered cloud above the house: 1.3 tall against about 3.5
+wide, leaning back-right, with one end reaching far out and the other
+drooping low.** It replaced a crown that was 2.0 tall against 3.3 and
+read as a ball.
+
+Two things made the difference, and the first is the one that could not
+have been got from the limb table:
+
+- **Every clump is an oblate spheroid, not a ball** (`LOBE_SQUASH`,
+  0.58). A cloud assembled out of spheres is at least one sphere tall
+  everywhere, so widening the limb reaches only ever gave a wider
+  dome. The squash scales the y of every offset inside a clump — the
+  sub-lobes' displacement, the shell the flowers sit in, and the fringe
+  — through one helper, so it cannot be applied twice to some offsets
+  and not at all to others. The flower's *facing* divides y back out,
+  because on a squashed lobe the raw outward difference is too
+  horizontal and a flower under a flat cloud has to be looking down at
+  you.
+- **Every leader off the trunk is more reach than rise.** A leader that
+  climbs carries a ball; a leader that runs out carries a cloud.
+  `LIMB_PLAN` is five of them (W, N, E, S, and C — the one short stem
+  that goes up), eleven second-generation limbs that are where the
+  width comes from, and seven twigs whose tips sit at six different
+  heights. **A top edge is bumpy because the wood under it is**, not
+  because the blossom on it is noisy.
+
+**The asymmetry is deliberate and its direction is not arbitrary.** The
+long reach is N1 and its twig, out to z -2.54 with barely any rise —
+and it goes mostly in **-z** rather than +x because -z is screen-right
+too and costs almost nothing in world x, which is the figure
+`_canopyfit.mjs` watches against the desk's near edge. The droop is W2,
+out and forward and *down* to y 2.22 with its flowers hanging to 1.98,
+on the -x/+z side. A second, smaller droop (E3) keeps the first from
+looking like a mistake.
+
+**The palette is mostly white and pale pink with a scatter of coral**,
+after the reference, which reads white from across the room. The old
+three-pinks-and-a-rose read as one pink mass however it was graded.
+Four tints now: `PETAL_WHITE`, `PETAL_PALE` (barely pink — the second
+dominant), `PETAL_PINK` (a minority) and `PETAL_CORAL`.
+
+**The coral is drawn flat, not against depth, and that is the trick.**
+In the reference it falls in small patches all through the crown — on
+the skyline, in the shade, out on the twigs alike — so grading it the
+way the pinks are graded would collect it somewhere and read as a
+stain. `CORAL_SHARE` is 0.08; past about 0.15 the crown turns orange.
+Everything else *is* graded by depth: pink deep inside, white out on
+the lit surface.
+
+**The pip was a strong yellow and is now a warm cream** (`BLOSSOM_EYE`),
+at `STUD * 0.125` rather than 0.17. Against three pinks the yellow was
+fine; against a mostly-white canopy a thousand saturated yellow dots
+read as a field of daisies.
+
+**The fringe is what keeps the outline from being a rim.** Without it
+every clump ends at its own shell, and a dozen clumps ending at their
+own shells is a dozen arcs — the same moulded edge at a smaller radius.
+`FRINGE_N` loose singles per clump, scattered to `FRINGE_REACH` times
+the radius and biased away from `CANOPY_HEART`, are the whole
+difference between an outline you can see the sky through and one you
+cannot. Both went up for the rebuild (9 and 1.52) because an airy edge
+is explicitly what the reference has.
+
+**One small cluster hangs on each low branch** (`LOW_LOBE_R`,
+`LOW_LOBE_FLOOR`). They are most of what says the crown is a cloud
+*above* a tree rather than the whole tree, and they need their own
+floor — `CANOPY_FLOOR` is 2.42 and these hang at 0.8 to 1.5. On the +X
+branch the cluster sits past both of the swing's ties, so the ropes and
+the seat stay clear.
+
+**The keep-out follows the roof; it is not a box over it.** A point is
+inside the house only if it is under the slope's own height at its own
+x (`roofTopAt`), plus a clearance that tapers from nothing at the eave
+to `RIDGE_CLEAR` at the ridge. With no clearance the blossom lay on the
+roof everywhere and, since the camera looks down at 20 degrees, the
+whole roof went under — *nestled* became *buried*. With the taper,
+blossom laps the lower slopes and the eaves while the ridge stays
+clear. **A clear void over the porch** (`inPorchVoid`) is the only
+place the canopy is told to stay away outright: it covers the doorway,
+the rail and the ladder.
+
+#### Placement, and the batching
+
+Placement is `TREEHOUSE_X` / `TREEHOUSE_Z` in `scene.js`, at (6.9,
+-2.1), unchanged through both shrinks and the rebuild, and both are set
+against what is already on that half of the desk rather than by eye:
+the mouse's painted contact shadow runs x 3.5..5.7 over z 2.0..4.6 and
+its cord crosses x 1.5..4.5 over z 0.4..2.6. The depth is the less
+obvious half — screen x is roughly `0.8x - 0.6z` at this azimuth and
+depth toward the camera is `0.57x + 0.75z`, so a model placed level
+with the monitor sits screen-right of it *and in front of it*, and the
+canopy crosses the bezel. `TREEHOUSE_FACING` is `AZIMUTH - 0.50`:
+AZIMUTH is the yaw at which the model's +Z looks straight down the
+lens, so the offset *is* the three-quarter angle. At 0.14 — the first
+value — it was a front elevation and the round window was edge-on.
 
 **Everything goes through a batching kit**, keyed by shape *and*
 colour, and nothing reaches the scene until `bake`. Repeated pieces
 come out as one `InstancedMesh` per batch — the base plate's studs
-alone are about 180 instances in one draw call, and the canopy's ~320
-flowers are six. Two consequences worth knowing: footprints are
-canonicalised, so a 4x2 brick and a 2x4 brick are one geometry and a
-right angle; and studs are not part of a brick, so every stud of a
-given colour in the whole model is one batch whatever it sits on.
-**Scale lives in the instance matrix, not in the batch key** — a large
-blossom and a small one are the same geometry — which is what lets the
-canopy vary freely in size without splitting a draw call.
+alone are about 120 instances in one draw call, and the canopy's ~1,030
+flowers are eight meshes, four petal tints plus their pips. The whole
+model is **~2,050 instances in 53 meshes**, which `_canopyfit.mjs`
+prints. Two consequences worth knowing: footprints are canonicalised,
+so a 4x2 brick and a 2x4 brick are one geometry and a right angle; and
+studs are not part of a brick, so every stud of a given colour in the
+whole model is one batch whatever it sits on. **Scale lives in the
+instance matrix, not in the batch key** — a large blossom and a small
+one are the same geometry — which is what lets the canopy vary freely
+in size without splitting a draw call.
 
-Placement is `TREEHOUSE_X` / `TREEHOUSE_Z` in `scene.js`, at (6.9,
--2.1), and both are set against what is already on that half of the
-desk rather than by eye: the mouse's painted contact shadow runs x
-3.5..5.7 over z 2.0..4.6 and its cord crosses x 1.5..4.5 over z
-0.4..2.6. The depth is the less obvious half — screen x is roughly
-`0.8x - 0.6z` at this azimuth and depth toward the camera is
-`0.57x + 0.75z`, so a model placed level with the monitor sits
-screen-right of it *and in front of it*, and the canopy crosses the
-bezel. `TREEHOUSE_FACING` is `AZIMUTH - 0.50`: AZIMUTH is the yaw at
-which the model's +Z looks straight down the lens, so the offset *is*
-the three-quarter angle. At 0.14 — the first value — it was a front
-elevation and the round window was edge-on.
+`limbCurve(i, lawnY)` is the single source for a canopy limb's path and
+`lowBranchCurve(i, lawnY)` for a low branch's; `buildBranches`, the
+swing and the canopy all call them, so re-aiming a limb carries what
+hangs off it rather than leaving a swing adrift from a remembered copy
+of the maths. `LIMB_PTS` resolves the whole table once at module scope,
+and a gen-0 limb's start comes off the spine by its `tt` rather than
+being written down, so re-shaping the S carries the whole crown.
 
-Four things in the build cost a round trip and are worth knowing:
-
-- **The roof is slope bricks, not stepped courses.** It was stepped
-  first, on the reasoning that stepping is the honest brick way to make
-  a diagonal. It is, at a large enough scale. Over a five-stud span it
-  is two steps, and two steps are a ziggurat from the gable end and a
-  plain grey box as deep as the house from the flank. A slope brick is
-  every bit as standard an element. The **gable** under it is plates,
-  and its widths are derived by `gableRows` rather than written down —
-  it is a statement about the roof, so a hand-kept list silently starts
-  poking through the slope the moment the pitch changes.
-- **The round window's frame is a torus.** The first version used a
-  cylinder, which is a solid disc: it covered its own glass and the
-  window rendered as a blank white dot.
-- **The four canopy branches are paired to the flanks, not splayed
-  round the compass.** Evenly splayed, one bough goes through the front
-  wall and another through the back, and a branch through a wall with
-  no notch cut for it reads as a mistake. They bow out *below* the deck
-  and then climb: 0.06 or more outside the deck's 0.75 edge at deck
-  height, 0.18 clear of the roof's 0.87 overhang at the eave. Those two
-  clearances are what the control points are set against — move
-  `HOUSE_W`, `ROOF_OVER` or the deck and they have to be re-checked.
-- **The sprays exist because the blossom has to get above the roof.**
-  Raising the four branch tips was tried first and fails on a geometry
-  the house already imposed: a branch that climbs faster reaches the
-  eave's height at a smaller `t`, which is further down its own bow and
-  therefore further *in*, so every raised tip had to be paid for by
-  pushing the control point out until the bough overhung the lawn. A
-  spray starts where the verified curve ends and leaves every clearance
-  alone.
-
-`branchCurve(i, lawnY)` is the single source for a branch's path —
-`buildBranches`, the swing and the canopy all call it, so re-aiming a
-branch carries what hangs off it rather than leaving a swing adrift
-from a remembered copy of the maths.
-
-**The canopy is a shell, not a ball**, with cluster centres sampled
-between 0.62 and 1.0 of an ellipsoid radius and biased upward: a solid
-canopy is thousands of blossoms nobody can see, and the ones inside
-cost what the ones outside do. A **keep-out box** written against the
-roof's own half span and apex stops it growing through the house, and
-clusters also go on the wood — the outer half of each bough, the whole
-of each spray — so the mass is visibly carried rather than hovering.
-The flowers face **outward from the canopy's centre, not up**: a field
-of blossom all facing the sky is a lawn; what makes it read as a tree
-is that every flower underneath is looking down at you.
-
-**The drifting petals are the only moving thing in the room**, and
-`castShadow = false` on them is load-bearing — see the shadow-map note
-under "Frame rate" below. They fade by **shrinking, not by alpha**: a
-petal is about two pixels across at the home framing, where the two are
-indistinguishable, and a transparent material would mean depth-sorting
-a dozen moving quads against three hundred blossoms for nothing. They
-spawn outside the canopy's keep-out radius and sway too little to
-wander back over the roof, so petals fall *around* the house and there
-is no case to handle. `frustumCulled` is off on them: three caches an
-`InstancedMesh`'s bounding sphere the first time it needs one, and
-these instances move every frame, so the cache would describe where the
-petals used to be.
-
-Under `prefers-reduced-motion` there is no render loop, so nothing
-steps the fall. The group is hidden — in `buildScene`, before the one
-static frame is drawn, rather than at the reduced-motion return where
-it would be drawn with petals and then redrawn without them.
+**Current figures**, all from `_canopyfit.mjs`: top of tree 3.95 above
+the desk top, margin to the desk's +x edge 0.58, to its back edge 1.54,
+and 47px of clearance between the model and the live overlay's right
+edge at 1440x900.
 
 ### Frame rate, and what holds it at 60
 
@@ -1504,6 +1673,36 @@ wants its own investigation. Do not compare a frame time against a
 figure written down weeks ago and call it a regression; the `notree`
 A/B exists so the attribution can be made on one machine in one
 sitting.
+
+**That desktop regression did not reproduce after the model was
+shrunk and the canopy rebuilt, and the paragraph above is left standing
+anyway** — because the point it makes is about method, not about a
+number. On the sitting that measured the new canopy, desktop ran 16.7 /
+16.6 median (in / out) with the treehouse and 16.7 / 16.7 with
+`notree`: zero janky frames either way, and the model is now inside
+the noise rather than costing the ~1 ms it used to, despite carrying
+roughly twice the blossom. Mobile is unchanged at a flat 16.7. Both
+arms sitting at 16.7 on a machine where they previously sat at 25 is
+itself the evidence that the earlier figure was the machine and not the
+scene.
+
+**Re-measured after the canopy was rebuilt as clumps on a fork tree,
+and again after the whole model was rebuilt against the cherry-blossom
+reference, and it is still free.** The fork-tree rebuild roughly
+doubled the blossom — ~1,380 flowers against ~700 — and came back 16.7
+/ 16.7 median (in / out) with the model and the same with `notree`.
+The reference rebuild — curve-driven trunk and roots, a three-stud
+house, a flat cloud of ~1,030 flowers, ~2,050 instances in 53 meshes —
+measured **desktop 16.6 / 16.7 median and mobile 16.6 / 16.7, zero
+janky frames in either direction on either viewport**, worst frame
+22.2ms.
+
+Why more blossom is not more frame time: the canopy is ~1,030 flowers
+in eight batches, so it adds instances rather than draw calls, and it
+is static geometry under a frozen shadow map — one shadow pass at
+startup and nothing per frame. The curve-built trunk and roots are the
+same story: more pieces, but they land in the same handful of
+`branch|WxD|colour` batches the limbs already use.
 
 What got it to 16.7 in the first place,
 in order of how much each was worth:
