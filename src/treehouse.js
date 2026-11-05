@@ -38,13 +38,35 @@ const BH = STUD * 1.2;        // one brick course, at the usual 6:5 ratio
 const PH = BH / 3;            // one plate: a third of a brick, as it should be
 const STUD_R = STUD * 0.3;    // the stud itself
 const STUD_H = STUD * 0.2;
-/* The moulding bevel. Tiny, and it is here because the key rakes in
-   almost horizontally: without it two stacked bricks of the same colour
-   share one unbroken face and the course line vanishes. These bricks
-   carry flat colour and no noise map, so the fillet's collapsed UVs —
-   the thing that made RoundedBoxGeometry unusable on the desk — cost
-   nothing here. */
-const BEVEL = STUD * 0.055;
+/* The moulding bevel. It is here because the key rakes in almost
+   horizontally: without it two stacked bricks of the same colour share
+   one unbroken face and the course line vanishes. These bricks carry
+   flat colour and no noise map, so the fillet's collapsed UVs — the
+   thing that made RoundedBoxGeometry unusable on the desk — cost
+   nothing here.
+
+   It was STUD * 0.055 and is now 0.09, which at the home framing is
+   about a pixel and a half of lit edge per seam. That is the whole
+   mechanism by which a stack of same-coloured bricks reads as a stack:
+   the bevel catches the key and draws a bright line where two pieces
+   meet. Pushed much past this a 1x1 starts to read as a pebble. */
+const BEVEL = STUD * 0.09;
+
+/* Moulded ABS catches the light; sprayed enamel and aged plastic do
+   not. The two numbers that make the model read as a toy standing on
+   the furniture rather than as more furniture:
+
+   - **GLOSS multiplies every roughness the kit is asked for**, rather
+     than each call site being retuned. The relative spread stays —
+     bark duller than petal, grass between them — and the whole model
+     moves together. 0.55 takes the kit's 0.42 default to 0.23, which
+     is a hard small highlight on a 0.3-unit face.
+   - **BRICK_ENV is above the furniture's 0.34.** The studio HDRI is
+     ambient from every direction, so on a matt surface it only
+     flattens; on a glossy one it is what puts a sheen on the faces the
+     key never reaches, which is most of the underside of a canopy. */
+const GLOSS = 0.55;
+const BRICK_ENV = 0.55;
 
 /* --- Palette ---------------------------------------------
    Moulded ABS, not sprayed enamel: glossier than the desk and the
@@ -286,7 +308,8 @@ function createKit() {
     let m = mats.get(key);
     if (!m) {
       m = track(new THREE.MeshStandardMaterial({
-        color: colour, roughness, metalness: 0, envMapIntensity: 0.34,
+        color: colour, roughness: Math.max(0.1, roughness * GLOSS),
+        metalness: 0, envMapIntensity: BRICK_ENV,
       }));
       m.userData.key = key;
       mats.set(key, m);
@@ -522,8 +545,8 @@ function buildLawnFlowers(kit, top) {
      round, so the corners stagger down the silhouette instead of
      lining up into four long edges.
    - **The overlap is tighter than a branch's.** A branch wants its
-     pieces merged into a smooth limb, so it runs 1.3 of the step; the
-     trunk wants the course lines to read, so it runs 1.08.
+     pieces to close up round a bend, so it runs 1.26 of the step; the
+     trunk wants the course lines to read, so it runs 1.14.
    - **The roots are short branches, not a plinth.** The reference's
      base is a splay of separate roots with lawn visible between them,
      which a cone or a stack of widening plates cannot give. Five of
@@ -612,7 +635,7 @@ function buildTrunk(kit, floorY) {
     TRUNK_SPINE.map((p) => new THREE.Vector3(...p).add(lift)), false, 'catmullrom', 0.5);
   buildBranch(kit, bark, spine, {
     sizes: TRUNK_SIZES, bands: TRUNK_BANDS, step: BH * 0.8,
-    overlap: 1.08, twist: 0.17, shade: barkDark,
+    overlap: 1.14, twist: 0.17, shade: barkDark,
   });
 
   LOW_PLAN.forEach((_, i) => {
@@ -723,14 +746,46 @@ function sizeAt(sizes, bands, t) {
    end to end rather than side by side, and is also the only way to
    build a trunk that bends back on itself.
 
-   `overlap` is the piece height as a multiple of the step: a branch
-   wants 1.3 so its bends do not open up, the trunk wants 1.08 so the
-   course lines still read. `shade` alternates a second colour down the
-   run, which is what keeps a long trunk from reading as a painted
-   post. */
+   `overlap` is the piece height as a multiple of the step, and both
+   figures came down when the orientation was quantised: a smooth tube
+   needed 1.3 to keep its bends from opening up, where a stepped one
+   breaks in 18-degree jumps and only has to cover the wedge that
+   leaves — 1.26 on a branch, 1.14 on the trunk. Less overlap is the
+   point rather than a saving: the less one piece buries the next, the
+   more of the seam between them the bevel has to draw. `shade`
+   alternates a second colour down the run, which is what keeps a long
+   trunk from reading as a painted post. */
+/* **A brick-built limb cannot point a brick anywhere it likes.** The
+   first version turned each piece to the exact tangent, which draws a
+   perfectly smooth tube out of boxes: correct as geometry and wrong as
+   a model, because the one thing a build does that a sculpt does not
+   is *step*. So the tilt and the roll are both quantised — a run of
+   pieces shares an angle, then visibly breaks to the next one, which
+   is what a builder gets out of a bag of hinge plates.
+
+   The two steps are different sizes on purpose. The tilt is the
+   coarser of the two (18 degrees) because it is the one the silhouette
+   shows; the roll is 22.5, which is a little over three of `twist`, so
+   the corners stagger down a trunk in threes instead of spiralling. */
+const TILT_STEP = Math.PI / 10;   // 18 degrees of lean per step
+const ROLL_STEP = Math.PI / 8;    // 22.5 degrees of turn per step
+const snap = (v, q) => Math.round(v / q) * q;
+
+function steppedQuat(tan, roll) {
+  /* Polar off UP and azimuth round it, both snapped, then rebuilt —
+     quantising a quaternion's own components would not keep it a
+     rotation. */
+  const p = snap(Math.acos(THREE.MathUtils.clamp(tan.y, -1, 1)), TILT_STEP);
+  const a = snap(Math.atan2(tan.z, tan.x), ROLL_STEP);
+  const d = new THREE.Vector3(
+    Math.sin(p) * Math.cos(a), Math.cos(p), Math.sin(p) * Math.sin(a));
+  return new THREE.Quaternion().setFromUnitVectors(UP, d)
+    .multiply(new THREE.Quaternion().setFromAxisAngle(UP, snap(roll, ROLL_STEP)));
+}
+
 function buildBranch(kit, material, curve, {
   spin = 0, sizes = BRANCH_SIZES, bands = BRANCH_BANDS,
-  step = BH * 0.92, overlap = 1.3, twist = 0.12, tipStud = true, shade = null,
+  step = BH * 0.92, overlap = 1.26, twist = 0.12, tipStud = true, shade = null,
 } = {}) {
   const len = curve.getLength();
   const n = Math.max(2, Math.round(len / step));
@@ -743,13 +798,9 @@ function buildBranch(kit, material, curve, {
     const t = (i + 0.5) / n;
     const p = curve.getPoint(t);
     curve.getTangent(t, tan).normalize();
-    q.setFromUnitVectors(UP, tan);
-    /* A roll along the branch, so successive pieces are not all
-       presenting the same face — the stepped-stack look. Gently: at a
-       fifth of a turn per piece the first version read as a twisted
-       rag rather than as a branch, because every piece showed a
-       different corner to the key. */
-    q.multiply(new THREE.Quaternion().setFromAxisAngle(UP, spin + i * twist));
+    /* Snapped, not aimed — see steppedQuat. The roll is still a slow
+       twist down the run, it is just taken in whole steps. */
+    q.copy(steppedQuat(tan, spin + i * twist));
 
     const m = shade && i % 3 === 1 ? shade : material;
     const [w, d] = sizeAt(sizes, bands, t);
@@ -1296,6 +1347,11 @@ function buildPetals(kit, lawnTop) {
    So the shell is gone, and nothing samples a global volume any more.
    Instead:
 
+   - **It is laid on the stud grid.** `markClump` resolves the lobe
+     volumes below onto CELL in plan and one plate in height; nothing
+     in the crown sits off that grid, which is why its outline comes
+     out a staircase rather than a curve. See `bakeCanopy` for what
+     the marked cells become.
    - **The clumps are the limb tips.** `LIMB_PLAN` hangs a `lobe` on
      most of its rows, and every piece of blossom in the model belongs
      to one of them. The crown's outline is therefore a *consequence*
@@ -1303,18 +1359,18 @@ function buildPetals(kit, lawnTop) {
      it, and two limbs that fork apart leave a gap between their
      clumps with the wood visible down it. There is no step at which a
      curve is fitted through them.
-   - **A clump is not a ball either.** Each is two to four sub-lobes,
-     offset from the clump's centre by up to 0.55 of its radius and
-     each 0.5 to 0.8 of it across, so the clump itself has bays and
-     shoulders. Flowers sit in a shell inside each sub-lobe rather
-     than filling it: a solid clump is blossom nobody can see, costing
-     exactly what the visible ones cost.
-   - **The edges are sparser than the middle.** The `edge` lobes — the
-     five twig tips, and both droops — carry EDGE_DENSITY of the
-     flowers a clump their size would otherwise get, and their shell
-     runs out past the nominal radius, so a handful of blooms sit
-     beyond the mass on their own. That is what makes an outline loose
-     rather than a hard rim.
+   - **A clump is not a ball either.** Each is three to five
+     sub-lobes, offset from the clump's centre and overlapping, so the
+     clump itself has bays and shoulders. Nothing fills a clump solid:
+     `bakeCanopy` culls every cell whose six neighbours are all
+     occupied, so what is emitted is the shell — blossom nobody can
+     see costs exactly what the visible pieces cost.
+   - **The edges are looser than the middle.** The `edge` lobes — the
+     five twig tips, and both droops — run a size down (EDGE_SUB_R)
+     and carry more blossom per exposed stud (EDGE_BLOOM), so out
+     there the structure thins to single plates while the flowers on
+     them do not. That is what makes an outline loose rather than a
+     hard rim.
    - **The inner lobes are the mass, and they are a size apart.** Each
      gen-1 limb also carries a lobe part-way along itself
      (`MID_T` / `MID_SCALE`), and the four trunk limbs carry one at the
@@ -1325,12 +1381,13 @@ function buildPetals(kit, lawnTop) {
    Three things that were true before are still true and still load
    bearing:
 
-   - **The flowers face outward, not up.** A field of blossom all
-     facing the sky is a lawn; what makes this read as a tree is that
-     every flower underneath is looking down at you. Here "outward" is
-     blended between the sub-lobe's own normal, which is what makes a
-     clump look like a clump, and the direction away from
-     `CANOPY_HEART`, which keeps the whole crown turned the same way.
+   - **The flowers are clipped to studs, so they point the way the
+     studs do.** They used to be turned outward — a blend of the
+     sub-lobe's normal and the direction away from `CANOPY_HEART` —
+     which is a sculpt's answer rather than a build's. SIDE_BLOOM is
+     what fills the role that facing played: axis-aligned flowers on
+     the outward vertical faces, so the crown is blossom from beside
+     and underneath and not only from above.
    - **Tint carries depth.** Four tints, and `tintFor` shifts the draw
      toward the lighter ones as a flower sits further out and higher:
      the deep rose collects inside and underneath where a real canopy
@@ -1365,9 +1422,22 @@ function buildPetals(kit, lawnTop) {
    that moves a lobe outward.
    ========================================== */
 const BLOSSOM_TINTS = [PETAL_PINK, PETAL_PALE, PETAL_WHITE];
-/* What share of the canopy is coral. Nine percent is a scatter you
-   read as flecks; past about fifteen the crown turns orange. */
+/* What share of the canopy is coral — and it is **two shares, because
+   a plate is not a flower**. Eight percent of the flowers is a scatter
+   you read as flecks, and that figure survived the rebuild unchanged.
+   Eight percent of the *structure* does not: a patch of plates covers
+   something like ten times the area a flower does, so the same share
+   came back as slabs of orange and the crown read as a maple. The
+   structure runs at a quarter of it.
+
+   The same arithmetic is behind PLATE_LIFT. The three graded tints
+   were balanced against flowers; at plate size the pinks carry far
+   more of the frame than they did, so the structure's draw is pushed
+   toward the white end and the crown reads white again — which is what
+   the reference does from across the room. */
 const CORAL_SHARE = 0.08;
+const CORAL_PLATE = 0.022;
+const PLATE_LIFT = 0.12;
 
 /* The middle of the crown. It is not a shape any more — nothing is
    sampled against it — but two things still want one point to measure
@@ -1387,17 +1457,51 @@ const HEART_SPAN = 1.55;               // the distance that counts as "out"
    3.3. */
 const LOBE_SQUASH = 0.58;
 
-const LOBE_SUBS = [3, 4];              // sub-lobes per clump
-const LOBE_SUB_R = [0.52, 0.86];       // each, as a share of the clump radius
-const LOBE_SUB_OFF = [0.22, 0.55];     // and how far off centre it sits
-const LOBE_SHELL = [0.54, 1.0];        // where in a sub-lobe a flower may sit
-const EDGE_SHELL = [0.58, 1.46];       // an edge lobe throws a few past its own
-const LOBE_FILL = 152;                 // flowers per unit of sub-lobe area
-const EDGE_DENSITY = 0.52;             // ...and how much of that an edge gets
-const FRINGE_N = 9;                    // loose singles past a 0.45 clump's edge
-const FRINGE_REACH = 1.52;             // how far past it they go
-const FRINGE_SIZE = 0.82;
+const LOBE_SUBS = [3, 5];              // sub-lobes per clump
+/* The sub-lobes run larger and sit closer in than they did when they
+   held scattered flowers, and both moved for the same reason. A
+   voxelised lobe only keeps the cells whose *centres* fall inside it,
+   so it finishes about half a cell short of its nominal radius in
+   every direction — and the shortfall is taken off each lobe
+   separately, so a clump of four came out as four islands with grid
+   gaps between them. Bigger and nearer closes the gaps; the clump's
+   own extent is the same, because the two changes pull opposite ways. */
+const LOBE_SUB_R = [0.58, 0.92];       // each, as a share of the clump radius
+const LOBE_SUB_OFF = [0.20, 0.46];     // and how far off centre it sits
+const EDGE_SUB_R = 0.86;               // an edge clump's lobes run a size down
 const INNER_SCALE = 1.12;              // the fork lobes run a little larger
+
+/* --- the grid the crown is laid on ----------------------
+   The canopy is a *build*, so it is laid on the same grid the base
+   plate's studs are: CELL in plan, one plate in height, with the
+   layers counted up from the lawn. Nothing in the crown sits off it —
+   which is the whole reason the outline comes out stair-stepped
+   instead of drawn.
+
+   RUN_MAX is the longest plate laid in one piece. It is a batching
+   figure as much as a modelling one: each distinct footprint is its
+   own geometry, so an uncapped run would mint a 1x11 nobody can see
+   the far end of. Six is the longest plate in the bin. */
+const CELL = STUD;
+const LAYER = PH;
+const RUN_MAX = 6;
+
+/* How much blossom goes on. A flower is *clipped to a stud*, so these
+   are shares of the exposed studs rather than densities in a volume —
+   the structure decides where blossom may go and these decide how much
+   of it is taken. Where a flower is not taken the stud is left bare,
+   which is what puts studs on the upward-facing surfaces. */
+const TOP_BLOOM = 0.52;                // of the up-facing plates in the mass
+const EDGE_BLOOM = 0.78;               // ...and out on the loose clumps
+const SIDE_BLOOM = 0.24;               // of the outward-facing vertical faces
+const BLOOM_TOP_SIZE = 0.86;
+const BLOOM_SIDE_SIZE = 0.74;
+/* The loose single plates stepped off the mass. They are what the old
+   scattered fringe was for — an outline you can see the sky through —
+   except that each one is a 1x1 with a flower on it, on the grid, in
+   line with the build. */
+const TIP_N = 10;                      // per 0.45 of clump radius
+const TIP_REACH = 1.46;
 /* The two puffs on the low branches. They are most of what says the
    crown is a cloud *above* a tree rather than the whole tree, and
    they need their own floor: CANOPY_FLOOR is 2.42 and these hang at
@@ -1406,7 +1510,6 @@ const LOW_LOBE_R = 0.30;
 const LOW_LOBE_FLOOR = 0.52;
 const MID_T = 0.54;                    // where on a limb its second lobe sits
 const MID_SCALE = 0.74;
-const BLOOM_SIZE = [0.70, 1.26];
 const CANOPY_FLOOR = 2.42;             // nothing hanging down level with the swing
 
 /* The house's footprint as the canopy sees it, wide enough that a
@@ -1426,9 +1529,9 @@ const PORCH_Y = WALL_Y + DOOR_COURSES * BH + PH;
    grading it the way the pinks are graded would collect it somewhere
    and read as a stain. Everything else is graded: pink deep inside,
    white out on the lit surface. */
-function tintFor(v, depth) {
-  if (v < CORAL_SHARE) return PETAL_CORAL;
-  const t = ((v - CORAL_SHARE) / (1 - CORAL_SHARE)) * 0.66 + depth * 0.34;
+function tintFor(v, depth, coral = CORAL_SHARE, lift = 0) {
+  if (v < coral) return PETAL_CORAL;
+  const t = ((v - coral) / (1 - coral)) * 0.66 + depth * 0.34 + lift;
   return BLOSSOM_TINTS[t < 0.30 ? 0 : t < 0.62 ? 1 : 2];
 }
 
@@ -1481,116 +1584,244 @@ function blocked(p, lawnY, floor) {
     || inPorchVoid(p, lawnY);
 }
 
-/* One clump: three or four sub-lobes around `centre`, each holding a
-   shell of flowers, and a loose fringe of singles past the whole
-   thing. `radius` is the clump's nominal size — the count follows the
-   sub-lobe's area, so a big clump is denser rather than the same few
-   flowers spread thinner — and `dens` is the share of that an edge
-   clump gets.
+/* --- the grid, in both directions ------------------------ */
+const cellX = (i) => (i + 0.5) * CELL;
+const cellZ = (k) => (k + 0.5) * CELL;
+const cellY = (j) => j * LAYER;        // a plate's bottom, in the lawn's frame
+const key3 = (i, j, k) => `${i}|${j}|${k}`;
 
-   **The fringe is what keeps the outline from being a rim.** Without
-   it every clump ends at its own shell, and a dozen clumps ending at
-   their own shells is a dozen arcs — which is the smooth moulded edge
-   this is trying to get away from, just drawn at a smaller radius. The
-   fringe scatters a handful of smaller blooms between one and
-   FRINGE_REACH times the radius, biased away from the heart of the
-   tree so they go outward rather than back into the mass, and that is
-   the whole difference between an outline you can see the sky through
-   and one you cannot. */
-function clump(kit, r, centre, lawnY, {
-  radius, floor = CANOPY_FLOOR, dens = 1, shell = LOBE_SHELL, inner = 0,
+/* A deterministic value per cell. Used for colour and for whether a
+   stud carries a flower, and it is a *hash of the coordinates* rather
+   than a draw off the clump's rng on purpose: the two passes that want
+   it (marking and baking) run at different times over different sets,
+   so a sequential rng would give a cell one answer in one pass and
+   another in the next. */
+function hash3(a, b, c) {
+  let h = Math.imul(a + 0x9e3779b9, 0x85ebca6b)
+    ^ Math.imul(b + 0x165667b1, 0xc2b2ae35)
+    ^ Math.imul(c + 0x27d4eb2f, 0x1b873593);
+  h = Math.imul(h ^ (h >>> 15), 0x2545f491);
+  return ((h ^ (h >>> 13)) >>> 0) / 4294967296;
+}
+
+/* A direction on the sphere, taken properly rather than off a cube: a
+   cube of offsets piles the tips into the corners. */
+function sphereDir(r, v) {
+  const cy = r() * 2 - 1;
+  const sy = Math.sqrt(Math.max(0, 1 - cy * cy));
+  const th = r() * Math.PI * 2;
+  return v.set(Math.cos(th) * sy, cy, Math.sin(th) * sy);
+}
+
+/* One clump, marked onto the grid rather than drawn: three or four
+   squashed sub-lobes around `centre`, every cell whose centre falls
+   inside one of them flagged occupied, plus a handful of single cells
+   stepped off the edge.
+
+   **This is the step that makes the crown a build.** The volume the
+   sub-lobes describe is the one the old scattered canopy had, so the
+   mass and the silhouette are the same shape — what changed is that
+   the shape is now resolved onto the stud grid before anything is
+   emitted, so its outline can only ever be a staircase. There is no
+   stage at which a smooth surface is approximated; the cells *are* the
+   model.
+
+   The tips do what the old fringe did and are the one place the two
+   differ in kind. The fringe scattered loose blooms past the mass at
+   any angle and any distance; a tip is a 1x1 plate on the grid, one or
+   two cells clear of the mass, with a flower clipped to it. Same job —
+   an outline with sky through it — done the way the rest of the model
+   is done. */
+function markClump(cells, r, centre, lawnY, {
+  radius, floor = CANOPY_FLOOR, edge = false, inner = 0,
 } = {}) {
   const subs = LOBE_SUBS[0] + Math.floor(r() * (LOBE_SUBS[1] - LOBE_SUBS[0] + 1));
   const dir = new THREE.Vector3();
   const sub = new THREE.Vector3();
-  const face = new THREE.Vector3();
-  const away = new THREE.Vector3();
-  const off = new THREE.Vector3();
+  const p = new THREE.Vector3();
 
-  /* A displacement of `rad` along `v`, flattened in y. Everything
-     inside a clump goes through here, which is what keeps the squash
-     from being applied twice to some offsets and not at all to
-     others. */
-  const squashed = (v, rad) => off.set(v.x * rad, v.y * rad * LOBE_SQUASH, v.z * rad);
-
-  /* One flower at p, belonging to the lobe centred at `from`. `f` is
-     how far out in that lobe's shell it sits, which is one of the
-     three things the tint is drawn against. */
-  const place = (p, from, f, size) => {
+  /* `tip` loses to anything already there — a single stepped off one
+     clump that lands inside the next is just part of the mass. The
+     mass likewise wins the `edge` flag, so a cell shared by a loose
+     clump and a solid one carries the solid one's blossom density. */
+  const mark = (i, j, k, tip) => {
+    p.set(cellX(i), lawnY + cellY(j) + LAYER / 2, cellZ(k));
     if (blocked(p, lawnY, floor)) return;
-    /* Facing: mostly out of its own lobe, which is what gives a clump
-       its roundness, blended with out of the clump and out of the whole
-       crown, so the canopy still turns one way as a mass. CANOPY_HEART
-       is in the lawn's frame and p is not, which is what the lawnY is
-       doing in there. */
-    /* Facing: out of its own lobe, with the y undone — on a squashed
-       lobe the raw difference is too horizontal, and a flower on the
-       underside of a flat cloud has to be looking down at you. */
-    face.copy(p).sub(from);
-    face.y /= LOBE_SQUASH;
-    face.normalize()
-      .addScaledVector(away.copy(p).sub(centre).normalize(), 0.35)
-      .addScaledVector(away.set(p.x - CANOPY_HEART.x,
-        p.y - lawnY - CANOPY_HEART.y,
-        p.z - CANOPY_HEART.z).normalize(), 0.45)
-      .normalize();
-    const q = new THREE.Quaternion().setFromUnitVectors(UP, face)
-      .multiply(new THREE.Quaternion().setFromAxisAngle(UP, r() * Math.PI * 2));
-
-    /* How far out this flower is, for the tint: its own place in the
-       lobe's shell, plus how far it sits from the heart, plus a push
-       toward the rose for anything hanging underneath. */
-    const out = Math.hypot(p.x - CANOPY_HEART.x, p.z - CANOPY_HEART.z);
-    const depth = Math.min(1, Math.max(0,
-      0.30 * f + 0.52 * out / HEART_SPAN
-      + 0.26 * (p.y - lawnY - CANOPY_HEART.y) - inner));
-    flower(kit, tintFor(r(), depth), p, q, size);
+    const was = cells.get(key3(i, j, k));
+    if (was) {
+      if (tip) return;
+      was.inner = Math.max(was.inner, inner);
+      was.edge = was.edge && edge;
+      was.tip = false;
+      return;
+    }
+    cells.set(key3(i, j, k), { i, j, k, inner, edge, tip: !!tip });
   };
 
-  /* A direction on the sphere, taken properly rather than off a cube:
-     a cube of offsets piles flowers into the corners, which is exactly
-     the square-shouldered clump this is trying not to be. */
-  const spherical = (v) => {
-    const cy = r() * 2 - 1;
-    const sy = Math.sqrt(Math.max(0, 1 - cy * cy));
-    const th = r() * Math.PI * 2;
-    return v.set(Math.cos(th) * sy, cy, Math.sin(th) * sy);
+  /* Every cell whose centre is inside the squashed sphere. The bounds
+     are the sphere's own box in cell indices, so a 0.2 lobe visits
+     nine cells rather than the whole crown. */
+  const fill = (c, sr) => {
+    const ry = sr * LOBE_SQUASH;
+    const i0 = Math.floor((c.x - sr) / CELL - 0.5);
+    const i1 = Math.ceil((c.x + sr) / CELL - 0.5);
+    const k0 = Math.floor((c.z - sr) / CELL - 0.5);
+    const k1 = Math.ceil((c.z + sr) / CELL - 0.5);
+    const j0 = Math.floor((c.y - lawnY - ry) / LAYER);
+    const j1 = Math.ceil((c.y - lawnY + ry) / LAYER);
+    for (let i = i0; i <= i1; i++) {
+      for (let k = k0; k <= k1; k++) {
+        for (let j = j0; j <= j1; j++) {
+          const dx = (cellX(i) - c.x) / sr;
+          const dy = (lawnY + cellY(j) + LAYER / 2 - c.y) / ry;
+          const dz = (cellZ(k) - c.z) / sr;
+          if (dx * dx + dy * dy + dz * dz <= 1) mark(i, j, k, false);
+        }
+      }
+    }
   };
 
-  const bloom = () => BLOOM_SIZE[0] + r() * (BLOOM_SIZE[1] - BLOOM_SIZE[0]);
-
+  const subR = edge ? EDGE_SUB_R : 1;
   for (let s = 0; s < subs; s++) {
-    const sr = radius * (LOBE_SUB_R[0] + r() * (LOBE_SUB_R[1] - LOBE_SUB_R[0]));
+    const sr = radius * subR
+      * (LOBE_SUB_R[0] + r() * (LOBE_SUB_R[1] - LOBE_SUB_R[0]));
     /* Off centre, and downward a little less than upward: a clump
        spreads along its branch and over it, not under it. */
     dir.set(r() - 0.5, (r() - 0.5) * 0.7, r() - 0.5).normalize();
-    sub.copy(centre).add(squashed(dir,
-      radius * (LOBE_SUB_OFF[0] + r() * (LOBE_SUB_OFF[1] - LOBE_SUB_OFF[0]))));
+    const off = radius
+      * (LOBE_SUB_OFF[0] + r() * (LOBE_SUB_OFF[1] - LOBE_SUB_OFF[0]));
+    sub.set(centre.x + dir.x * off,
+      centre.y + dir.y * off * LOBE_SQUASH,
+      centre.z + dir.z * off);
+    fill(sub, sr);
+  }
 
-    const n = Math.max(2, Math.round(LOBE_FILL * sr * sr * dens));
-    for (let i = 0; i < n; i++) {
-      const f = shell[0] + r() * (shell[1] - shell[0]);
-      place(sub.clone().add(squashed(spherical(dir), sr * f)), sub, f, bloom());
+  /* The tips, biased away from the heart of the tree so they step
+     outward rather than back into the mass. */
+  const away = new THREE.Vector3(
+    centre.x - CANOPY_HEART.x,
+    (centre.y - lawnY - CANOPY_HEART.y) * 0.5,
+    centre.z - CANOPY_HEART.z).normalize();
+  const tips = Math.round(TIP_N * (radius / 0.45));
+  for (let t = 0; t < tips; t++) {
+    sphereDir(r, dir).addScaledVector(away, 0.9).normalize();
+    const f = radius * (1 + r() * (TIP_REACH - 1));
+    mark(Math.round((centre.x + dir.x * f) / CELL - 0.5),
+      Math.round((centre.y + dir.y * f * LOBE_SQUASH - lawnY) / LAYER),
+      Math.round((centre.z + dir.z * f) / CELL - 0.5), true);
+  }
+}
+
+/* Turning the marked cells into pieces. Four passes, and the order of
+   the first two is the whole performance story:
+
+   1. **Colour.** Per cell, from `tintFor` as before — but the draw is
+      a hash of the cell's *patch* (two cells square, three layers
+      deep, which is one brick course) rather than of the cell, so the
+      tints come out in patches a few plates across. That is both what
+      a builder's bag of parts looks like and what lets the next pass
+      merge anything at all: per-cell colour would make every run one
+      plate long.
+   2. **Cull the interior.** A cell with all six neighbours occupied
+      can never be seen, and a crown this size is mostly interior. The
+      neighbour test runs against the *full* set, so a surface cell
+      under a culled one still knows it is covered and does not sprout
+      a stud into solid blossom.
+   3. **Merge runs.** Along x, within a layer, same colour, capped at
+      RUN_MAX — so a flat top comes out as a few long plates and a
+      stepped flank as a stack of short ones.
+   4. **Studs and flowers.** A flower is clipped to an exposed stud and
+      hides it, so the two are alternatives rather than stacked: where
+      the draw takes a flower the stud is not drawn at all. The side
+      faces get a few as well, axis-aligned — the crown is seen from
+      the side as much as from above, and a bare plate wall there would
+      read as a wall. */
+function bakeCanopy(kit, cells, lawnY) {
+  const full = cells;
+  const has = (i, j, k) => full.has(key3(i, j, k));
+
+  /* 1 — colour and depth. */
+  for (const c of full.values()) {
+    const x = cellX(c.i), z = cellZ(c.k), y = cellY(c.j) + LAYER / 2;
+    const out = Math.hypot(x - CANOPY_HEART.x, z - CANOPY_HEART.z);
+    c.depth = Math.min(1, Math.max(0,
+      0.30 + 0.52 * out / HEART_SPAN
+      + 0.26 * (y - CANOPY_HEART.y) - c.inner));
+    c.col = tintFor(hash3(c.i >> 1, Math.floor(c.j / 3), c.k >> 1), c.depth,
+      CORAL_PLATE, PLATE_LIFT);
+  }
+
+  /* 2 — the shell. */
+  const skin = [];
+  for (const c of full.values()) {
+    if (has(c.i + 1, c.j, c.k) && has(c.i - 1, c.j, c.k)
+      && has(c.i, c.j + 1, c.k) && has(c.i, c.j - 1, c.k)
+      && has(c.i, c.j, c.k + 1) && has(c.i, c.j, c.k - 1)) continue;
+    skin.push(c);
+  }
+
+  /* 3 — runs. Grouped by layer and row, then walked in x. */
+  const rows = new Map();
+  for (const c of skin) {
+    const rk = `${c.j}|${c.k}`;
+    let row = rows.get(rk);
+    if (!row) rows.set(rk, (row = []));
+    row.push(c);
+  }
+  for (const row of rows.values()) {
+    row.sort((a, b) => a.i - b.i);
+    let n = 0;
+    for (let a = 0; a < row.length; a = n) {
+      n = a + 1;
+      while (n < row.length && n - a < RUN_MAX
+        && row[n].i === row[n - 1].i + 1 && row[n].col === row[a].col) n++;
+      const w = n - a, c = row[a];
+      kit.brick(kit.mat(c.col, 0.38), w, 1,
+        cellX(c.i + (w - 1) / 2), lawnY + cellY(c.j), cellZ(c.k),
+        { h: LAYER, studs: false });
     }
   }
 
-  /* The fringe. Biased outward from the heart of the tree, and a
-     little smaller than the mass, because a twig end carries smaller
-     flowers than a bough does. */
-  away.set(centre.x - CANOPY_HEART.x,
-    (centre.y - lawnY - CANOPY_HEART.y) * 0.5,
-    centre.z - CANOPY_HEART.z).normalize();
-  const fringe = Math.round(FRINGE_N * (radius / 0.45) * dens);
-  for (let i = 0; i < fringe; i++) {
-    spherical(dir).addScaledVector(away, 0.85).normalize();
-    const f = 1 + r() * (FRINGE_REACH - 1);
-    place(centre.clone().add(squashed(dir, radius * f)), centre, 1,
-      bloom() * FRINGE_SIZE);
+  /* 4 — what is clipped on top, and on the flanks. */
+  const axes = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  const v = new THREE.Vector3();
+  for (const c of skin) {
+    const x = cellX(c.i), z = cellZ(c.k);
+    const top = lawnY + cellY(c.j) + LAYER;
+
+    if (!has(c.i, c.j + 1, c.k)) {
+      const share = c.tip ? 1 : c.edge ? EDGE_BLOOM : TOP_BLOOM;
+      if (hash3(c.i, c.j + 977, c.k) < share) {
+        flower(kit, tintFor(hash3(c.i + 31, c.j, c.k + 17), c.depth),
+          new THREE.Vector3(x, top, z),
+          new THREE.Quaternion().setFromAxisAngle(UP,
+            snap(hash3(c.i + 7, c.j + 7, c.k + 7) * Math.PI * 2, ROLL_STEP)),
+          BLOOM_TOP_SIZE);
+      } else {
+        kit.stud(kit.mat(c.col, 0.38), x, top, z);
+      }
+    }
+
+    /* One flank flower at most, on the first open face going round —
+       which `tip` cells never get, since a single plate out on its own
+       already carries one on top. */
+    if (c.tip || hash3(c.i + 5, c.j + 5, c.k + 5) >= SIDE_BLOOM) continue;
+    for (const [di, dk] of axes) {
+      if (has(c.i + di, c.j, c.k + dk)) continue;
+      v.set(di, 0, dk);
+      flower(kit, tintFor(hash3(c.i + 53, c.j + 11, c.k + 53), c.depth),
+        new THREE.Vector3(x + di * CELL / 2,
+          lawnY + cellY(c.j) + LAYER / 2, z + dk * CELL / 2),
+        new THREE.Quaternion().setFromUnitVectors(UP, v),
+        BLOOM_SIDE_SIZE);
+      break;
+    }
   }
 }
 
 function buildCanopy(kit, lawnY) {
   const r = rng(0xb1055 % 0xffffffff);
+  const cells = new Map();
 
   LIMB_PLAN.forEach((L, i) => {
     if (!L.lobe) return;
@@ -1599,19 +1830,18 @@ function buildCanopy(kit, lawnY) {
     const opts = {
       radius: radius * (inner ? INNER_SCALE : 1),
       floor,
-      dens: edge ? EDGE_DENSITY : 1,
-      shell: edge ? EDGE_SHELL : LOBE_SHELL,
+      edge,
       /* The fork lobes sit in the heart of the tree whatever their
          coordinates say, so their tint is pushed toward the rose. */
       inner: inner ? 0.30 : 0,
     };
-    clump(kit, r, curve.getPoint(1), lawnY, opts);
+    markClump(cells, r, curve.getPoint(1), lawnY, opts);
 
     /* A second, smaller clump part-way along the limb, so the mass is
        visibly carried by the wood instead of balanced on the end of
        it. Not on the twigs — a twig is all tip. */
     if (LIMB_GEN[i] === 1) {
-      clump(kit, r, curve.getPoint(MID_T), lawnY,
+      markClump(cells, r, curve.getPoint(MID_T), lawnY,
         { ...opts, radius: opts.radius * MID_SCALE });
     }
   });
@@ -1620,128 +1850,155 @@ function buildCanopy(kit, lawnY) {
      On the +X branch that is past both of the swing's ties, so the
      ropes and the seat stay clear. */
   LOW_PLAN.forEach((_, i) => {
-    clump(kit, r, lowBranchCurve(i, lawnY).getPoint(1), lawnY, {
-      radius: LOW_LOBE_R, floor: LOW_LOBE_FLOOR,
-      dens: EDGE_DENSITY, shell: EDGE_SHELL,
+    markClump(cells, r, lowBranchCurve(i, lawnY).getPoint(1), lawnY, {
+      radius: LOW_LOBE_R, floor: LOW_LOBE_FLOOR, edge: true,
     });
   });
+
+  bakeCanopy(kit, cells, lawnY);
 }
 
 /* ==========================================
-   DRIFTING PETALS
+   THE SPARE BRICKS
 
-   A dozen petals falling out of the canopy onto the base, and the one
-   piece of this model that is not static geometry. Four things fall
-   out of that, and the first is the only one the scene cares about:
+   Four loose pieces on the desk in front of the model, as if left over
+   from building it — a 2x4, a 2x2, a 1x2 and a two-brick stack, in
+   four colours already in the build. They are the one thing on this
+   desk that says somebody put the tree together rather than bought it.
 
-   - **They do not cast.** The scene renders its shadow map once and
-     freezes it (`renderer.shadowMap.autoUpdate = false`), because
-     nothing in the room moves; a moving caster would bake its shadow
-     into that one frame and then drag the stale print around the floor
-     for the rest of the session. `castShadow = false` keeps them out
-     of the shadow pass entirely, so the freeze stays correct. They
-     still *receive*, which costs nothing and is read from the same
-     frozen map.
-   - **They fade by shrinking, not by alpha.** A petal is about two
-     pixels across at the home framing, and at that size the two are
-     indistinguishable — while a transparent material would mean
-     depth-sorting ten moving quads against a thousand blossoms
-     for no visible gain. The scale ramps up over the first twelve
-     percent of the fall and back down over the last twenty, so a petal
-     appears in the canopy and is gone by the time it reaches the
-     grass.
-   - **They fall outside the house, not through it.** Spawn radius
-     starts beyond the canopy's own keep-out box, and the sway is small
-     enough that none of them wanders back over the roof. Petals fall
-     *around* a house; there is no case to handle.
-   - **`frustumCulled` is off.** Three caches an InstancedMesh's
-     bounding sphere the first time it needs one, and these instances
-     move every frame, so the cache would be describing where the
-     petals used to be. Two small meshes; not worth recomputing it.
+   Four things about them:
 
-   Under `prefers-reduced-motion` scene.js never starts a render loop,
-   so there is nothing to step the fall — the group is hidden instead,
-   rather than left as a dozen petals frozen in mid-air.
+   - **They are their own group, not part of the model.** That is a
+     tooling decision as much as a modelling one: `_canopyfit.mjs`
+     measures the model's world box against the desk's, and a brick
+     dropped two units in front of the tree would quietly move the
+     front-edge margin it reports and stop the number meaning what it
+     says. A sibling group costs a handful of draw calls — these are
+     single pieces, so nothing instances — and keeps `__fit("treehouse")`
+     honest. `__fit("spares")` reads this one.
+   - **Their frame is the desk's, not the model's.** The treehouse is
+     yawed by TREEHOUSE_FACING and the clearances these have to hold —
+     the mouse's contact shadow at x 3.5..5.7 over z 2.0..4.6, its cord
+     at x 1.5..4.5 over z 0.4..2.6, the base plate at 1.34 around
+     (6.9, -2.1) — are all stated in the desk's. Sitting at the desk's
+     own origin means the plan below is those coordinates directly
+     rather than the same figures rotated by half a radian.
+   - **One is tipped onto its side.** Three bricks lying flat at three
+     angles still reads as an arrangement; a brick resting on a long
+     face is the one that reads as dropped. `tip` rolls it a quarter
+     turn about its own length, which puts its studs out sideways and
+     its resting height at half its width.
+   - **They cast for real.** Everything else small on this desk is
+     grounded with a painted contact shadow, because the key's shadow
+     map spreads 2048 texels over +/-80 world units and the hairline
+     under a base plate never lands on one. A brick is a different
+     case: it stands a third of a unit tall under a key raking in at
+     13 degrees, so it throws about a unit and a half of shadow across
+     the walnut — twenty texels of it, soft but unmistakably there.
    ========================================== */
-const DRIFT_N = 10;
-const DRIFT_SPAN = 2.7;         // how far a petal falls
-const DRIFT_SECONDS = [11, 17]; // and how long it takes — slowly
-const DRIFT_SWAY = 0.11;
-const DRIFT_R = [0.92, 1.16];   // spawn radius: outside the house, inside the lawn
-const PETAL_SHAPE = new THREE.Vector3(1.45, 1, 0.78);
+const QUARTER = new THREE.Quaternion().setFromAxisAngle(UP, Math.PI / 2);
+const LONG = new THREE.Vector3(0, 0, 1);
 
-function buildDrift(lawnY) {
-  const group = new THREE.Group();
-  const geo = track(new THREE.CylinderGeometry(STUD * 0.23, STUD * 0.23, PH * 0.3, 8));
-  const r = rng(0x5ca77e);
-  const meshes = [];
-  const petals = [];
+/* Three-quarters of full size: set down at 0.556, taken up 75% to
+   0.973 and then back down 20%, all on request.
 
-  for (const colour of [PETAL_PALE, PETAL_WHITE]) {
-    const n = DRIFT_N / 2;
-    const im = new THREE.InstancedMesh(geo, track(new THREE.MeshStandardMaterial({
-      color: colour, roughness: 0.4, metalness: 0, envMapIntensity: 0.34,
-    })), n);
-    im.castShadow = false;
-    im.receiveShadow = true;
-    im.frustumCulled = false;
-    meshes.push(im);
-    group.add(im);
+   Worth knowing what that lands on, because the number it wants to be
+   compared against is not 1. The model carries a group scale
+   (`TREEHOUSE_SCALE`, 1.1733) and these carry none, so the ratio is
+   what decides whether a loose piece reads as the same part as the
+   ones in the build: at 0.7784 it is ~66% of one. That is below the
+   ~83% the 0.973 pass reached and well above the ~32% it started at —
+   a brick that reads as belonging to the build while sitting a little
+   smaller than one in it.
 
-    for (let i = 0; i < n; i++) {
-      const a = r() * Math.PI * 2;
-      const d = DRIFT_R[0] + r() * (DRIFT_R[1] - DRIFT_R[0]);
-      petals.push({
-        mesh: im,
-        index: i,
-        x: Math.cos(a) * d,
-        z: Math.sin(a) * d,
-        top: lawnY + DRIFT_SPAN,
-        /* Staggered, so they are not a falling curtain. */
-        u: r(),
-        rate: 1 / (DRIFT_SECONDS[0] + r() * (DRIFT_SECONDS[1] - DRIFT_SECONDS[0])),
-        phase: r() * Math.PI * 2,
-        sways: 1.2 + r() * 1.6,
-        spins: 1.5 + r() * 2.5,
-        axis: new THREE.Vector3(r() - 0.5, r() * 0.4, r() - 0.5).normalize(),
-        size: 0.85 + r() * 0.4,
-      });
+   It is carried in each piece's own matrix rather than on the group,
+   because the group's origin is the desk's centre — scaling there
+   would walk all four bricks a share of seven units back toward the
+   mouse, which is a move dressed up as a resize. In the matrix the
+   batch key is untouched, so these still share geometry with the
+   build's own bricks; they are simply instanced at their own size.
+
+   What it costs is clearance, and every figure is measured rather
+   than assumed: these grow about their own placement points, so the
+   group's box spreads on all four sides. Re-run `_spares.mjs` after
+   touching this — the mouse's contact shadow, the desk's +x edge and
+   the canopy's +z overhang are the three gaps it has to hold. */
+const SPARE_SCALE = 0.7784;
+
+/* w x d footprint, colour, where on the desk top, and the yaw it came
+   to rest at. `on` is a second brick stacked on the first, crossed
+   over it the way a leftover pair ends up. */
+const SPARE_PLAN = [
+  { w: 2, d: 4, c: PLANK, x: 7.05, z: 1.35, yaw: 0.33 },
+  { w: 2, d: 2, c: PETAL_PINK, x: 8.25, z: 0.80, yaw: -0.54 },
+  { w: 1, d: 2, c: GRASS, x: 8.70, z: 2.05, yaw: 1.15, tip: true },
+  {
+    w: 2, d: 2, c: PLANK_ALT, x: 7.25, z: 2.95, yaw: -0.20,
+    on: { w: 1, d: 2, c: PETAL_PALE, yaw: 1.37 },
+  },
+];
+
+/* A brick at an arbitrary orientation, with its studs. The kit's own
+   `brick` is y-up and yaw-only — it places a piece on top of whatever
+   is already there, which is what building is — so a piece lying where
+   it fell needs this instead. Footprints are canonicalised the same
+   way, and the quarter turn goes on the *right* so it happens in the
+   brick's own frame before the pose does; that is what keeps it
+   correct for a piece that is also rolled onto its side. The batch
+   keys are the kit's, so a loose 2x4 in a colour the build already
+   uses lands in the same geometry. */
+function looseBrick(kit, material, w, d, pos, quat) {
+  let bw = w, bd = d;
+  const q = quat.clone();
+  if (bw > bd) { bw = d; bd = w; q.multiply(QUARTER); }
+  const s3 = new THREE.Vector3(SPARE_SCALE, SPARE_SCALE, SPARE_SCALE);
+
+  kit.put(`box|${bw}x${bd}x${BH.toFixed(3)}|${material.userData.key}`,
+    () => new RoundedBoxGeometry(bw * STUD, BH, bd * STUD, 1, BEVEL),
+    material, new THREE.Matrix4().compose(pos, q, s3));
+
+  /* The stud offsets are in the brick's own space, so they take the
+     scale before the pose does — otherwise the studs stay on the
+     full-size grid and walk off the ends of a smaller brick. */
+  const o = new THREE.Vector3();
+  for (let i = 0; i < bw; i++) {
+    for (let j = 0; j < bd; j++) {
+      o.set((i - (bw - 1) / 2) * STUD, BH / 2 + STUD_H / 2,
+        (j - (bd - 1) / 2) * STUD)
+        .multiplyScalar(SPARE_SCALE).applyQuaternion(q).add(pos);
+      kit.put(`stud|${material.userData.key}`,
+        () => new THREE.CylinderGeometry(STUD_R, STUD_R, STUD_H, 10),
+        material, new THREE.Matrix4().compose(o.clone(), q, s3));
     }
   }
+}
 
-  const pos = new THREE.Vector3();
-  const scl = new THREE.Vector3();
-  const q = new THREE.Quaternion();
-  const m = new THREE.Matrix4();
+/* Built in the desk's frame with its origin on the desk top, so
+   scene.js only lifts it by DESK_TOP_Y. */
+export function buildSpareBricks() {
+  const root = new THREE.Group();
+  const kit = createKit();
 
-  function place(p) {
-    const turn = p.phase + p.u * Math.PI * 2;
-    pos.set(
-      p.x + Math.sin(turn * p.sways) * DRIFT_SWAY,
-      p.top - p.u * DRIFT_SPAN,
-      p.z + Math.cos(turn * p.sways * 0.8) * DRIFT_SWAY * 0.7);
-    const s = p.size
-      * Math.min(1, p.u / 0.12)           // appearing in the canopy
-      * Math.min(1, (1 - p.u) / 0.2);     // gone before it reaches the grass
-    scl.copy(PETAL_SHAPE).multiplyScalar(s);
-    q.setFromAxisAngle(p.axis, p.phase + p.u * p.spins * Math.PI * 2);
-    p.mesh.setMatrixAt(p.index, m.compose(pos, q, scl));
+  for (const B of SPARE_PLAN) {
+    const q = new THREE.Quaternion().setFromAxisAngle(UP, B.yaw);
+    /* Rolled about its own length, so it rests on a long face. The
+       footprint is kept w <= d for a tipped piece, so the
+       canonicalising quarter turn above never lands on top of this. */
+    if (B.tip) q.multiply(new THREE.Quaternion().setFromAxisAngle(LONG, Math.PI / 2));
+    const lie = (B.tip ? (B.w * STUD) / 2 : BH / 2) * SPARE_SCALE;
+    const pos = new THREE.Vector3(B.x, lie, B.z);
+    looseBrick(kit, kit.mat(B.c, 0.40), B.w, B.d, pos, q);
+
+    if (!B.on) continue;
+    /* The second of the pair, square on the first and crossed over it.
+       Its own yaw is in the desk's frame like everything else here. */
+    looseBrick(kit, kit.mat(B.on.c, 0.40), B.on.w, B.on.d,
+      new THREE.Vector3(B.x, (BH + BH / 2) * SPARE_SCALE, B.z),
+      new THREE.Quaternion().setFromAxisAngle(UP, B.on.yaw));
   }
 
-  petals.forEach(place);
-  meshes.forEach((im) => { im.instanceMatrix.needsUpdate = true; });
-
-  return {
-    group,
-    update(dt) {
-      for (const p of petals) {
-        p.u += dt * p.rate;
-        if (p.u >= 1) p.u -= 1;
-        place(p);
-      }
-      for (const im of meshes) im.instanceMatrix.needsUpdate = true;
-    },
-  };
+  kit.bake(root);
+  return root;
 }
 
 /* ==========================================
@@ -1796,13 +2053,7 @@ export function buildTreehouse() {
   shade.renderOrder = -1;
   root.add(shade);
 
-  /* The one moving part. It hangs off `root` with everything else, so
-     it travels with the model; scene.js owns whether it is stepped. */
-  const drift = buildDrift(lawnY);
-  drift.group.name = "treehouse-drift";
-  root.add(drift.group);
-
-  return { root, lawnY, ridgeY, drift };
+  return { root, lawnY, ridgeY };
 }
 
 export function disposeTreehouse() {

@@ -87,6 +87,7 @@ src/scene.js      camera, lighting, env map, AO, hover, the orbit, the fly-in
 src/floor.js      the ground: its colour, its size, its fog, the wordmark on it
 src/computer.js   the CRT machine, built from primitives
 src/desk.js       the steel tanker desk it stands on, likewise
+src/treehouse.js  the brick-built cherry treehouse, and the spare bricks beside it
 public/env/       CC0 studio HDRI used as the environment map
 public/textures/  CC0 walnut scan for the desk top, vendored and relit
 src/style.css     Win95 design tokens (:root vars) + all component CSS
@@ -102,8 +103,8 @@ design-references/  local mood board (CRT monitor photos, isometric angles) — 
 
 ### The scene
 
-`src/scene.js`, `src/computer.js` and `src/desk.js` are the only modules that
-import three. Perspective camera on a **20° vertical FOV**, **20° down / 37°
+`src/scene.js`, `src/computer.js`, `src/desk.js` and `src/treehouse.js` are the
+only modules that import three. Perspective camera on a **20° vertical FOV**, **20° down / 37°
 around** — see "Perspective, and what it replaced" below; it was orthographic
 until the orbit leash reached 2°. The elevation comes from a CAD
 axis tripod, where the two ground axes fall ~18-19° below the horizon either
@@ -1012,24 +1013,21 @@ camera's own target, winds the frustum to the orbit's minimum, hides
 the desk and the machine, and turns it face by face. It leaves the page
 mangled, which is fine — every run reloads.
 
-`_drift.mjs` checks the falling petals off the **scene graph** rather
-than off a picture: that they actually move, that nothing in the model
-casts a shadow it should not (50 of 53 meshes cast; the three that do
-not are the two drift meshes and the contact-shadow quad — it is the
-*three*, not the totals, that is the invariant, since the mesh count
-moves with the palette), and that reduced motion gets the tree without
-the fall.
-
 `_finalshots.mjs` shoots the four framings the finished model has to
 hold up in — home, eye level (the flat clamp, 2° above the floor), and
 a profile of each flank — on both viewports, with `window.__fit` beside
 each. Note the model's NDC box runs past the frame edge on a phone at
-home. Part of that is the **contact shadow's** rotated corner, which is
-transparent, and part of it is the conservative box `_canopyfit.mjs`
-also reads (see below) — but since the canopy went lopsided to the
-back-right, the picture really is cropped there by a little. The desk's
-own ends are cropped on a portrait frame by design; this is the same
-trade, and it is the price of the asymmetry.
+home — `x1` **1.25**, against 0.57 on desktop. Part of that is the
+**contact shadow's** rotated corner, which is transparent, and part of
+it is the conservative box `_canopyfit.mjs` also reads (see below) —
+but since the canopy went lopsided to the back-right, the picture
+really is cropped there by a little. The desk's own ends are cropped on
+a portrait frame by design; this is the same trade, and it is the price
+of the asymmetry. Shrinking the model to 1.1733 improved it and did not
+remove it, which is the evidence it is a framing problem rather than a
+size one: `FRUSTUM_MOBILE` is 37 against 24, so a tall narrow frame
+sees far less world width. The lever is `TREEHOUSE_X` at the portrait
+breakpoint, if it is ever worth pulling.
 
 `_canopyfit.mjs` answers the two questions the canopy can quietly get
 wrong, and answers both off numbers rather than off a picture: **does
@@ -1047,6 +1045,26 @@ also prints the top of the tree as a height above the desk top, which
 is what the three-quarters figure is checked against, and the instance
 and mesh counts. Run it after anything that moves the canopy outward or
 upward.
+
+`_tightfit.mjs` prints the **true** world box of the treehouse and the
+spares, instance by instance, and the clearance to the glass off the
+same corners. It exists because `Box3.setFromObject` takes the AABB of
+a rotated AABB for an `InstancedMesh`, which on a model yawed half a
+radian over-reports the +x edge by about half a unit — enough, at
+`TREEHOUSE_SCALE`, for `_canopyfit.mjs` to call the model off the desk
+while every brick is still on it. It transforms each instance's own box
+corners instead. Run it beside `_canopyfit.mjs`, never instead of it:
+the conservative bound is the one that fails safe. It uses
+`window.__camera`, which is exposed next to `window.__scene` for
+exactly this — a script that wants to project its own points rather
+than the box `__fit` chose.
+
+`_spares.mjs` prints the world boxes of the spare bricks, the
+treehouse, the computer kit and the desk, and the four gaps between
+them that the bricks have to hold — the mouse, the base plate, and the
+desk's +x and front edges. Run it after moving anything in
+`SPARE_PLAN`; "do they clear the mouse" is a question about two boxes,
+not about a screenshot.
 
 `_treeshot.mjs` shoots **the tree with the house hidden**, which the
 home framing cannot do: the trunk's S runs up behind exactly where the
@@ -1146,7 +1164,21 @@ Two things there are less obvious than they look:
   the button panel and LED go.
 - **Vents are slats over a dark cavity**, so the gaps read as the slots. Their x
   position is derived from the funnel's taper at that depth — hard-coding it
-  leaves them floating off the surface.
+  leaves them floating off the surface. **Their depth is a share of `BACK_D`**
+  for a second reason: a vent panel is flat and the flank it sits on slopes, so
+  the two only agree over a limited run of z, and how far the ends drift is set
+  by a slope that steepens as the funnel is shortened. Scaling the panel with
+  the funnel keeps the slats as flush as they ever were. Only the gap behind
+  the bezel's rear wall is absolute, because that wall does not move.
+- **`BACK_D` is 2.73, 35% shorter than the 4.2 it was built at**, on request:
+  at a side view the machine ran nearly the whole depth of the desk and there
+  was no walnut visible behind it. It is shortened **from the back only** —
+  `FUNNEL_FRONT_Z` is an offset from the bezel rather than a fraction of the
+  funnel's own depth, so the bezel, the glass and `SCREEN_TARGET` do not move.
+  That was checked rather than assumed: `#screen`'s client rect at the home
+  framing *is* the projection of the screen plane's corners, and it is identical
+  to three decimals at both depths. The gain is 1.47 of clear desk behind the
+  monitor — 0.89 before, 2.36 after.
 
 #### What carries the realism
 
@@ -1275,14 +1307,24 @@ the two on the near corner rather than behind the monitor.
 Four things there are less obvious than they look.
 
 - **The plan is set by what stands on it, and the depth was measured rather than
-  estimated.** The CRT's funnel runs 4.8 units back from the stand and the
-  keyboard 2.6 forward of it, so the kit occupies very nearly 12 units of depth.
+  estimated.** The CRT's funnel ran 4.8 units back from the stand and the
+  keyboard 2.6 forward of it, so the kit occupied very nearly 12 units of depth.
   The first pass used a guess of 3 for the funnel and made the desk 10.5 deep;
   the monitor then hung over the back edge, which was invisible at the home
-  framing and obvious the moment the camera swung to a side view. `COMPUTER_Z`
-  in `scene.js` now carries the figures `window.__fit("computer")` reports, and
-  its front figure is the front of the keyboard's painted *contact shadow* — a
-  quad lying on the desk, which would otherwise hang off it in mid-air.
+  framing and obvious the moment the camera swung to a side view. `KIT_Z_MAX`
+  in `scene.js` carries the figure `window.__fit("computer")` reports, and it
+  is not the keyboard's front edge (6.2) but the front of its painted *contact
+  shadow* — a quad lying on the desk, which would otherwise hang off it in
+  mid-air.
+- **The kit is placed by that front figure, not by centring it**, and the
+  difference is what the shorter funnel bought. Centring is where the number
+  came from — at the old 4.2 funnel depth the kit ran -4.77..7.2 and sat square
+  on the desk at `COMPUTER_Z` -1.215. The funnel now ends at -3.31, and
+  re-centring the shorter kit would walk the machine 0.73 back, taking
+  `SCREEN_TARGET` and the fly-in's arrival with it. So `KIT_FRONT_Z` is held
+  where it was and the whole 1.47 becomes clear walnut behind the monitor.
+  **Do not restore the `-(KIT_Z_MIN + KIT_Z_MAX) / 2` form**: it looks tidier
+  and it moves the one thing the flight cannot have move.
 - **`DESK_TOP_Y` is 9, and true to scale it would be about 11.4.** A real
   29-inch desk under a 17-inch CRT is nearly two-thirds desk, and at that ratio
   the machine is a detail on top of a cabinet — and the frame would have to pull
@@ -1423,9 +1465,34 @@ way; shrinking the pitch is the one change this model cannot afford.
 machine stands 6.60 above the desk top. The model reached 6.25 of that
 once — level with it, which read as a second object competing with the
 thing a visitor is meant to press — then 4.75, and a flat 15% pass took
-it to **3.95, about 60%**, which is where it still is after the
-rebuild. `_canopyfit.mjs` prints the figure and it is the one number to
-hold.
+it to 3.95, about 60%, which is where it still builds itself. With
+`TREEHOUSE_SCALE` on top it stands at **4.62, about 70%**.
+`_canopyfit.mjs` prints the figure and it is the one number to hold:
+the ceiling is the 6.25 that read as a rival, not the 6.60 itself —
+and at 4.62 the model is clear of both. It was briefly 6.93 (105%),
+past the machine it stands beside; see "Placement" for what that cost
+and what the two-thirds pass bought back.
+
+#### Reading as a build, not as a plant
+
+Three passes over the whole kit, and together they are what separate
+this from a sculpt that happens to be made of boxes.
+
+- **`GLOSS` multiplies every roughness the kit is asked for**, rather
+  than each call site being retuned, so the relative spread stays —
+  bark duller than petal, grass between them — and the model moves
+  together. 0.55 takes the kit's 0.42 default to 0.23, which is a hard
+  small highlight on a 0.3-unit face. `BRICK_ENV` goes to 0.55 against
+  the furniture's 0.34 for the other half of it: the HDRI is ambient
+  from every direction, so on a matt surface it only flattens, while on
+  a glossy one it is what puts a sheen on the faces the key never
+  reaches — most of the underside of a canopy.
+- **`BEVEL` went from `STUD * 0.055` to `0.09`**, about a pixel and a
+  half of lit edge per seam at the home framing. That is the entire
+  mechanism by which a stack of same-coloured bricks reads as a stack;
+  without it two pieces share one unbroken face. Much past 0.09 and a
+  1x1 starts to read as a pebble.
+- **Orientation is quantised** — see the trunk below.
 
 #### The trunk
 
@@ -1446,10 +1513,26 @@ branch's are — each turned so its own up axis runs along the tangent.
   trunk gets them from rolling each piece further round, so the corners
   stagger down the silhouette instead of lining up into four long
   edges.
-- **The overlap is tighter than a branch's** — 1.08 of the step against
-  1.3 — because the trunk wants its course lines to read where a branch
-  wants to be smooth. Both are options on `buildBranch`, which is
-  curve-driven now (`step`, `overlap`, `twist`, `bands`, `shade`).
+- **A brick-built limb cannot point a brick anywhere it likes.** The
+  first version turned each piece to the exact tangent, which draws a
+  perfectly smooth tube out of boxes: correct as geometry and wrong as
+  a model, because the one thing a build does that a sculpt does not is
+  *step*. `steppedQuat` snaps both the tilt and the roll, so a run of
+  pieces shares an angle and then visibly breaks to the next. The two
+  steps are deliberately different sizes: `TILT_STEP` is the coarser at
+  18 degrees because it is the one the silhouette shows, and
+  `ROLL_STEP` is 22.5, a little over three of `twist`, so corners
+  stagger down a trunk in threes instead of spiralling.
+- **The overlap is tighter than a branch's** — 1.14 of the step against
+  1.26 — because the trunk wants its course lines to read where a
+  branch wants its bends closed up. Both figures came down when the
+  orientation was quantised: a smooth tube needed 1.3 to keep its bends
+  from opening, where a stepped one breaks in 18-degree jumps and only
+  has to cover the wedge that leaves. **Less overlap is the point
+  rather than a saving** — the less one piece buries the next, the more
+  of the seam between them the bevel gets to draw. Both are options on
+  `buildBranch`, which is curve-driven (`step`, `overlap`, `twist`,
+  `bands`, `shade`).
 - **`TRUNK_TOP_Y` is 2.35**, and it is what makes the brief's "exposed
   for the lower half" true: the tree tops out at 3.73 above the lawn,
   so a fork there leaves the trunk the lower half and the crown the
@@ -1519,6 +1602,63 @@ wide, leaning back-right, with one end reaching far out and the other
 drooping low.** It replaced a crown that was 2.0 tall against 3.3 and
 read as a ball.
 
+**It is laid on the stud grid, and that is the change that makes it a
+build.** The crown used to be several hundred flowers scattered on
+spherical shells, each at its own position and its own free rotation —
+which is a cloud of petals, not a model anybody could assemble. Now
+`markClump` resolves the same sub-lobe volumes onto a grid (`CELL` in
+plan, one plate in height, counted up from the lawn) and `bakeCanopy`
+turns the marked cells into pieces. **The mass and the silhouette are
+the same shape they were**: nothing about the limb table or the lobe
+geometry moved. What changed is that the shape is resolved onto the
+grid before anything is emitted, so its outline can only ever come out
+a staircase — there is no stage at which a smooth surface is
+approximated, because the cells *are* the model.
+
+`bakeCanopy` is four passes, and the order of the first two is the
+whole performance story:
+
+1. **Colour**, from `tintFor` as before — but the draw is a hash of the
+   cell's *patch* (two cells square, three layers deep, which is one
+   brick course) rather than of the cell. That is both what a builder's
+   bag of parts looks like and what lets the next pass merge anything
+   at all: per-cell colour would make every run one plate long.
+2. **Cull the interior.** A cell with all six neighbours occupied can
+   never be seen, and a crown this size is mostly interior. The
+   neighbour test runs against the *full* set, not the surviving shell,
+   so a surface cell under a culled one still knows it is covered and
+   does not sprout a stud into solid blossom.
+3. **Merge runs** along x, within a layer, same colour, capped at
+   `RUN_MAX` — a flat top comes out as a few long plates and a stepped
+   flank as a stack of short ones. The cap is a batching figure as much
+   as a modelling one: each footprint is its own geometry, so an
+   uncapped run would mint a 1x11 nobody can see the far end of.
+4. **Studs and flowers.** A flower is clipped to an exposed stud and
+   hides it, so the two are **alternatives rather than stacked**: where
+   the draw takes a flower the stud is not drawn at all, and where it
+   does not the bare stud is what puts studs on the upward-facing
+   surfaces. `TOP_BLOOM` / `EDGE_BLOOM` are those shares. `SIDE_BLOOM`
+   adds a few on outward-facing vertical faces, axis-aligned — the
+   crown is seen from the side as much as from above, and a bare plate
+   wall there reads as a wall.
+
+The flowers no longer face outward. They used to be turned by a blend
+of the sub-lobe's own normal and the direction away from
+`CANOPY_HEART`; a flower is clipped to a stud now, so it points the way
+the stud does, and `SIDE_BLOOM` is what fills the role that facing
+played — blossom visible from under and beside the crown, not only from
+above.
+
+Two figures moved for one reason, and it is a rasterisation fact rather
+than an aesthetic one: **a voxelised lobe finishes about half a cell
+short of its nominal radius**, because only cells whose *centres* fall
+inside are kept, and the shortfall is taken off each sub-lobe
+separately — so a clump of four first came out as four islands with
+grid gaps between them. `LOBE_SUB_R` went up (0.58-0.92) and
+`LOBE_SUB_OFF` came in (0.20-0.46), which closes the gaps while the
+clump's own extent stays put, since the two pull opposite ways.
+`LOBE_SUBS` is 3-5 for the same reason.
+
 Two things made the difference, and the first is the one that could not
 have been got from the limb table:
 
@@ -1526,12 +1666,9 @@ have been got from the limb table:
   0.58). A cloud assembled out of spheres is at least one sphere tall
   everywhere, so widening the limb reaches only ever gave a wider
   dome. The squash scales the y of every offset inside a clump — the
-  sub-lobes' displacement, the shell the flowers sit in, and the fringe
-  — through one helper, so it cannot be applied twice to some offsets
-  and not at all to others. The flower's *facing* divides y back out,
-  because on a squashed lobe the raw outward difference is too
-  horizontal and a flower under a flat cloud has to be looking down at
-  you.
+  sub-lobes' displacement and the sphere each one is rasterised into
+  — so it cannot be applied twice to some offsets and not at all to
+  others.
 - **Every leader off the trunk is more reach than rise.** A leader that
   climbs carries a ball; a leader that runs out carries a cloud.
   `LIMB_PLAN` is five of them (W, N, E, S, and C — the one short stem
@@ -1559,23 +1696,34 @@ dominant), `PETAL_PINK` (a minority) and `PETAL_CORAL`.
 In the reference it falls in small patches all through the crown — on
 the skyline, in the shade, out on the twigs alike — so grading it the
 way the pinks are graded would collect it somewhere and read as a
-stain. `CORAL_SHARE` is 0.08; past about 0.15 the crown turns orange.
-Everything else *is* graded by depth: pink deep inside, white out on
-the lit surface.
+stain. Everything else *is* graded by depth: pink deep inside, white
+out on the lit surface.
+
+There are now **two coral shares, because a plate is not a flower**.
+`CORAL_SHARE` is still 0.08 for the flowers, and past about 0.15 the
+crown turns orange. The *structure* runs at `CORAL_PLATE`, a quarter of
+it: a patch of plates covers roughly ten times what a flower does, so
+the same share came back as slabs of orange and the crown read as a
+maple. `PLATE_LIFT` is the same arithmetic applied to the pinks — the
+three graded tints were balanced against flowers, so the structure's
+draw is pushed toward the white end to get back the crown that reads
+white from across the room.
 
 **The pip was a strong yellow and is now a warm cream** (`BLOSSOM_EYE`),
 at `STUD * 0.125` rather than 0.17. Against three pinks the yellow was
 fine; against a mostly-white canopy a thousand saturated yellow dots
 read as a field of daisies.
 
-**The fringe is what keeps the outline from being a rim.** Without it
-every clump ends at its own shell, and a dozen clumps ending at their
-own shells is a dozen arcs — the same moulded edge at a smaller radius.
-`FRINGE_N` loose singles per clump, scattered to `FRINGE_REACH` times
-the radius and biased away from `CANOPY_HEART`, are the whole
-difference between an outline you can see the sky through and one you
-cannot. Both went up for the rebuild (9 and 1.52) because an airy edge
-is explicitly what the reference has.
+**The tips are what keep the outline from being a rim.** Without them
+every clump ends at its own lobes, and a dozen clumps ending at their
+own lobes is a dozen arcs — the same moulded edge, just stepped. `TIP_N`
+single cells per clump, marked out to `TIP_REACH` times the radius and
+biased away from `CANOPY_HEART`, are the whole difference between an
+outline you can see the sky through and one you cannot. Each comes out
+as a 1x1 plate with a flower clipped to it — which is what separates
+them from the scattered fringe they replaced: same job, done on the
+grid like the rest of the model. A tip always loses to mass, so one
+stepped off a clump that lands inside the next is simply absorbed.
 
 **One small cluster hangs on each low branch** (`LOW_LOBE_R`,
 `LOW_LOBE_FLOOR`). They are most of what says the crown is a cloud
@@ -1610,12 +1758,35 @@ AZIMUTH is the yaw at which the model's +Z looks straight down the
 lens, so the offset *is* the three-quarter angle. At 0.14 — the first
 value — it was a front elevation and the round window was edge-on.
 
+**`TREEHOUSE_SCALE` is 1.1733, and it is a group scale rather than a
+rebuild.** It was 1.76, and at that value the model **overhanged the
+desk on two edges and crossed the monitor**; two-thirds of it is what
+brought every one of those margins back positive — see the figures at
+the end of this section before changing anything near it.
+
+Scaling the group is safe in **either** direction only so far, and the
+limit is the same rule either way. `STUD` must never come *down*,
+because under about eight pixels a stud stops reading and the build
+stops being a build — and a group scale takes the stud with it. At
+1.1733 a stud renders at ~0.35 world units against the 0.30 the model
+builds itself at, so there is still headroom, but not much: below
+about 1.0 the pitch itself is what is being cut, and the answer then
+is fewer bricks, not smaller ones, exactly as it was on the three
+rebuilds above.
+
+It is applied about the model's own origin — on the desk top at the
+base plate's centre — so the model grows and shrinks in place rather
+than drifting, and the base plate stays where it was set down. All of
+it is measured: re-run `_canopyfit.mjs` **and** `_tightfit.mjs` after
+touching it, the first because it fails safe and the second because it
+is the truth.
+
 **Everything goes through a batching kit**, keyed by shape *and*
 colour, and nothing reaches the scene until `bake`. Repeated pieces
 come out as one `InstancedMesh` per batch — the base plate's studs
 alone are about 120 instances in one draw call, and the canopy's ~1,030
 flowers are eight meshes, four petal tints plus their pips. The whole
-model is **~2,050 instances in 53 meshes**, which `_canopyfit.mjs`
+model is **~790 instances in 64 meshes**, which `_canopyfit.mjs`
 prints. Two consequences worth knowing: footprints are canonicalised,
 so a 4x2 brick and a 2x4 brick are one geometry and a right angle; and
 studs are not part of a brick, so every stud of a given colour in the
@@ -1632,10 +1803,161 @@ of the maths. `LIMB_PTS` resolves the whole table once at module scope,
 and a gen-0 limb's start comes off the spine by its `tt` rather than
 being written down, so re-shaping the S carries the whole crown.
 
-**Current figures**, all from `_canopyfit.mjs`: top of tree 3.95 above
-the desk top, margin to the desk's +x edge 0.58, to its back edge 1.54,
-and 47px of clearance between the model and the live overlay's right
-edge at 1440x900.
+#### The spare bricks
+
+Four loose pieces on the desk in front of the model, as if left over
+from building it — a 2x4 in `PLANK`, a 2x2 in `PETAL_PINK`, a 1x2 in
+`GRASS` and a two-brick stack (`PLANK_ALT` under a crossed
+`PETAL_PALE`), at four different yaws. They are the one thing on this
+desk that says somebody put the tree together rather than bought it.
+`SPARE_PLAN` is the table; `buildSpareBricks` is the only other export
+`treehouse.js` has, and `disposeTreehouse` frees it along with the
+model.
+
+Four things about them:
+
+- **They are their own group, not part of the model**, added by
+  `scene.js` as a sibling named `spares`. That is a tooling decision as
+  much as a modelling one: `_canopyfit.mjs` measures the model's world
+  box against the desk's, and a brick dropped two units in front of the
+  tree would quietly move the front-edge margin it reports and stop the
+  number meaning what it says. The separation costs a handful of draw
+  calls — these are single pieces, so nothing instances — and keeps
+  `__fit("treehouse")` honest. `__fit("spares")` reads this one.
+- **Their frame is the desk's, not the model's**, with the origin on
+  the desk top at the desk's own centre, so `scene.js` only lifts them
+  by `DESK_TOP_Y` and applies no yaw. The treehouse is turned by
+  `TREEHOUSE_FACING`, but every clearance these have to hold is stated
+  in the desk's frame — so sitting in it means the plan is those
+  coordinates directly rather than the same figures rotated by half a
+  radian. Measured with `_spares.mjs`: **0.98 clear in x of the
+  computer kit's +x extent** (which is the mouse's painted contact
+  shadow — note the z figures quoted beside `TREEHOUSE_Z` are in the
+  *computer's* local frame and the x figures are not), 0.78 to the
+  desk's +x edge and 3.32 to its front. The cord never comes near: it
+  runs x 1.5..4.5. The gap `_tightfit.mjs` prints against the
+  *treehouse* is **+0.42**, so the bricks sit in the open in front of
+  the canopy, which is where they were placed.
+
+  **These four figures are the budget `SPARE_SCALE` spends.** The
+  binding one is the treehouse, and it is the one to watch because
+  `_spares.mjs` reads the *conservative* box there: at 0.973 it
+  printed **-0.01** — essentially touching — against a true +0.34,
+  and nothing intersected even then, since the canopy's +z reach at
+  that point is two units above the desk and the bricks are under one
+  tall. At 0.7784 it prints **+0.07**, so both readings are positive
+  and the fail-safe one has slack again. Past about 0.95 that stops
+  being true.
+
+  The z gap went to -0.57 while `TREEHOUSE_SCALE` was 1.76, which put
+  the bricks in the canopy's shade rather than in front of it.
+  Shrinking the model bought it back.
+- **`SPARE_SCALE` is 0.7784, carried in each piece's own matrix rather
+  than on the group.** The group's origin is the desk's centre, so
+  scaling there would walk all four bricks a share of seven units back
+  toward the mouse — a move dressed up as a resize. In the matrix the
+  batch key is untouched, so these still share geometry with the
+  build's own bricks and are simply instanced at their own size. The
+  stud offsets take the scale in the brick's own space, before the
+  pose; left on the full-size grid they would walk off the ends of a
+  resized brick.
+
+  **The number to compare it against is not 1.** The model carries
+  `TREEHOUSE_SCALE` as a group scale and these carry none, so what
+  decides whether a loose piece reads as the same part as the ones in
+  the build is the *ratio*. It has been 0.556 against 1.76 (~32%,
+  where a leftover was a third the size of what it was left over
+  from), 0.973 against 1.1733 (~83%), and is now 0.7784 against
+  1.1733 — **~66%**, a brick that belongs to the build while sitting
+  a little smaller than one in it. **If `TREEHOUSE_SCALE` moves again
+  this ratio moves with it** and nothing recomputes it; the two
+  constants are independent and only this note ties them together.
+- **One is tipped onto its side.** Three bricks lying flat at three
+  angles still reads as an arrangement; a brick resting on a long face
+  is the one that reads as dropped. `tip` rolls it a quarter turn about
+  its own length, which puts its studs out sideways and its resting
+  height at half its width. Its footprint is kept w <= d so the
+  canonicalising quarter turn in `looseBrick` never lands on top of the
+  roll.
+- **They cast for real.** Everything else small on this desk is
+  grounded with a painted contact shadow, because the key's shadow map
+  spreads 2048 texels over +/-80 world units and the hairline under a
+  base plate never lands on one. A brick is a different case: it stands
+  a third of a unit tall under a key raking in at 13 degrees, so it
+  throws about a unit and a half of shadow across the walnut — twenty
+  texels of it, soft but unmistakably there.
+
+`looseBrick` is what places them: the kit's own `brick` is y-up and
+yaw-only, since it puts a piece on top of whatever is already there,
+which is what building *is*. A piece lying where it fell needs a full
+quaternion. It canonicalises footprints the same way and multiplies the
+quarter turn on the **right**, so it happens in the brick's own frame
+before the pose does — which is what keeps it correct for a piece that
+is also rolled onto its side. The batch keys are the kit's, so a loose
+2x4 in a colour the build already uses reuses that geometry.
+
+**Current figures, and the model fits the desk.** Top of tree **4.62**
+above the desk top, which is **70% of the monitor's 6.60** — back
+under the 6.25 that once read as a rival to the thing a visitor is
+meant to press. Every margin is positive on the true box:
+
+| | `_canopyfit.mjs` | `_tightfit.mjs` (true) |
+|---|---|---|
+| margin to the desk's +x edge | -0.00 | **+0.53** |
+| margin to the desk's back edge | +0.84 | **+1.05** |
+| clearance to the live overlay @1440x900 | +25px | **+45px** |
+| gap from the spare bricks in z | — | **+0.51** |
+
+**The +x edge is the one with no slack, and the two columns disagree
+about it on purpose.** The conservative box lands exactly on the
+desk's edge while the true box is half a unit clear — which is the
+`Box3.setFromObject` over-report described below, not a disagreement
+about where the bricks are. Read it as: the model passes on its real
+geometry and has nothing spare on the fail-safe check. Anything that
+moves the canopy outward on that side wants both scripts run again.
+
+The spares gap flipping positive is the second thing the pass bought
+back. At 1.76 it was **-0.57** — the canopy's +z overhang passed two
+units above the front brick, so nothing touched, but the bricks sat in
+its shade rather than in front of it, which is not where they were
+placed. They are back in the open.
+
+**What this replaced.** The scale was 1.76, which was asked for after
+the height ceiling had been flagged and was recorded rather than
+quietly corrected: at that value the true-box margins were **-0.64**
+and **-0.81** with the crown **-11px** over the glass, blossom hung
+past the walnut into empty air on the right and the back, and the
+crown crossed in front of the CRT's right flank. Re-placing could not
+have rescued it, and the arithmetic is worth keeping because it bounds
+any future increase: the free corridor on that half of the desk runs
+from the computer kit's +x extent (5.7 — the mouse's painted contact
+shadow) to the desk's own edge at 9.75, so **4.05 units wide**. The
+model at 1.76 spanned 6.55 of that, too wide whatever `TREEHOUSE_X`
+was set to, and moving it inboard only drove it further over the
+glass. At 1.1733 it spans **4.60** — still wider than the corridor,
+which is why the +x margin is thin rather than comfortable, but it now
+fits because the canopy's overhang clears the desk's edge in y rather
+than in x.
+
+**One framing is still cropped, and it is the portrait one.**
+`_finalshots.mjs` reports the model's NDC box at `x1` **1.25** at home
+on a phone and 1.23 at eye level, against 0.57 on desktop — so a
+sliver of the canopy's right side is outside the frame there. Part of
+that is the conservative box again, but the picture really is clipped.
+It is the same trade the desk's own ends take on a portrait viewport
+and for the same reason — `FRUSTUM_MOBILE` is 37 against 24, so a tall
+narrow frame sees far less world width — and it is better than it was
+at 1.76, not gone. Fixing it properly is a `TREEHOUSE_X` question on
+the portrait breakpoint, not a scale one.
+
+**`_canopyfit.mjs` over-reports the +x edge by about half a unit at
+built size**, and proportionally more as the model scales, because it
+reads `Box3.setFromObject` — which for an `InstancedMesh` takes the
+AABB of a *rotated* AABB, and this model is yawed half a radian. That
+is why its figure and `_tightfit.mjs`'s disagree by 0.76 here. **Keep
+it as the check anyway**: it fails safe, and a conservative bound that
+over-warns is worth more than one that can quietly pass. Just read
+`_tightfit.mjs` beside it before acting, in either direction.
 
 ### Frame rate, and what holds it at 60
 
@@ -1686,9 +2008,47 @@ arms sitting at 16.7 on a machine where they previously sat at 25 is
 itself the evidence that the earlier figure was the machine and not the
 scene.
 
+**Re-measured at `TREEHOUSE_SCALE` 1.76, and the `notree` A/B is what
+the answer rests on.** Desktop **16.7 / 16.7**, mobile **16.7 / 16.7**,
+zero janky frames in either direction on either viewport. The model was
+free at 1.76; it has been free at every scale it has been given, which
+is what a static model under a frozen shadow map costs.
+
+**The scale is 1.1733 now and that figure has *not* been re-measured.**
+It is left unmeasured deliberately rather than assumed away: a group
+scale changes the instance matrices and nothing else — same 789
+instances, same 64 meshes, same geometry, same frozen shadow map — so
+there is no mechanism by which it could cost anything, and a *smaller*
+model shades fewer fragments if it differs at all. But that is a
+prediction, not a reading, and the rule on this branch is that a frame
+time without its A/B beside it is worth nothing. If the number matters,
+run `_perfcheck.mjs` with and without `notree` in one sitting.
+
+That reading took two sittings and the first one is the lesson. At
+1.21 the desktop arm measured **21.3 / 20.6 with 4 and 6 janky**, which
+looks exactly like a regression — until `notree` in the same sitting
+came back **21.3 / 21.2 with 3 and 6**, identical, and the whole scene
+measured 16.6 again an hour later with a *larger* model in it. The
+machine was busy. This is the second time that trap has been walked
+into on this branch: **never read a frame time without the A/B beside
+it**, because a number compared against one written down earlier
+compares two machines as much as two scenes.
+
+**Measured after the model was rebuilt as a brick build** — the canopy
+voxelised onto the stud grid, the limbs stepped, the spare bricks added
+— and it was free then too: **desktop 16.8 / 16.8 median (in / out),
+mobile 16.7 / 16.7, zero janky frames either direction on either
+viewport**, worst frame 27.4ms. Instance count came *down* with the
+rebuild, from ~2,050 to ~790, because the canopy's interior cull more
+than pays for the extra plate footprints; mesh count went up 51 to 64
+for the same reason, and 64 static draw calls under a frozen shadow map
+cost nothing per frame. One mobile zoom-out leg showed a single 321ms
+outlier that did not reproduce on a second run — which is the harness,
+the same way the headed-click hitch below is.
+
 **Re-measured after the canopy was rebuilt as clumps on a fork tree,
 and again after the whole model was rebuilt against the cherry-blossom
-reference, and it is still free.** The fork-tree rebuild roughly
+reference, and it was free then too.** The fork-tree rebuild roughly
 doubled the blossom — ~1,380 flowers against ~700 — and came back 16.7
 / 16.7 median (in / out) with the model and the same with `notree`.
 The reference rebuild — curve-driven trunk and roots, a three-stud
@@ -1715,12 +2075,11 @@ in order of how much each was worth:
    `needsUpdate = true` saves re-rendering a 2048² VSM depth pass with
    16 blur samples on every frame. **Anything animated back into the
    scene has to either not cast, or this has to be reverted.** Two
-   things already live inside that rule. The orbit moves the *camera*,
-   and a shadow map is in the light's space, not the camera's. And the
-   treehouse's drifting petals move every frame with `castShadow =
-   false`, which keeps them out of the shadow pass entirely — a moving
-   caster would bake its shadow into that one frame and then drag the
-   stale print around the floor for the rest of the session.
+   thing already lives inside that rule: the orbit moves the *camera*,
+   and a shadow map is in the light's space, not the camera's. The
+   treehouse once had drifting petals, which were kept out of the
+   shadow pass with `castShadow = false` for exactly this reason; they
+   were removed, and the model is static geometry again.
 3. **`MAX_DPR` is 1.5, not 2.** The scene shades through GTAO on a
    full-screen composite, so cost goes with the square of this; on a 2x
    display the difference is not visible on matt plastic and a blurred
@@ -1767,8 +2126,8 @@ or the file is fetched twice.
   conversion the renderer would otherwise do, so the lighting calibration below
   holds on both paths.
 
-`window.__scene`, `window.__composer` and `window.__fit` are debug handles for
-the review scripts.
+`window.__scene`, `window.__camera`, `window.__composer` and `window.__fit` are
+debug handles for the review scripts.
 
 ## Notes / known rough edges
 

@@ -32,7 +32,19 @@ const SCREEN_INK   = '#1b47a3';  // the floor blue, reused on the screen
 /* --- Proportions ----------------------------------------- */
 export const MON_W = 6.4, MON_H = 5.4;
 const BEZEL_D = 1.35;
-const BACK_D = 4.2, BACK_TAPER = 0.42;
+
+/* The funnel is 35% shorter than it was (4.2), on request: at a side
+   view the machine ran nearly the full depth of the desk and there was
+   no walnut visible behind it. It is shortened **from the back only** —
+   `FUNNEL_FRONT_Z` is an offset from the bezel rather than a fraction
+   of the funnel's own depth, so the bezel, the glass and the
+   `SCREEN_TARGET` the whole fly-in is read off do not move. Both vent
+   panels are placed proportionally against it (see `buildMonitor`), so
+   the flank reads exactly as it did, scaled in z. */
+const BACK_D = 2.73, BACK_TAPER = 0.42;
+const FUNNEL_W = MON_W * 0.88, FUNNEL_H = MON_H * 0.86;
+const FUNNEL_FRONT_Z = -BEZEL_D / 2 + 0.1;   // fixed; see above
+
 export const SCREEN_W = 5.1, SCREEN_H = 3.9;
 export const MON_Y = 3.85;       // centre height of the monitor body
 export const OPEN_CY = 0.26;     // screen opening rides above centre
@@ -442,6 +454,15 @@ function taperedBox(w, h, d, radius, taper) {
   return track(geo);
 }
 
+/* The taper factor at a given distance behind the funnel's front face.
+   Nothing on the funnel's surface can be placed by a written-down
+   figure: shorten the funnel and the same inset lands on a narrower,
+   steeper part of it, which leaves a vent panel floating off the
+   flank. `t` runs 0 at the back to 1 at the front, as in taperedBox. */
+function funnelK(inset) {
+  return THREE.MathUtils.lerp(BACK_TAPER, 1, 1 - inset / BACK_D);
+}
+
 /* Rounded rectangle as a Shape, so the bezel can be extruded with a
    real hole in it — a solid box plus a dark panel cannot give a recess,
    the panel just covers the screen. */
@@ -664,8 +685,8 @@ function buildMonitor(body, backBody, dark) {
 
   /* Deep tapered funnel behind the bezel. */
   const back = new THREE.Mesh(
-    taperedBox(MON_W * 0.88, MON_H * 0.86, BACK_D, 0.45, BACK_TAPER), backBody);
-  back.position.z = -BACK_D / 2 - BEZEL_D / 2 + 0.1;
+    taperedBox(FUNNEL_W, FUNNEL_H, BACK_D, 0.45, BACK_TAPER), backBody);
+  back.position.z = FUNNEL_FRONT_Z - BACK_D / 2;
   back.castShadow = true;
   back.receiveShadow = true;
   g.add(back);
@@ -811,22 +832,44 @@ function buildMonitor(body, backBody, dark) {
   badge.position.set(-0.55, panelY + 0.02, BEZEL_D / 2 + 0.015);
   g.add(badge);
 
-  /* Side vents on the funnel, as in crt-computer-big.webp. */
-  const ventT = 0.78;                                   // how far forward on the funnel
-  const ventK = THREE.MathUtils.lerp(BACK_TAPER, 1, ventT);
-  const ventX = (MON_W * 0.88 / 2) * ventK - 0.02;
-  const ventZ = back.position.z - BACK_D / 2 + BACK_D * ventT;
+  /* Side vents on the funnel, as in crt-computer-big.webp.
+
+     A vent panel is flat and the flank it sits on slopes, so the two
+     can only agree over a limited run of z — and how far off the panel
+     ends up is set by the slope, which steepens as the funnel is
+     shortened. So the panel's **depth is a share of BACK_D** rather
+     than a fixed 1.5: a 35% shorter back carries a proportionally
+     shorter grille and the slats sit as flush as they ever did. Its x
+     still comes off the taper at its own depth. Only `VENT_GAP` is
+     absolute, and it is measuring against something that does not
+     move — the bezel's rear wall, which the panel's front edge has to
+     stay behind. */
+  const VENT_GAP = 0.17;
+  const ventD = BACK_D * 0.357;
+  const ventInset = VENT_GAP + ventD / 2;
+  const ventK = funnelK(ventInset);
+  const ventX = (FUNNEL_W / 2) * ventK - 0.02;
+  const ventZ = FUNNEL_FRONT_Z - ventInset;
   for (const side of [-1, 1]) {
-    const v = buildVents(backBody, dark, 1.5, 2.2, 11);
+    const v = buildVents(backBody, dark, ventD, 2.2, 11);
     v.rotation.y = side * Math.PI / 2;
     v.position.set(side * ventX, 0.2, ventZ);
     g.add(v);
   }
 
-  /* And a vent strip across the top of the funnel. */
-  const top = buildVents(backBody, dark, 2.6, 1.3, 8);
+  /* And a vent strip across the top of the funnel, placed the same way.
+     Both of its figures were proportional to the old depth already —
+     the taper factor they land on comes out at the 0.779 they were
+     tuned against — so the strip lies on the top surface at the same
+     place on it as before. The slat count comes down with the depth
+     instead of the pitch: 8 slats in 0.85 is a 0.04 slat, which is
+     under a pixel at this camera once foreshortened. */
+  const topD = BACK_D * 0.31;
+  const topInset = BACK_D * 0.381;
+  const top = buildVents(backBody, dark, 2.6, topD, 5);
   top.rotation.x = -Math.PI / 2;
-  top.position.set(0, MON_H * 0.86 * 0.5 - 0.5, -BEZEL_D / 2 - 1.5);
+  top.position.set(0, FUNNEL_H / 2 * funnelK(topInset) + 0.014,
+    FUNNEL_FRONT_Z - topInset);
   g.add(top);
 
   return {

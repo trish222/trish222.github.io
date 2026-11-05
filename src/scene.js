@@ -25,7 +25,7 @@ import { buildDesk, disposeDesk, DESK_TOP_Y } from "./desk.js";
 /* The brick-built cherry blossom treehouse standing on the desk. Its
    own module for the same reason the desk is: it is a self-contained
    object with its own origin on the surface it stands on. */
-import { buildTreehouse, disposeTreehouse } from "./treehouse.js";
+import { buildTreehouse, buildSpareBricks, disposeTreehouse } from "./treehouse.js";
 /* The ground is its own module — colour, size, fog and the wordmark
    drawn across it all live there, so it can be swapped whole without
    touching the camera. */
@@ -210,9 +210,19 @@ const PROJ_Z = Math.sin(ELEVATION) * Math.sin(AZIMUTH); // screen y per unit alo
    figure likewise is not the keyboard's front edge (6.2) but the front
    of its painted contact shadow, which is a quad lying on the desk and
    would otherwise hang off it in mid-air. */
-const KIT_Z_MIN = -4.77;   // the back of the funnel
 const KIT_Z_MAX = 7.2;     // the front of the keyboard's contact shadow
-const COMPUTER_Z = -(KIT_Z_MIN + KIT_Z_MAX) / 2;
+
+/* The kit is placed by that **front** figure, not by centring it, and
+   the difference is the whole point of the shorter funnel. Centring is
+   where the number came from: at the funnel's old 4.2 depth the kit ran
+   -4.77..7.2 and sat square on the desk at z -1.215. The funnel now
+   ends at -3.31, and re-centring the shorter kit would walk the machine
+   0.73 back — taking the bezel, the glass and `SCREEN_TARGET` with it,
+   which is the one thing the fly-in cannot have move. So the front edge
+   is held where it was and the 1.47 the funnel gave up all becomes
+   clear walnut behind the monitor. */
+const KIT_FRONT_Z = 5.985;
+const COMPUTER_Z = KIT_FRONT_Z - KIT_Z_MAX;
 
 /* --- Where the treehouse is set down ---------------------
    On the desk to the **right of the monitor as the home view sees
@@ -246,6 +256,31 @@ const TREEHOUSE_Z = -2.1;
    effectively a front elevation — the flank, and with it the round
    window, was edge-on. */
 const TREEHOUSE_FACING = AZIMUTH - 0.50;
+/* Two-thirds of the 1.76 this was set to, on request: at that value the
+   model stood 105% of the monitor's height, hung off the walnut on the
+   +x and back edges, and its crown crossed in front of the CRT's right
+   flank — so the one object a visitor is meant to find and press was
+   partly behind a tree. Every one of those is measured, and at 1.1733
+   every one of them comes back inside the furniture; see the figures
+   under "Placement" in CLAUDE.md.
+
+   It is a group scale rather than a rebuild, which is safe in this
+   direction only so far: the note in treehouse.js is that STUD must
+   never come *down*, because under about eight pixels a stud stops
+   reading and the build stops being a build. Scaling the group down
+   takes the stud with it, so this is the same argument — at 1.1733 a
+   stud is ~0.35 world units against the 0.30 the model builds itself
+   at, still above the pitch that has survived three rebuilds, but
+   there is not much room left under this. Below about 1.0 the pitch
+   itself is what is being cut, and the answer then is fewer bricks,
+   not smaller ones.
+
+   Applied about the model's own origin, which sits on the desk top at
+   the base plate's centre, so the model shrinks in place rather than
+   drifting and the base plate stays where it was set down. Re-run
+   `_canopyfit.mjs` *and* `_tightfit.mjs` after touching this — the
+   first fails safe on a yawed InstancedMesh, the second is the truth. */
+const TREEHOUSE_SCALE = 1.1733;
 
 /* Lighting once the HDRI is in play — see the note on the PI factor below. */
 const ENV_INTENSITY = 0.7;
@@ -640,13 +675,18 @@ function buildScene() {
   treehouse.root.name = "treehouse";
   treehouse.root.position.set(TREEHOUSE_X, DESK_TOP_Y, TREEHOUSE_Z);
   treehouse.root.rotation.y = TREEHOUSE_FACING;
-  /* Its falling petals are the only moving thing in the room, and the
-     only thing stepping them is the render loop below — which reduced
-     motion never starts. Hidden here rather than at that early return,
-     so the one static frame is drawn without them instead of being
-     drawn with them and then redrawn. */
-  treehouse.drift.group.visible = !prefersReducedMotion();
+  treehouse.root.scale.setScalar(TREEHOUSE_SCALE);
   s.add(treehouse.root);
+
+  /* The leftovers from building it, lying on the desk in front. Their
+     own group and their own frame — the desk's, unyawed — so the
+     clearances they hold (the mouse, its cord, the base plate) are
+     stated in the coordinates they were measured in, and so
+     `__fit("treehouse")` still measures only the model. */
+  const spares = buildSpareBricks();
+  spares.name = "spares";
+  spares.position.set(0, DESK_TOP_Y, 0);
+  s.add(spares);
 
   /* One low directional light — the shallow angle is what stretches the
      shadow out long and diagonal across the letters.
@@ -2157,6 +2197,11 @@ export async function initScene(canvas) {
      at a point of the fly-in and draws it, which is how the head-on
      framing gets tuned without trying to catch it mid-animation. */
   window.__scene = scene;
+  /* Exposed for the same reason the scene is: a review script that
+     wants to project its own points — `_tightfit.mjs` reads the
+     model's true corners rather than the conservative box `__fit`
+     reports — needs the camera `__fit` projects against. */
+  window.__camera = camera;
   window.__composer = composer;
   window.__stillReady = () => !!stillCanvas;
   /* Where the furniture lands in the frame, in NDC — ±1 is the edge.
@@ -2358,9 +2403,7 @@ export async function initScene(canvas) {
   });
 
   /* Reduced motion: one static frame and no loop. The screen is still
-     clickable — the fly-in just arrives instead of flying. The
-     treehouse's falling petals go with the loop; they were hidden back
-     in buildScene, before the first frame was drawn. */
+     clickable — the fly-in just arrives instead of flying. */
   if (prefersReducedMotion()) return true;
 
   /* Vite folds `import.meta.env.DEV` to `false` when building, so this
@@ -2393,10 +2436,6 @@ export async function initScene(canvas) {
     /* The controls own the camera at the establishing shot and nowhere
        else, so this is a no-op from the moment a flight starts. */
     tickOrbit(dt);
-    /* The treehouse's falling petals — the only thing in the room that
-       moves on its own. They do not cast, so the frozen shadow map is
-       untouched by them; see buildDrift in treehouse.js. */
-    treehouse.drift.update(dt);
     const k = 1 - Math.exp(-HOVER_RATE * dt);
     hover.value += (hover.target - hover.value) * k;
     computer.setScreen(hover.value);
