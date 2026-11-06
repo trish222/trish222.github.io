@@ -28,6 +28,12 @@ const KEY_MOD      = 0xc2b9a1;   // the wide keys are a shade darker, as they us
 const CABLE        = 0x978d78;   // darker than the shells, or it reads as a scratch on the floor
 const SCREEN_TEAL  = 0x0b7a76;
 const SCREEN_INK   = '#1b47a3';  // the floor blue, reused on the screen
+/* The tube and the light coming off it. The spill is the colour the
+   brief names; the emissive is the same hue held well back, because it
+   multiplies the drawn picture rather than replacing it — see the
+   screen material for what full saturation did to the login bitmap. */
+const SCREEN_SPILL = 0x5fe3d4;
+const SCREEN_EMISSIVE = 0xb8f2ea;
 
 /* --- Proportions ----------------------------------------- */
 export const MON_W = 6.4, MON_H = 5.4;
@@ -239,11 +245,15 @@ function drawPicture(w, h, greeting) {
   u.fillStyle = '#ffffff';
   u.fillRect(bx, by, bw, bh);
   if (greeting) {
-    /* Same type as the floor, so the screen reads as part of the scene.
-       The webfont is already resident — initScene awaits it before the
-       computer is built. */
+    /* The one typeset thing left in the 3D scene. It used to echo the
+       floor's wordmark, which is why it is a serif at all; the floor
+       is a plank diorama now and the rug's name is gone, so this is
+       the whole reason Playfair is still preloaded. The face is
+       resident because initScene awaits `loadScreenFont` before the
+       computer is built — without that it silently sets in Georgia,
+       and the fallback looks close enough to pass review. */
     u.fillStyle = SCREEN_INK;
-    u.font = `500 ${Math.round(bh * 0.46)}px "Playfair Display", Georgia, serif`;
+    u.font = GREETING_FONT(Math.round(bh * 0.46));
     u.textAlign = 'center';
     u.textBaseline = 'middle';
     u.fillText(greeting, bx + bw / 2, by + bh / 2);
@@ -310,6 +320,22 @@ function compositePicture(ui, w, h) {
    greeting come up like a CRT settling instead of a hard cut. The
    overlapping parts of the two pictures are identical, so only the
    window's body actually changes. */
+/* Playfair is declared in src/style.css and preloaded from index.html,
+   so the fetch starts with the entry stylesheet rather than with this
+   lazy chunk. The greeting is drawn with canvas 2D into a texture, so
+   the face has to be resident before that draw — a canvas does not
+   re-draw itself when a webfont arrives the way laid-out text does. */
+const GREETING_FONT = (size) =>
+  `500 ${size}px "Playfair Display", Georgia, serif`;
+
+export async function loadScreenFont() {
+  try {
+    await document.fonts.load(GREETING_FONT(100));
+  } catch {
+    /* the serif stack is a fine fallback */
+  }
+}
+
 function screenDisplay() {
   const w = 768, h = 576;
   const idle = compositePicture(drawPicture(w, h, null), w, h);
@@ -732,13 +758,31 @@ function buildMonitor(body, backBody, dark) {
   well.receiveShadow = true;
   g.add(well);
 
-  /* The picture itself — emissive, so it reads as a lit CRT. */
+  /* The picture itself — emissive, so it reads as a lit CRT.
+
+     **The emissive is a teal now, not white.** It multiplies the
+     drawn picture, so what this does is pull every phosphor on the
+     tube toward the same hue as the light spilling off it — which is
+     what a CRT in a dark room actually looks like, and what makes the
+     tube and its spill read as one source rather than two.
+
+     It is a *pale* teal rather than the point light's own #5FE3D4,
+     and that was measured against the fly-in rather than chosen by
+     eye. The same map carries the bitmap of the real login screen for
+     the length of the flight (see `setStill`), and at full saturation
+     the dialog, its title bar and its text all went teal — a
+     monochrome terminal, three seconds before the live HTML arrives
+     in full colour. At this value the picture keeps its own hues and
+     the whole tube still reads teal. */
   const display = screenDisplay();
   const screenMat = track(new THREE.MeshStandardMaterial({
     color: 0x000000,
-    emissive: 0xffffff,
+    emissive: SCREEN_EMISSIVE,
     emissiveMap: display.texture,
-    emissiveIntensity: 1.25,
+    /* Up from 1.25: the tube is one of three lights in the room now
+       rather than a bright object in a lit one, so it has to hold its
+       own against a 2048-texel moon. */
+    emissiveIntensity: 1.9,
     roughness: 0.9,
     metalness: 0,
   }));
@@ -746,10 +790,38 @@ function buildMonitor(body, backBody, dark) {
   screen.position.set(0, OPEN_CY, BEZEL_D / 2 - 0.3);
   g.add(screen);
 
-  /* A lit tube spills light onto its own bezel. Small range and no
-     shadow, so it only warms the plastic right around the opening. */
-  const screenGlow = new THREE.PointLight(0x8ee8e0, 2.1, 5.5, 2);
-  screenGlow.position.set(0, OPEN_CY, BEZEL_D / 2 + 0.55);
+  /* **The tube's own light, which now has to reach the keyboard.**
+     It used to warm the plastic around the opening and nothing else —
+     2.1 over a 5.5 range at `decay` 2, which put the keyboard, 5.2
+     units away, past the cutoff entirely. In a night room lit by three
+     sources that is the single most valuable thing it could be doing:
+     a teal wash across the keys and the walnut in front of them is
+     what says the screen is on.
+
+     Three figures, and two of them are deliberately unphysical:
+
+     - **`decay` is 1.25, not 2.** A tube is a 5x4-unit area source and
+       this is a point; inverse-square from a point put 75x more light
+       on the bezel than on the keyboard, so the bezel blew out long
+       before the keys saw anything. At 1.25 that ratio is about 8:1,
+       which is roughly what the real area source would give.
+     - **The range is 11**, which is short where it matters: measured
+       from here it dies about a unit before the desk's +x edge (9.75
+       from the machine's own axis) and never reaches the floor or
+       either wall. It does just graze the treehouse, which is correct
+       — it stands on the same desk, two units nearer than the edge.
+     - **It sits 0.9 in front of the glass**, on the screen's own axis
+       rather than below it. Dropping it toward the desk lit the keys
+       harder but made the bezel glow asymmetric, and the bezel already
+       has `recessShadowTexture` describing where its lip shades the
+       picture — two accounts of the same thing, disagreeing.
+
+     `intensity` is written here for the benefit of anything that reads
+     the light before the first frame; scene.js owns the running value
+     (SCREEN_GLOW times the picture's brightness) and writes it at
+     build and on every tick. */
+  const screenGlow = new THREE.PointLight(SCREEN_SPILL, 8.5, 11, 1.25);
+  screenGlow.position.set(0, OPEN_CY, BEZEL_D / 2 + 0.9);
   g.add(screenGlow);
 
   /* Slightly curved glass in front of it, picking up the environment. */

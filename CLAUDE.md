@@ -88,7 +88,8 @@ src/floor.js      the ground: its colour, its size, its fog, the wordmark on it
 src/computer.js   the CRT machine, built from primitives
 src/desk.js       the steel tanker desk it stands on, likewise
 src/treehouse.js  the brick-built cherry treehouse, and the spare bricks beside it
-public/env/       CC0 studio HDRI used as the environment map
+src/nightwindow.js  the window in the left wall: joinery, the night sky on the glass, the rain
+public/env/       CC0 studio HDRI — vendored, no longer loaded (see "The night lighting")
 public/textures/  CC0 walnut scan for the desk top, vendored and relit
 src/style.css     Win95 design tokens (:root vars) + all component CSS
 src/perf.js       dev-only stats.js FPS meter; never reaches production
@@ -246,15 +247,13 @@ the key and hemisphere tints were neutralised along with it. That second part
 matters: a warm key over a neutral ground still renders as cream, so the colour
 constant alone does not control how grey the floor reads.
 
-One `DirectionalLight` sits ~13° above the floor — the shallow angle is what makes
-the shadow long and diagonal — plus ambient and hemisphere fill. Its shadow camera
-is ±80, which bounds the caster set and the shadow it throws with room to spare —
-see "An endless floor" for the measurement, and for why that box is not
-camera-dependent however much floor comes into frame. **Light
-intensities look ~3x too high because three's physical lighting divides them by
-PI.** They are tuned so the lit ground lands on `CREAM` and the shadowed ground sits at
-~0.72 of it, matching the tonal drop in the reference. Changing one means re-checking
-the others.
+**The daylight rig this paragraph used to describe is gone** — a warm
+key ~13° above the floor at ±80 of shadow box, an ambient, a
+hemisphere and a studio HDRI, calibrated so the lit ground landed
+exactly on the old `CREAM`. All five are replaced; see "The night
+lighting" below for the three that replaced them. The one thing worth
+carrying forward is the unit: **light intensities look ~3x too high
+because three's physical lighting divides them by PI.**
 
 ### An endless floor, and what the 2° view costs
 
@@ -956,6 +955,31 @@ off the picture. Shoot it after touching anything the flat view can see: the
 floor's size or fog, the camera's near and far planes, or the desk's
 undersides. The front-on swing is −37 because home is 37° round from the
 front.
+
+`_lightshots.mjs` covers the night rig, on desktop and mobile. Three
+jobs plus an optional fourth, and the first two are what a dark
+screenshot cannot do: whether the picture is moody rather than black
+(`window.__histogram` over the non-void pixels, plus `__probes` and
+`__pixel`); whether the shadow box still covers what casts and what
+receives (`window.__shadowfit`, where a negative margin now means a
+patch of floor flooded with moonlight rather than merely unshadowed);
+and crops of the three places acne would show — the desk's drawer
+fronts, the contact under the monitor's base, and the window's sash
+inside its reveal. `node _lightshots.mjs sweep` re-runs the two
+searches the rig was set by — the six moon aims and the
+hemisphere/exposure/env grid — off one page load through
+`window.__lights`. It is the method, kept runnable, not a test.
+
+`_winshots.mjs` covers the window on the left wall, on desktop /
+mobile / reduced motion. Four jobs, and the first two are the ones a
+screenshot cannot do: whether the assembly lands in frame
+(`window.__fit("wall-window")`, the eight projected corners of casing,
+sill and all — the portrait figure is the one to watch); whether the
+rain is actually running (`window.__rain()`, and under reduced motion
+whether its clock stays at zero while the shot still shows streaks);
+whether it fades with its wall at the front and the left clamp; and a
+crop of the window taken off its own NDC box, so the crop follows it
+as it is re-tuned.
 
 `_orbit.mjs` covers the camera leash, on desktop / mobile / reduced
 motion. It drags with real pointer events so everything goes through
@@ -1959,6 +1983,390 @@ it as the check anyway**: it fails safe, and a conservative bound that
 over-warns is worth more than one that can quietly pass. Just read
 `_tightfit.mjs` beside it before acting, in either direction.
 
+### The window on the left wall
+
+`src/nightwindow.js` builds a four-pane sash in a painted casing, with
+a night sky behind the glass and rain running down it. Its own module
+for the same reason the desk and the treehouse are: it is a
+self-contained object with its own origin on the surface it is fixed
+to. `src/room.js` places it and nothing else in the scene knows it
+exists.
+
+**Local space is the wall panel's.** x across the opening, 0 at its
+centre; y up, **0 at the sill line**; z = 0 the wall's *inner* face,
+with the thickness running back to -`WALL_T`. That is exactly the
+frame `buildWallPanel` builds in, so room.js only has to place the
+group at the opening's centre and the two cannot disagree about which
+way the wall faces.
+
+**The opening is a real hole, and the wall field stopped being a
+box to make it one.** With a window in it the field is an
+`ExtrudeGeometry` with a `Path` hole — the same decision
+`computer.js` makes for the bezel, and for the same reason: a panel
+plus a dark inset cannot make an opening, it can only cover one. The
+alternative was four boxes around the opening, which is easier to
+write and wrong in a way that shows: each box carries its own 0..1
+UV, so four pieces of different sizes crop the shared noise field
+differently and the lattice breaks at every joint. Extruding puts the
+UVs in world units instead, so the grain runs continuously round the
+opening — which is why the field's `map.repeat` is `1 / 9` on the
+windowed wall against `width / 9` on the plain one. **Both spellings
+mean one noise lattice per 9 world units**; they have to, or a wall
+with a window reads at a different grain from the one without.
+
+**The size is set by the top of the frame, not by the proportion.**
+The opening is 8 x 6.4 with its sill at 9.4, and the height came down
+from 7.0 because at that value the casing's head landed at NDC y
+**0.95** at home and **0.97** at the right clamp — in shot, but with
+3% of the frame to spare, which is not a margin. At 6.4 it is 0.88,
+and the panes lost nothing worth having (3.86 x 3.06 against
+3.86 x 3.36). The sill clears the wainscot's cap rail (7.88) and sits
+level with the desk top (9), so the opening is the one large bright
+area above the desk's left end rather than something half-hidden
+behind the machine.
+
+**The placement is set back along -z, and that is a portrait
+decision.** Screen-x runs roughly `0.8x - 0.6z` at this azimuth, so
+moving the window *back* walks it toward the middle of the frame.
+`WINDOW_Z` is -2.0, which is as far as it goes: the opening is 8 wide,
+the back corner is at z -9, and the casing, the sill's ears and the
+back wall's own thickness have to live in the 3 units that leaves.
+
+**It is cropped on a phone anyway, and that is the same trade the
+desk's ends take.** `_winshots.mjs` reports the assembly's NDC box at
+**-1.31..-0.57** at home on a 390x844 frame, against -0.58..-0.24 on
+desktop — so about 58% of it is in shot there, the screen-right half.
+`FRUSTUM_MOBILE` is 37 against 24, so a tall narrow frame sees far
+less world width and the left wall is the first thing it loses. What
+*was* fixed is the moon: it sits at pane UV **0.70**, in the
+upper-right pane, because the pane's +u runs toward world -z, which
+is screen right. At 0.30 it was whole on desktop and cut off on a
+phone.
+
+**It fades with its wall and the cutaway was not told about it.** The
+window is a child of the left wall panel and its materials join that
+panel's list, so `updateWallFade` dims it and the group's `visible`
+flag culls it — glass, rain and joinery together — when the camera
+comes round behind the wall. Nothing in room.js's fade code mentions
+the window.
+
+#### The glass
+
+The sky is drawn once into a canvas and used as an **unlit** `map`:
+gradient (`#141A33` overhead to `#2B3560` at the horizon), a thinning
+scatter of stars, a moon with a wide weak halo and three soft maria,
+then two ranks of skyline — a lighter hazed rank behind and a nearly
+black one in front carrying the lit windows. A faint diagonal sheen
+over the lot is what makes it glass rather than a hole; past about
+0.1 alpha it stops reading as a reflection and starts reading as a
+smear.
+
+`MeshBasicMaterial`, not `MeshStandard`, and that is the point: the
+sky does not dim with the room. It is the brightest thing in the
+picture and the only surface here meant to look like a light source.
+The seeds are fixed, so the skyline and the stars are identical on
+every load — a city that rearranges itself on refresh cannot be
+art-directed.
+
+**One sheet of sky with bars over it, not four panes.** That is how a
+four-pane sash is actually glazed, and it is what keeps the skyline
+continuous across the mullion instead of stepping at it.
+
+#### The rain, and why it is a patched material rather than a shader
+
+Streaks are computed in the fragment shader from the pane's own
+coordinates: no geometry, no texture, no per-frame upload beyond a
+single float. Two layers, near and far, each specified as a column
+count across the pane and a run count up it — so the widths are
+resolution-independent and the pane can be resized without re-tuning
+them.
+
+**It is injected into a `MeshBasicMaterial` through
+`onBeforeCompile`, and a raw `ShaderMaterial` would have been
+wrong.** A ShaderMaterial gets none of three's fragment epilogue — no
+`tonemapping_fragment`, no `colorspace_fragment`, no fog — and this
+scene has an operator on one render path and `OutputPass` doing the
+same job on the other (see `src/tonemap.js`). The rain would have
+come out a different colour on desktop than on mobile, and unfogged
+on both. Patching a built-in material keeps all of it, and `opacity`
+stays the plain uniform the cutaway writes, which is what makes the
+fade free.
+
+Two details in the injection are deliberate. The pane coordinate is
+derived from `position` rather than `uv`, because a
+`MeshBasicMaterial` with no maps on it does not declare the uv
+attribute and asking for one by defining `USE_UV` pulls in machinery
+nothing here uses. And the uniform object lives at module scope and
+is handed back on every compile, because `onBeforeCompile` runs again
+whenever the program cache key changes — `window.__tonemap` switching
+the operator is exactly that.
+
+**Reduced motion has two halves and only the first is load-bearing.**
+`scene.js` runs no render loop under `prefers-reduced-motion`, so
+`tickRain` is never called and the glass is simply frozen — which is
+why the shader is written to look like rain at `uTime` 0 rather than
+resolving into one: every column carries its own phase offset, so the
+opening frame is already a scatter. `RAIN_SLOW` is the second half, a
+0.12 factor that applies if a loop ever does run there — a crawl
+rather than a stop, so the glass still reads as wet without anything
+streaking across it. `window.__rain()` reports which is in force, and
+`_winshots.mjs` checks the clock really does stay at zero.
+
+`window.__rain(speed)` re-tunes the fall on a live page, in cell-runs
+per second, which is how the streaks were set without a rebuild per
+candidate.
+
+**Not measured for frame rate.** It adds about fourteen static draw
+calls under the frozen shadow map and one small transparent pass over
+the pane, so there is no mechanism by which it should cost anything —
+but that is a prediction, not a reading, and the rule on this branch
+is that a frame time without its A/B beside it is worth nothing. Run
+`_perfcheck.mjs` if the number matters.
+
+### The night lighting
+
+**Three sources and nothing else.** The daylight rig had five — a warm
+key, an `AmbientLight`, a hemisphere, a studio HDRI and the tube — and
+the first two are *gone* rather than dimmed. An ambient light is a flat
+lift with no direction in it, which is exactly what a night room must
+not have: it is what makes a dark scene read as a grey scene.
+
+| | colour | intensity | what it does |
+|---|---|---|---|
+| moon | `#8FA3D8` | 5.5 | the only thing with a direction; casts |
+| hemisphere | `#3A3560` sky / `#1C1A2A` ground | 30 | the bounce, and the only light on most surfaces |
+| CRT spill | `#5FE3D4` | 8.5 × picture brightness | the keyboard and the walnut in front of it |
+
+Intensities still read ~3x high because three divides by PI. What does
+*not* carry over from the daylight rig is the target: those numbers were
+set so lit ground landed on the old cream with its shadow at 0.72 of it.
+There is no cream. These were set against the picture, through
+`window.__lights`, which moves all four knobs on one page — four numbers
+that only mean anything against each other cannot be bisected one build
+at a time.
+
+#### Aiming the moon through the window
+
+A `DirectionalLight` has no position, only a direction, but "coming
+through the window" is a statement about a **line**. Both ends are
+derived: the opening's centre comes off `ROOM_PLAN.window`, which
+room.js writes from the same two constants it cuts the hole with, so
+moving the window re-aims the light instead of leaving it shining at a
+wall; `MOON_AT` is where the beam is pointed.
+
+**`MOON_AT` is the one figure here that was searched for rather than
+tuned**, and the search is worth keeping because the answer is not
+obvious. The window's centre is at y 12.6 and the desk top is at 9 only
+3.2 units in from the wall, so:
+
+- a beam shallow enough to run the length of a 32-unit room is already
+  below the desk top before it has left the wall — it lights the
+  pedestal's left flank and nothing else;
+- a beam steep enough to land inside the room lands *on* the desk,
+  and the desk's own shadow then covers every piece of floor beyond it.
+
+Six aims were shot. Five lit no floor at all. The one that works goes
+mostly **forward in +z rather than across in +x**: by the time it
+reaches the desk's near edge it is already past it in depth, so it
+crosses the desk top, clears the front edge and lands on the floor and
+the rug. That is the pool in the shot. `_lightshots.mjs sweep` re-runs
+all six.
+
+The elevation that falls out is **36.5°**, much steeper than the
+daylight key's 13°, and that is consistent rather than a compromise:
+the moon is drawn high in the window's own sky texture.
+
+#### The window wall casts, and only the window wall
+
+room.js used to say *nothing in the room casts* — the key raked in from
+outside the left wall, so a casting wall would have put the whole desk
+in shadow, and "a dollhouse's light comes through its missing walls"
+was the convention that bought the way out.
+
+The night rig makes the opposite choice for exactly one panel. The
+field around the opening is a real hole and the joinery casts too, so
+letting the window wall cast is what turns the beam into a
+window-shaped pool **striped by the sash and the two mullions**. It is
+the single thing that makes the light read as coming from somewhere.
+
+The right wall still does not cast and would wreck it if it did: the
+light travels toward +z, so the -z wall is upstream of everything and
+would shadow the whole room. It is a receiver — the far wall the beam
+lands on.
+
+Two consequences to know:
+
+- **The frozen shadow map is now load-bearing in a new way.**
+  `shadowMap.autoUpdate` is off and the map is rendered once, at the
+  home framing, where the cutaway has the left wall visible. If it were
+  ever re-rendered while the camera had swung round far enough to cull
+  that wall, the room would flood with moonlight. `window.__lights({ at })`
+  sets `needsUpdate` deliberately — it is a dev handle, and the only
+  thing in the file that does.
+- **The large pool on the floor at the flat end of the orbit is light
+  passing *over* the wall, not through the window.** The wall is 19
+  tall and the beam descends at 36.5°, so everything past x ≈ 12.7 is
+  lit over the top of it. That is the dollhouse cut-away being exactly
+  what it says it is, and it is load-bearing for "not pitch black" —
+  it is most of the lit floor in the frame.
+
+#### The shadow box, and the bias the brief asked for
+
+`bias` stays **0** and must. VSM does not compare depths, it compares a
+depth against a variance-bounded estimate; a constant offset there
+shifts the whole distribution and shows up as light leaking out from
+under contacts, not as the acne it would cure under PCF. What does the
+work is **`normalBias`, 0.035**, which walks the sample along the
+surface normal by a distance in *world* units — so the right figure is a
+function of how much world a texel covers.
+
+That changed, because the box did. `window.__shadowfit()` projects the
+room, the desk, the machine and the treehouse into the light's own
+basis and prints the union against the camera. The union is
+**-14.0..29.3 across, -13.8..27.0 up, 15.0..60.8 deep**, and the box
+clears it by about 1.5 on every face:
+
+```
+left -16  right 31   bottom -15.5  top 28.5   near 13  far 64
+```
+
+**Deliberately asymmetric** — the light comes in over one corner of a
+room that is not square to it, so a box centred on the axis would spend
+half its texels on empty space. 47 × 44 over a 2048² map is a texel of
+**0.023 world units**, against 0.078 at the old ±80. `normalBias` 0.035
+is about a texel and a half: under one the acne comes back at the
+shallow end of the orbit, past about three the contact under the
+monitor's base visibly detaches. That finer texel is why the drawer
+fronts — 0.03-unit overlay steps, the surface that produced acne at 13°
+— are clean under a light raking in at 36.5°.
+
+A receiver outside this box is no longer merely unshadowed. The wall
+casts, so it is a patch of floor flooded with moonlight that should be
+dark. **Re-run `__shadowfit` after anything that moves the window, the
+aim or the furniture**: the basis turns with the light, so those six
+numbers do not survive a re-aim.
+
+#### The exposure is a lighting control now
+
+It was 0.95, set under the daylight rig as "a trim rather than a
+correction", with a note that ACES's toe was the thing to watch when the
+night lighting landed. It landed, and the toe is what had to be
+answered: at 0.95 the room's median pixel read **4/255** and over half
+of it sat under 8 — the walls and the floor were being crushed into the
+backdrop, so the diorama had no edges.
+
+**`TONE_EXPOSURE` is 1.3**, and it is not interchangeable with raising
+the lights. The lights lift the bright albedos as fast as the dark ones
+— and this room has exactly one bright albedo, the desk's enamel, which
+goes white long before the floor comes up. The exposure lifts the bottom
+of the curve, where everything dark actually lives. Both were swept
+together; `_lightshots.mjs sweep` has the grid, including the two
+single-knob rows that show neither alone gets there.
+
+AgX is the honest alternative and was measured beside it: at 0.95 it
+lands within a couple of levels of ACES at 1.9 everywhere, its toe being
+gentler by about that much. ACES is what the restyle asked for, so ACES
+is what is set and the exposure is what pays for its toe.
+`window.__tonemap('agx')` still switches on a live page, and the void's
+pre-image follows the exposure because it is solved numerically rather
+than baked — `_roomshots.mjs` still reports err 0 on both paths at 1.3.
+
+#### The HDRI is not one of the three, so it is off
+
+`ENV_INTENSITY` is 0. It was first left at **0.1** "for the highlights",
+on the assumption that so small a number could only be a reflection.
+**That was wrong and the A/B caught it**: at 0.1 the studio HDRI was
+still doubling the median room pixel (4 → 8) and lifting the walls from
+3 to 7 — a fourth light quietly doing a third of the fill, in a brief
+that says the room reads on three. So it is 0, `loadEnvironment` returns
+before fetching, and the hemisphere was re-tuned afterwards to make up
+the difference honestly.
+
+What that costs is measurable and small: the desk's chrome pulls go from
+79 to 54 and the CRT's glass from 127 to 107, so both still read as
+highlights, just duller. `window.__lights({ env })` puts it back on a
+live page — note it only does anything if `ENV_INTENSITY` was non-zero
+at build, since otherwise there is no map to scale.
+
+#### The tube, and its spill
+
+The screen material's `emissive` is a **pale** teal (`#B8F2EA`) rather
+than the spill's own `#5FE3D4`, and that was measured against the
+fly-in rather than chosen by eye: the same map carries the bitmap of
+the real login screen for the length of the flight, and at full
+saturation the dialog, its title bar and its text all went teal — a
+monochrome terminal, three seconds before the live HTML arrives in
+colour. At this value the picture keeps its own hues and the whole tube
+still reads teal. `emissiveIntensity` is up from 1.25 to 1.9: the tube
+is one of three lights in the room now, not a bright object in a lit
+one.
+
+The `PointLight` in front of it used to warm the bezel and nothing else
+— 2.1 over a 5.5 range at `decay` 2, which put the keyboard, 5.2 units
+away, past the cutoff entirely. Three figures changed, and two are
+deliberately unphysical:
+
+- **`decay` is 1.25, not 2.** A tube is a 5×4-unit area source and this
+  is a point; inverse-square put 75× more light on the bezel than on
+  the keys, so the bezel blew out before the keys saw anything. At 1.25
+  the ratio is about 8:1, roughly what the real area source would give.
+- **The range is 11**, short where it matters: it dies about a unit
+  before the desk's +x edge and never reaches the floor or either wall.
+  It does graze the treehouse, which is correct — same desk, two units
+  nearer than the edge.
+- **It sits 0.9 in front of the glass, on the screen's own axis.**
+  Dropping it toward the desk lit the keys harder but made the bezel
+  glow asymmetric, and `recessShadowTexture` already describes where
+  the lip shades the picture — two accounts of the same thing,
+  disagreeing.
+
+**scene.js owns what it runs at, computer.js owns where it is and how it
+falls off.** The loop writes `SCREEN_GLOW × picture brightness` every
+frame, but there is no loop under reduced motion and none before the
+first tick, so `buildScene` writes it once as well. Left to computer.js's
+constructed value the two paths would disagree the moment `SCREEN_GLOW`
+moved, and the symptom would be a dim tube for exactly the visitors who
+get a single static frame.
+
+#### One thing turning the HDRI off broke
+
+**The walnut is now the only asynchronous asset in the scene**, and
+`TextureLoader.load` is fire-and-forget. On any path that draws a
+single frame and stops — reduced motion — nothing noticed the three
+512px jpgs arriving, and the desk top rendered in its base colour and
+stayed there. That used to be covered *by accident*: `loadEnvironment`
+resolved after a 128 kB HDRI, well after the jpgs, and re-rendered.
+Turning the HDRI off took the re-render with it.
+
+`buildDesk` now returns a `ready` promise alongside its root, settled
+(on error as well as on load) when the three files have landed, and
+scene.js draws one more frame on it. `_winshots.mjs`'s reduced pass is
+what caught it — a reminder that the reduced-motion variant is not a
+formality: it is the only path with no loop to paper over a late
+asset.
+
+#### What "moody but not pitch black" is, as a number
+
+`window.__histogram()` reads the framebuffer back after a draw and
+buckets the luma of every pixel that is **not the void** — the only
+honest denominator, since most of a desktop frame is backdrop and
+counting it would let any scene pass by being mostly empty. Shipped, at
+home on 1440×900:
+
+| | was (daylight trim) | shipped |
+|---|---|---|
+| median room pixel | 4 | **10** |
+| p95 | 47 | **123** |
+| share under luma 8 | 80% | **33%** |
+| back wall | 0 | **9** |
+| desk enamel | 95 | **168** |
+
+`window.__probes()` is the per-surface companion and `window.__pixel(u, v)`
+reads one pixel by screen fraction — which is the one to use when the
+question is "is that part of the *picture* black", because a world point
+can quietly land on the wrong surface and report something true about
+somewhere else. That mistake cost two rounds here.
+
 ### Frame rate, and what holds it at 60
 
 `src/perf.js` is a stats.js panel plus a rolling log of frame deltas
@@ -2116,11 +2524,13 @@ or the file is fetched twice.
   `shadow.radius` / `shadow.blurSamples` is the soft option now, and it wants
   `shadow.bias = 0`.
 - **`RGBELoader` is deprecated** in favour of `HDRLoader`.
-- The environment map is an ambient light source, so it has to be paid for
-  somewhere: when it loads, `ENV_INTENSITY` goes up and the flat fills come down
-  to `AMBIENT_WITH_ENV` / `HEMI_WITH_ENV`. Left alone, the HDRI blows the cream
-  out to white and flattens the shadow until it stops reading. The scene renders
-  before the HDRI arrives and still looks right without it, just flatter.
+- The environment map is an ambient light source, which is why it is
+  now **off**: `ENV_INTENSITY` is 0 and `loadEnvironment` returns
+  before fetching when it is, so the 128 kB HDRI is no longer
+  requested at all. See "The night lighting" for the measurement that
+  decided it — at the 0.1 it was first left at "for the highlights" it
+  was still doubling the median room pixel. The asset stays vendored
+  in `public/env/` with its licence; restoring it is one constant.
 - GTAO runs through an `EffectComposer`, **desktop only** — it is the most
   expensive thing in the scene. `OutputPass` takes over the colour-space
   conversion the renderer would otherwise do, so the lighting calibration below
@@ -2138,7 +2548,7 @@ debug handles for the review scripts.
   `--font`, so fixing it fixes the login screen too — there is one knob, not two.
   An OFL pixel face was fitted here and reverted on request; see "Typography" for
   what fitting one costs.
-- The scene chunk is ~206 kB gzipped plus a 128 kB HDRI and ~106 kB of walnut
+- The scene chunk is ~215 kB gzipped plus ~106 kB of walnut
   for the desk top, all lazy-loaded after the desktop paints. The entry chunk is still ~3.9 kB gzipped. The treehouse is ~8 kB of the scene chunk and no asset at all. GSAP accounts
   for ~26 kB of the scene chunk; importing `gsap/gsap-core` rather than `gsap`
   keeps CSSPlugin out and saves ~7 kB of that. OrbitControls is ~8 kB of it.

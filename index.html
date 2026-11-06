@@ -5,12 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Trish Nguyen — Portfolio</title>
   <!--
-    The floor wordmark is drawn with canvas 2D, so the webfont has to be
-    resident before the first 3D frame or the type silently falls back to
-    Georgia. Discovering it through the lazy scene chunk's stylesheet is
-    far too late, hence a real preload off the stable public/ path (see
-    the @font-face in src/style.css). crossorigin is required even
+    The CRT's greeting is drawn with canvas 2D, so the webfont has to be
+    resident before the first 3D frame or it silently falls back to
+    Georgia — a canvas does not re-draw itself when a face arrives late.
+    Discovering it through the lazy scene chunk's stylesheet is far too
+    late, hence a real preload off the stable public/ path (see the
+    @font-face in src/style.css). crossorigin is required even
     same-origin, or the preload is fetched twice.
+
+    This used to be here for the floor wordmark, which was the bigger
+    consumer; that is gone with floor.js and the rug's name. If the
+    greeting ever stops being typeset, this and the @font-face and the
+    vendored woff2 all go together.
   -->
   <link rel="preload" href="/fonts/playfair-display-latin-500-normal.woff2"
         as="font" type="font/woff2" crossorigin>

@@ -364,11 +364,29 @@ function enamelMaterial(tex, color = ENAMEL, roughness = 0.62) {
    desk's own dimensions rather than left at 1, so the grain keeps the
    same physical scale on the top, the edges and the ends instead of
    stretching to fit whichever face it lands on. */
+/* Filled by `woodMaterial`, drained by `buildDesk`. The three walnut
+   files are the **only** asynchronous assets left in the scene now
+   that the HDRI is no longer fetched, and something has to notice when
+   they land: `TextureLoader.load` is fire-and-forget, so on any path
+   that draws a single frame and stops — reduced motion — the slab
+   renders in its base colour and stays there.
+
+   That used to be covered by accident. `loadEnvironment` resolved
+   after a 128 kB HDRI, well after three 512px jpgs, and re-rendered;
+   turning the HDRI off took the re-render with it and the desk top
+   came out black. Making the dependency explicit is the fix — see
+   `desk.ready` in scene.js. */
+let woodPending = [];
+
 function woodMaterial() {
   const loader = new THREE.TextureLoader();
   const base = `${import.meta.env.BASE_URL}textures/`;
   const load = (file, srgb) => {
-    const t = loader.load(`${base}${file}`);
+    /* Settles on error as well as on load: a missing file is a desk
+       with no grain, not a scene that never redraws. */
+    let settle;
+    woodPending.push(new Promise((res) => { settle = res; }));
+    const t = loader.load(`${base}${file}`, settle, undefined, settle);
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
     t.center.set(0.5, 0.5);
     t.rotation = Math.PI / 2;
@@ -583,6 +601,7 @@ function buildDrawer(w, h, thick, handleAt, pullW, chrome) {
    ASSEMBLY
    ========================================== */
 export function buildDesk() {
+  woodPending = [];
   const shellTex = enamelTextures();
   const shell = enamelMaterial(shellTex);
   /* Reveals and small trim — paint in its own shadow, not a void. */
@@ -821,7 +840,10 @@ export function buildDesk() {
     root.add(s);
   }
 
-  return { root };
+  /* `ready` settles once the walnut has landed (or failed to), so the
+     caller can draw one more frame on a path that has no loop. See
+     woodPending. */
+  return { root, ready: Promise.all(woodPending) };
 }
 
 function contactShadow() {

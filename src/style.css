@@ -7,11 +7,18 @@
    Self-hosted from the @fontsource package (OFL-1.1; the licence travels
    with the file in public/fonts/LICENSE.txt) rather than imported from
    node_modules, for two reasons: the URL has to stay stable so
-   index.html can preload it, and it belongs in the *entry* stylesheet
-   rather than in the lazy scene chunk — scene.js draws the type into a
-   canvas, so the face has to be resident before the first 3D frame.
-   Latin only: the wordmark is ASCII, and the other five subsets
-   @fontsource ships would never be fetched anyway.
+   index.html could preload it, and it belonged in the *entry*
+   stylesheet rather than in the lazy scene chunk — scene.js drew the
+   type into a canvas, so the face had to be resident before the first
+   3D frame. Latin only: the wordmark was ASCII, and the other five
+   subsets @fontsource ships would never be fetched anyway.
+
+   **Its one consumer now is the CRT's own picture**, not the floor.
+   The floor's tiled wordmark went with floor.js and the rug's single
+   name was dropped on request; what is left is the greeting
+   computer.js draws into the screen texture, which is still canvas 2D
+   and so still needs the face resident up front. Drop that and this,
+   the preload and the vendored woff2 all go together.
    ================================ */
 @font-face {
   font-family: 'Playfair Display';
@@ -77,10 +84,13 @@
   --black: #000000;
   --title-active: #000080;
   --highlight: #000080;
-  /* Must match CREAM in scene.js: the 3D canvas stops at the taskbar,
+  /* Must match VOID in src/room.js: the 3D canvas stops at the taskbar,
      so this is what shows in the strip the taskbar vacates during the
-     fly-in. */
-  --scene-floor: #dcdee0;
+     fly-in. The room is a finite diorama floating in this colour, so
+     it is the void rather than the floor now — and src/tonemap.js is
+     what keeps the rendered void landing on exactly this value
+     despite the tone mapping sitting after it. */
+  --scene-void: #1c1a2a;
   /* Chrome: title bars, buttons, menus, icon labels, the taskbar, the
      login dialog. The vendored 98.css falls back to --font too, so
      this is one knob for the whole kit. */
@@ -1162,7 +1172,7 @@ body.orbit-live #screen {
   /* Reads as a label lying on the floor rather than a toast over it:
      the floor grey it sits on, with the raised 1px edge every other
      control here has. */
-  background: color-mix(in srgb, var(--scene-floor) 86%, transparent);
+  background: color-mix(in srgb, var(--scene-void) 86%, transparent);
   box-shadow:
     inset -1px -1px var(--dark),
     inset 1px 1px var(--white);
@@ -1224,7 +1234,7 @@ body.screen-active {
   background-color: color-mix(
     in srgb,
     var(--desktop) calc(var(--scene-fade, 0) * 100%),
-    var(--scene-floor)
+    var(--scene-void)
   );
   /* The fly-in writes --scene-fade as it goes, so a transition here
      would lag behind it and fight it. Going *in*, the instant step to

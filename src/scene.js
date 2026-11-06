@@ -13,6 +13,7 @@ import { gsap } from "gsap/gsap-core";
 import {
   buildComputer,
   disposeComputer,
+  loadScreenFont,
   FACING,
   MON_W,
   MON_H,
@@ -26,39 +27,52 @@ import { buildDesk, disposeDesk, DESK_TOP_Y } from "./desk.js";
    own module for the same reason the desk is: it is a self-contained
    object with its own origin on the surface it stands on. */
 import { buildTreehouse, buildSpareBricks, disposeTreehouse } from "./treehouse.js";
-/* The ground is its own module — colour, size, fog and the wordmark
-   drawn across it all live there, so it can be swapped whole without
-   touching the camera. */
+/* The room is its own module — the plank floor, the two cutaway walls,
+   the wainscot, the trim and the rug all live there, so the whole
+   setting can be swapped without touching the camera. It replaces src/floor.js, which was the opposite idea: an
+   effectively endless plane whose edges fog hid. */
 import {
-  buildFloor,
   buildFog,
-  CREAM,
-  disposeFloor,
-  fitFloor,
-  FLOOR_SIZE,
-  loadFloorFont,
+  buildRoom,
+  disposeRoom,
+  ROOM_PLAN,
+  ROOM_RADIUS,
   setFogRange,
-} from "./floor.js";
-/* Playfair is declared in src/style.css and preloaded from index.html,
-   so the fetch starts with the entry stylesheet rather than waiting for
-   this chunk to load. Nothing to import here — just await it below. */
+  updateWallFade,
+  VOID,
+  wallFades,
+} from "./room.js";
+/* The rain on the window in the left wall is the only thing in the
+   room that moves, so it is the only thing here this module owes a
+   frame to. room.js builds and fades the window; the clock is this
+   file's, so the advance is. `rainState` is the live-tuning handle —
+   see `window.__rain` below. */
+import { rainState, tickRain } from "./nightwindow.js";
+/* Tone mapping is on now, and the background clear is the one thing it
+   gets wrong — see src/tonemap.js for the asymmetry between the two
+   render paths and why the void needs a pre-image on one of them. */
+import { tonemapForward, tonemapPreimage, TONE_MAPPINGS } from "./tonemap.js";
+/* The rug's wordmark is gone (see src/room.js), so the only typeset
+   thing left in the scene is the greeting on the CRT's own picture.
+   The webfont still has to be resident before the first frame for it —
+   `loadScreenFont` is awaited below, and computer.js owns both the
+   face and the reason. */
 
 /* ==========================================
    ISOMETRIC INTRO SCENE
 
    Owns one <canvas id="scene">. The only module that imports three
-   besides computer.js, desk.js and floor.js.
+   besides computer.js, desk.js and room.js.
 
    Camera: perspective on a narrow FOV, 20° down / 37° around — see
    design-references/isometric-angle.webp. It was orthographic; see
    "Perspective, and what replaced the frustum" below for what the
    switch cost and what it bought.
-   Floor: src/floor.js. Everything about what the ground *is* — its
-   colour, its size, the fog that ends it, the name repeated across it
-   after design-references/floor-text.png — lives there; this module
-   only tells it what frame it is being seen in.
-   A single low directional light rakes a long soft shadow across the
-   letters.
+   Room: src/room.js. The whole setting — the plank floor, the two
+   cutaway walls that fade as the camera comes round behind them, the
+   wainscot, the trim and the rug — lives there; this module only lifts
+   it into the scene and tells it where the camera is looking.
+   A single low directional light rakes a long soft shadow across it.
    ========================================== */
 
 /* --- Camera ----------------------------------------------
@@ -101,9 +115,7 @@ const AZIMUTH = THREE.MathUtils.degToRad(37);
 
    so FRUSTUM, FRUSTUM_MOBILE, `monitorFrustum`, `screenFrustum` and
    the fly-in's log-space zoom curve all keep their old values and
-   their old meanings, and nothing about the floor's type sizing had to
-   change — `fitFloor` is handed the frustum at the target, and that is
-   still the number it was. What stops being a constant is the
+   their old meanings. What stops being a constant is the
    *distance*: `CAM_DIST` is gone, and the radius is derived from the
    framing rather than chosen. At 20° the establishing shot stands 68
    units out where the orthographic one stood at 60.
@@ -127,12 +139,12 @@ const AZIMUTH = THREE.MathUtils.degToRad(37);
      reason the orthographic near plane had to be negative is gone. See
      `buildCamera`.
    - **A low view has a horizon**, which an orthographic one cannot.
-     The fog already hides it: the floor is fully fogged to the
-     background colour well before it, so ground and backdrop meet with
-     no line between them. That the fog is in `CREAM` was load-bearing
-     before and is more so now — see `buildFog` in src/floor.js, whose
-     range is an offset from the camera's distance for the same reason
-     CAM_DIST is gone. */
+     With the room it no longer matters: the ground is a finite slab
+     that ends well inside the frame, and what is beyond it is the
+     void. The fog survives as a depth cue on the diorama's far corner
+     rather than as the thing that hides an edge — see `buildFog` in
+     src/room.js, whose range is still an offset from the camera's
+     distance for the same reason CAM_DIST is gone. */
 const FOV_DEFAULT = 20;
 let fov = FOV_DEFAULT;
 let tanHalfFov = Math.tan(THREE.MathUtils.degToRad(fov) / 2);
@@ -154,10 +166,10 @@ function distFor(frustum) {
    angles, the distance and the whole leash are untouched, so the home
    framing is the same shot further back.
 
-   The floor wordmark does not need re-tuning for this: LINE_FILL sizes
-   the type as a share of the *viewport*, and FILL_DEPTH sets the row
-   count as a share of the visible floor depth, so both scale with the
-   frustum and the type lands at the same size in the frame as before. */
+   The room needs no re-tuning for this. It is fixed geometry in world
+   units, so a change of frustum only changes how much of it is in
+   shot — unlike the old floor, whose type was sized as a share of the
+   viewport and had to be laid out again whenever this moved. */
 const FRUSTUM = 24;
 /* Portrait deliberately crops the desk's ends rather than framing the
    whole of it: fitting a 19-unit desk across a 390px frame would need a
@@ -282,10 +294,104 @@ const TREEHOUSE_FACING = AZIMUTH - 0.50;
    first fails safe on a yawed InstancedMesh, the second is the truth. */
 const TREEHOUSE_SCALE = 1.1733;
 
-/* Lighting once the HDRI is in play — see the note on the PI factor below. */
-const ENV_INTENSITY = 0.7;
-const AMBIENT_WITH_ENV = 0.5;
-const HEMI_WITH_ENV = 0.3;
+/* ==========================================
+   NIGHT LIGHTING
+
+   **Three sources and nothing else**: the moon through the window, a
+   hemisphere fill the colour of the room's own surfaces, and the CRT.
+   The daylight rig this replaced had five — a warm key, an ambient, a
+   hemisphere, a studio HDRI and the tube — and the first two of those
+   are gone rather than dimmed. An `AmbientLight` is a flat lift with
+   no direction in it, which is exactly what a night room must not
+   have: it is what makes a dark scene read as a grey scene.
+
+   **What the old calibration meant, and why none of it carries over.**
+   Intensities read ~3x high because three's physical lighting divides
+   them by PI — that part still holds. What does not is the target: the
+   old numbers were set so lit ground landed exactly on the daylight
+   floor's cream with its shadow at ~0.72 of it. There is no cream, the
+   ground is a plum plank floor, and ACES at 0.95 now sits after the
+   whole thing. These are set against the picture, through
+   `window.__lights`, which is what let all four be moved on one page
+   instead of one build per candidate.
+
+   The brief for the look: **moody, not pitch black.** The floor in the
+   moonlit patch, the walls away from it and the desk's lit side are
+   the three values that decide whether that is true, and
+   `_lightshots.mjs` prints all three off a real `readPixels` rather
+   than leaving it to a judgement about a dark screenshot.
+   ========================================== */
+/* The moon. Low, cool, and the only thing in the scene with a
+   direction — see `moonDirection` for how it is aimed through the
+   window rather than placed by hand. */
+const MOON_COLOUR = 0x8fa3d8;
+const MOON_INTENSITY = 5.5;
+/* The fill. Sky half is the wall plum lifted a little; ground half is
+   the void itself, so what bounces up off the floor is the same colour
+   the diorama floats in. Dim enough that it never flattens the moon's
+   own direction — at much past 1.4 the shadowed side of the machine
+   comes up to meet the lit side and the whole room goes matte. */
+const HEMI_SKY = 0x3a3560;
+const HEMI_GROUND = 0x1c1a2a;
+/* **14 is not a typo, and "dim" is still the right word for it.** In
+   three a light is colour times intensity, and both of these colours
+   are *dark* — #3A3560 is 0.042 linear at its brightest channel. A
+   hemisphere in those colours at an intensity of 1 puts out almost
+   nothing, and multiplied by the floor's own dark plum albedo it
+   rounds to black before ACES has even seen it. Measured: taking this
+   from 1.15 to 14 moves the back wall from 1/255 to 10 and the
+   median room pixel from 4 to 9, while the desk's enamel — the one
+   bright albedo in the room — goes from 75 to 110, which is where it
+   has to stop. Past about 20 the walls turn a vivid royal blue and the
+   enamel goes white: it stops being a night room and starts being a
+   blue-filtered day. */
+const HEMI_INTENSITY = 30.0;
+
+/* **The HDRI is not one of the three lights, so it is off.**
+   "Studio Small 09" is a daylit studio, and under the old rig it ran
+   at 0.7 as the ambient source — filling exactly the faces the key
+   never reached, which is the one thing a night room cannot have.
+
+   It was first kept at 0.1 "for the highlights", on the assumption
+   that so small a number could only be a reflection. **That was wrong
+   and the A/B caught it**: at 0.1 it was still doubling the median
+   room pixel (4 to 8) and lifting the walls from 3 to 7 — a fourth
+   light, quietly doing a third of the fill. The brief is that the
+   room reads on these three lights alone, so it is 0, and the
+   hemisphere was re-tuned afterwards to make up the difference
+   honestly.
+
+   What that costs is measurable and small: the desk's chrome pulls go
+   from 79 to 54 and the CRT's glass from 127 to 107, so both still
+   read as highlights, just duller. `window.__lights({ env })` puts it
+   back on a live page if that trade ever wants revisiting.
+
+   At 0 `loadEnvironment` does not fetch at all, so the 128 kB HDRI is
+   no longer requested. The asset and its licence stay in
+   `public/env/` — see the note in CLAUDE.md. */
+const ENV_INTENSITY = 0;
+
+/* **The exposure is a lighting control now, not a finishing trim.**
+   It was 0.95, set under the daylight rig as "a trim rather than a
+   correction", with a note that ACES's toe was the thing to watch when
+   the night lighting landed. It landed, and the toe is exactly what
+   had to be answered: at 0.95 the room's median pixel read 4/255 and
+   over half of it sat under 8 — the walls and the floor were being
+   crushed to the backdrop, so the diorama had no edges.
+
+   1.25 is where the room comes back without the rig having to be
+   turned up to the point of looking like daylight through a blue
+   filter. It is not interchangeable with raising the lights: the
+   lights lift the bright albedos (the desk's enamel) as fast as the
+   dark ones, and this lifts the bottom of the curve where everything
+   dark actually lives. Both were swept together — see HEMI_INTENSITY.
+
+   AgX is the honest alternative and was measured beside it: at 0.95 it
+   lands within a couple of levels of ACES at 1.9 everywhere, because
+   its toe is gentler by about that much. ACES is what the restyle
+   asked for, so ACES is what is set, and the exposure is what pays for
+   its toe. `window.__tonemap('agx')` still switches on a live page. */
+const TONE_EXPOSURE = 1.3;
 
 const GTAO_BLEND = 1.0; // deep enough that the creases actually darken
 /* How far past the furniture the AO is allowed to reach. See
@@ -294,9 +400,13 @@ const GTAO_BLEND = 1.0; // deep enough that the creases actually darken
    of the desk's feet and their contact shadows. */
 const GTAO_BOX_MARGIN = 8;
 const HOVER_RATE = 7; // hover easing, per second
-/* Base intensity of the point light spilling off the screen onto its own
-   bezel; the loop scales it with the picture brightness. */
-const SCREEN_GLOW = 2.1;
+/* Base intensity of the point light in front of the tube; the loop
+   scales it with the picture brightness. It used to light the bezel
+   and nothing else (2.1 at `decay` 2 over a 5.5 range); it is now the
+   room's second light source and has to reach the keyboard and the
+   walnut in front of it. See `screenGlow` in computer.js for the range
+   and the decay that go with this. */
+const SCREEN_GLOW = 8.5;
 
 /* Capped at 1.5 rather than 2: the scene is shaded through GTAO on a
    full-screen composite, so cost goes with the square of this number,
@@ -346,9 +456,23 @@ const MAX_DPR = 1.5;
    only how far either side of it the visitor may get, and the far side
    of the machine is simply further away than the near one.
 
-   At the clamps themselves the glass is exactly edge-on, which is what
-   FACE_MIN below is now actually for. */
-const ORBIT_SWING = THREE.MathUtils.degToRad(90);
+   **It came down from 90° to 60° when the room went in, and the room
+   is the reason.** The diorama has two walls, on the desk's -X and -Z
+   sides, and each fades out as the camera comes round to see it from
+   behind (see `updateWallFade` in room.js). What sets the leash is the
+   wall that must *not* fade: the -Z wall's facing bottoms out at
+   `cos(elevation) * cos(swing)`, which at ±60° is 0.47 — comfortably
+   above the 0.30 at which fading starts. At ±90° it reached 0, so both
+   walls would have gone and the extremes of the leash would have shown
+   a bare floor slab adrift in the void.
+
+   One consequence: at ±60° the glass is no longer anywhere near
+   edge-on at the clamps — `screenFacing()` bottoms out around 0.43
+   against FACE_MIN's 0.17 — so the overlay no longer comes off the
+   glass at the ends of the swing. FACE_MIN goes back to being a guard
+   rather than a working part. **`_orbit.mjs` asserts the old
+   behaviour and will fail until it is updated.** */
+const ORBIT_SWING = THREE.MathUtils.degToRad(60);
 /* Elevation is still measured off home, and is still asymmetric — but
    the flat end now goes all the way down to **2° above the floor**, so
    the visitor can drop to the desk's own height and look at the screen
@@ -366,9 +490,10 @@ const ORBIT_SWING = THREE.MathUtils.degToRad(90);
    for the flat view, two are now belt-and-braces and the third has
    reversed:
 
-   - **FLOOR_SIZE** (see src/floor.js) — 1700, so the plane's own edge
-     is off-frame at the flattest view on the deepest viewport, with the
-     fog dissolving its far reaches into the background either way.
+   - **The floor's size**, which has stopped being a question: the room
+     is a finite diorama now (see src/room.js), its own edges are in
+     frame deliberately, and what lies past them is the void rather
+     than more ground. The endless 1700-unit plane is gone.
    - **The camera's near plane**, which is *positive again*. Under the
      orthographic camera the view volume was a box and the bottom of
      the frame at 2° was ground *behind* the eye — 270 units of it on a
@@ -537,9 +662,19 @@ let composer = null;
 let computer = null;
 let desk = null;
 let treehouse = null;
+/* { root, walls } from buildRoom — the walls are kept so the cutaway
+   has something to fade. */
+let room = null;
 let envMap = null;
 let hover = { target: 0, value: 0 };
-let fillLights = null;
+/* { moon, hemi } — the two scene lights, kept so `window.__lights`
+   can re-tune them on a live page. The CRT's own point light hangs off
+   the computer and is reached through `computer.screenGlow`. */
+let lights = null;
+/* The CRT's point light runs at this times the picture's brightness.
+   It is a `let` only so `window.__lights` can move it; SCREEN_GLOW is
+   the value, and dispose puts it back. */
+let screenGlowBase = SCREEN_GLOW;
 let onPointerMove = null;
 let frame = null;
 let disposables = [];
@@ -585,8 +720,30 @@ let flyStart = null;
 let stillHidden = false;
 let screenAway = false;
 let screenHidden = ""; // last value written to the overlay's visibility
-/* Dev-only stats.js panel; null in a production build — see src/perf.js. */
+/* stats.js panel; null unless a dev build is explicitly asked for one
+   — see `perfWanted` and src/perf.js. */
 let perf = null;
+
+/* **Two gates, and they do different jobs.** `import.meta.env.DEV` is
+   the one that keeps stats.js out of the bundle: Vite folds it to the
+   literal `false` when building, so rollup drops the dynamic import
+   and the library with it. This flag is the one that keeps the panel
+   off the picture — a black FPS box pinned over the top-left corner of
+   a scene being art-directed is in the way of the thing being looked
+   at, and every shot `_roomshots.mjs` and friends take in dev had it
+   in the corner.
+
+   `?perf` in the query string, or `perf` in localStorage so it
+   survives the reloads a profiling session makes. `_perfcheck.mjs`
+   appends the parameter itself. */
+function perfWanted() {
+  try {
+    if (new URLSearchParams(location.search).has("perf")) return true;
+    return localStorage.getItem("perf") === "1";
+  } catch {
+    return false; // a sandboxed iframe can throw on either
+  }
+}
 
 /* WebGL may be absent (old browser, blocklisted driver, or _review.mjs
    stubbing getContext). Caller falls back to the plain CSS desktop. */
@@ -630,30 +787,27 @@ function camDist() {
   return distFor(frustumFor());
 }
 
-/* What the floor needs to know about the frame it is being seen in.
-   The two foreshortening factors are the camera's, not the floor's, so
-   they are handed over rather than recomputed there — which is what
-   keeps src/floor.js free of any knowledge of the camera. */
-function floorView(width, height) {
-  return {
-    frustum: frustumFor(),
-    aspect: width / height,
-    projX: PROJ_X,
-    projZ: PROJ_Z,
-    mobile: isMobile(),
-  };
-}
-
 function buildScene() {
   const s = new THREE.Scene();
-  s.background = new THREE.Color(CREAM);
-  /* The floor's own fade-out, in the floor's own colour — which is also
-     the background's, so the plane dissolves into the backdrop instead
-     of ending at an edge. With this and FLOOR_SIZE together there is no
-     floor edge and no horizon line anywhere on the orbit leash. */
+  /* The background is **not** set here, and that is deliberate: which
+     colour is correct depends on whether the composer is in play, and
+     that is not decided until after this returns. `applyVoidColor`
+     owns it. */
+  /* Fog in the void's own colour. In floor.js this hid an endless
+     plane's edges; here the edges are meant to be seen, and the fog
+     only just catches the diorama's far corner as a depth cue. */
   s.fog = buildFog(camDist());
 
-  s.add(buildFloor(renderer.capabilities.getMaxAnisotropy()));
+  /* Reduced motion is passed in rather than read in there: the room's
+     one moving part is the rain on the window, and under reduced
+     motion this module runs no loop at all — so the flag is really
+     only a belt-and-braces slow-down. See RAIN_SLOW in
+     src/nightwindow.js. */
+  room = buildRoom(
+    renderer.capabilities.getMaxAnisotropy(),
+    prefersReducedMotion(),
+  );
+  s.add(room.root);
 
   /* The desk, and the machine standing on it. The computer is built in
      its own local space with the origin on *its* ground plane, so the
@@ -666,6 +820,15 @@ function buildScene() {
 
   computer = buildComputer();
   computer.root.name = "computer";
+  /* **scene.js owns what the tube's light runs at, computer.js owns
+     where it is and how it falls off.** The loop multiplies this by
+     the picture's brightness every frame — but there is no loop under
+     reduced motion and none before the first tick, so it is written
+     once here as well. Left to computer.js's constructed value the two
+     paths would disagree the moment SCREEN_GLOW moved, and the
+     symptom would be a dim tube for exactly the visitors who get a
+     single static frame. */
+  computer.screenGlow.intensity = screenGlowBase;
   computer.root.position.set(0, DESK_TOP_Y, COMPUTER_Z);
   s.add(computer.root);
 
@@ -688,58 +851,219 @@ function buildScene() {
   spares.position.set(0, DESK_TOP_Y, 0);
   s.add(spares);
 
-  /* One low directional light — the shallow angle is what stretches the
-     shadow out long and diagonal across the letters.
-     Intensities look ~3x high because three's physical lighting divides
-     them by PI; tuned so lit cream lands on CREAM and the shadow sits at
-     ~0.72 of it, matching the reference. */
-  const key = new THREE.DirectionalLight(0xfffaf2, 4.4);
-  key.position.set(-30, 8, 14); // ~13° above the floor, raking from upper left
-  key.castShadow = true;
-  key.shadow.mapSize.set(2048, 2048);
-  key.shadow.radius = 3; // VSM blur width
-  key.shadow.blurSamples = 16;
-  key.shadow.bias = 0; // VSM wants no depth bias
-  key.shadow.normalBias = 0.02;
-  /* The box has to bound the caster set **and the shadow it throws**,
-     and the measurement is worth writing down because the number this
-     was first set against was the wrong one.
+  /* --- the moon ---
+     Aimed *through* the window rather than placed, so moving the
+     opening in room.js re-aims the beam instead of leaving it shining
+     at a wall. `moonDirection` is where that is worked out. */
+  const moon = new THREE.DirectionalLight(MOON_COLOUR, MOON_INTENSITY);
+  moon.position.copy(MOON_FROM);
+  moon.target.position.copy(MOON_AT);
+  moon.castShadow = true;
+  moon.shadow.mapSize.set(2048, 2048);
+  /* VSM, so this is a blur width in texels rather than a PCF spread —
+     see the shadowMap.type note in initScene. 3 was set against a box
+     spreading the map over ±80 world units; the box is a quarter of
+     that now (below), so the same radius is a *smaller* penumbra in
+     world terms. 4 puts it back to about where it read, which is what
+     "soft" means here: a moon is a half-degree source, so the penumbra
+     wants to be visible but not a smear. */
+  moon.shadow.radius = 4;
+  moon.shadow.blurSamples = 16;
+  /* **The bias, which is the one number the brief asks for by name.**
+     `bias` stays 0 and must: VSM does not compare depths, it compares
+     a depth against a variance-bounded estimate, and a constant offset
+     there shifts the whole distribution and shows up as light leaking
+     out from under contacts rather than as the acne it would cure
+     under PCF. What does the work is `normalBias`, which walks the
+     sample point along the surface normal by a distance in *world*
+     units — so the figure is a function of how much world a texel
+     covers, and that changed when the box did.
 
-     The box is in the *light's* space, and the light never moves. So
-     dropping the camera to 2° does not reach for its edges, however
-     much more floor comes into frame: what the box has to cover is the
-     desk, the machine, and where they land on the ground along the
-     light direction — nothing camera-dependent at all. Measured against
-     the two world boxes, that union occupies **±9.7 of light-space
-     lateral and 21 to 123 of light-space depth**. At ±80 / 1..220 the
-     box already clears it by about 8x laterally, so the flat view did
-     not need it widened, and widening it anyway is not free: it spreads
-     the same 2048² map over more ground, and the drawer-front contacts
-     are already at the resolution where a 0.03-unit step was enough to
-     produce acne (see desk.js).
+     Measured rather than guessed, on the surfaces that produced acne
+     before — desk.js's drawer fronts, which stand 0.03 off the face
+     behind them, and now the window's own sash sitting inside its
+     reveal. At the old ±80 box a texel covered 0.078 world units and
+     `normalBias` was 0.02, a quarter of one. The box below is 47 x 44,
+     so a texel is 0.023, and 0.035 is about a texel and a half — which
+     is the band this wants: under about one texel the acne comes back
+     at the shallow end of the orbit, and past about three the contact
+     under the monitor's base visibly detaches. `_lightshots.mjs` crops
+     all three. */
+  moon.shadow.bias = 0;
+  moon.shadow.normalBias = 0.035;
+  /* **The box, and why it had to grow laterally and shrink overall.**
+     A shadow map lives in the light's space and the light never moves,
+     so nothing here is camera-dependent — the orbit cannot reach its
+     edges. What it has to cover is every *caster* laterally, and every
+     *receiver* the casters can reach in depth. Outside it three's
+     lookup returns "lit", which is the thing to be afraid of now: the
+     left wall casts (see room.js), so a receiver outside the box is
+     not merely unshadowed, it is a patch of floor flooded with
+     moonlight that should be in the wall's shadow.
 
-     Outside the box three's shadow lookup returns "lit" rather than
-     clamping the map's border, so the far reaches of the 1700-unit
-     plane simply have no shadow — which is correct, because no shadow
-     reaches them. There is no edge to see. */
-  const cam = key.shadow.camera;
-  cam.left = -80;
-  cam.right = 80;
-  cam.top = 80;
-  cam.bottom = -80;
-  cam.near = 1;
-  cam.far = 220;
+     So the caster set is no longer just the furniture. Measured with
+     `window.__shadowfit()`, which projects the room, the desk, the
+     machine and the treehouse into the light's own basis: the union
+     occupies **-14.0..29.3 across, -13.8..27.0 up and 15.0..60.8 in
+     depth** about the light's axis. The box below clears that by about
+     1.5 on every face, and is **deliberately asymmetric** — the light
+     comes in over one corner of a room that is not square to it, so a
+     box centred on the axis would spend half its texels on empty
+     space. 47 x 44 over a 2048² map is a texel of **0.023 world
+     units**, against 0.078 at the old ±80. That is most of why the
+     drawer-front contacts are clean under a light raking in at 28°
+     when they produced acne at 13°.
+
+     Re-run `__shadowfit` after anything that moves the window, the
+     aim or the furniture: the basis turns with the light, so these
+     six numbers do not survive a re-aim. */
+  const cam = moon.shadow.camera;
+  cam.left = -16;
+  cam.right = 31;
+  cam.bottom = -15.5;
+  cam.top = 28.5;
+  cam.near = 13;
+  cam.far = 64;
   cam.updateProjectionMatrix();
-  s.add(key, key.target);
+  s.add(moon, moon.target);
 
-  /* Soft fill — keeps the shadowed cream warm rather than grey, while
-     staying low enough that the shadow reads as a distinct wedge. */
-  const ambient = new THREE.AmbientLight(0xffffff, 1.5);
-  const hemi = new THREE.HemisphereLight(0xfcfcfd, 0xc6c8cc, 0.76);
-  s.add(ambient, hemi);
-  fillLights = { ambient, hemi };
+  /* --- the fill ---
+     One hemisphere and nothing else. Its two colours are the room's
+     own: the sky half is the wall plum lifted, the ground half is the
+     void. That is what a night interior's bounce actually is — light
+     that has already hit these surfaces once — and it is also what
+     keeps the shadowed side of everything *coloured* rather than
+     merely dark, which is the whole difference between moody and
+     black. */
+  const hemi = new THREE.HemisphereLight(HEMI_SKY, HEMI_GROUND, HEMI_INTENSITY);
+  s.add(hemi);
+  /* Written even though nothing is loaded into `scene.environment`,
+     so `window.__lights()` reports what the rig means rather than
+     three's default of 1 over a map that is not there. */
+  s.environmentIntensity = ENV_INTENSITY;
+  lights = { moon, hemi };
 
   return s;
+}
+
+/* ==========================================
+   AIMING THE MOON
+
+   A DirectionalLight has no position, only a direction — but "coming
+   through the window" is a statement about a *line*, and the line is
+   the one from the opening to where the beam lands on the desk. So
+   both ends are derived:
+
+   - the opening's centre comes off `ROOM_PLAN.window`, which room.js
+     writes from the same two constants it cuts the hole with, so
+     moving the window re-aims the light rather than leaving it
+     shining at a wall;
+   - `MOON_AT` is where the beam is pointed, chosen rather than
+     derived: a little past the machine and a little below the desk
+     top, so the patch of floor the window throws lands clear of the
+     desk's own shadow instead of inside it.
+
+   The elevation that falls out is ~14° below the horizon, which is
+   within half a degree of the angle the daylight key raked in at —
+   kept deliberately, because that shallow angle is what makes the
+   shadows long and diagonal, and it is the one thing about the old rig
+   that was worth carrying over.
+
+   `MOON_DIST` only decides where the shadow camera sits along the
+   axis; the light itself is parallel. It is short because the box's
+   `near`/`far` are set against it, and a long throw spends depth
+   precision on empty space.
+   ========================================== */
+/* **Where the beam lands, and it is the one figure here that was
+   genuinely searched for rather than tuned.** The light has to clear
+   the desk to reach any floor at all: the window's centre is at y
+   12.6 and the desk top is at 9 only 3.2 units in from the wall, so a
+   beam shallow enough to run the length of the room is already below
+   the desk top before it has left the wall, and one steep enough to
+   land inside the 32-unit room lands *on* the desk. Six aims were
+   shot (`_lightshots.mjs`'s A..F pass); five put the whole floor in
+   the wall's shadow and lit nothing.
+
+   This one works because it goes mostly **forward in +z rather than
+   across in +x**: by the time it has reached the desk's near edge it
+   is already past it in depth, so it crosses the desk top, clears the
+   front edge and lands on the floor and the rug in front. That is the
+   pool in the shot — striped by the sash and the two mullions, which
+   is what the casting wall buys. */
+const MOON_AT = new THREE.Vector3(-2.0, 0, 11.0);
+const MOON_DIST = 45;
+
+/* The opening's centre on the left wall's inner face, off the same two
+   constants room.js cuts the hole with. */
+function windowCentre() {
+  const win = ROOM_PLAN.window;
+  return new THREE.Vector3(ROOM_PLAN.X0, win.sillY + win.h / 2, win.z);
+}
+
+function moonDirection(at = MOON_AT) {
+  return at.clone().sub(windowCentre()).normalize();
+}
+
+/* Where three has to stand the light so the beam runs down that line.
+   The light is parallel, so this only decides where the shadow camera
+   sits along the axis — and the box's near/far are quoted against it. */
+const MOON_FROM = MOON_AT.clone().addScaledVector(moonDirection(), -MOON_DIST);
+
+/* Re-aims the moon on a live page, through `window.__lights({ at })`.
+   **The shadow map has to be re-rendered**, which is the one thing
+   that makes this more than two assignments: `autoUpdate` is off, so
+   without the flag the beam moves and its shadow does not. */
+function setMoonAt(x, y, z) {
+  MOON_AT.set(x, y, z);
+  lights.moon.target.position.copy(MOON_AT);
+  lights.moon.position.copy(
+    MOON_AT.clone().addScaledVector(moonDirection(), -MOON_DIST),
+  );
+  lights.moon.target.updateMatrixWorld();
+  renderer.shadowMap.needsUpdate = true;
+}
+
+/* ==========================================
+   THE VOID
+
+   The diorama floats in a flat #1C1A2A, and that colour has to come
+   out of the pipeline exactly: it is a large flat area, and it is also
+   what `--scene-void` paints into the strip the taskbar vacates during
+   the fly-in, so a few levels of drift between the two shows as a
+   seam across the bottom of the picture.
+
+   Tone mapping breaks that, and asymmetrically — which is the part
+   worth knowing. three writes the background clear through
+   `getUnlitUniformColorSpace`, which hands back the *output* colour
+   space when drawing straight to the canvas and *linear* sRGB when
+   drawing into a render target. So:
+
+   - **direct path** (mobile, reduced motion): the clear is written to
+     the canvas in sRGB and never passes through an operator. Exact for
+     free, with the raw colour.
+   - **composer path** (desktop): the clear lands in the HalfFloat
+     buffer and `OutputPass` tone maps it along with everything else.
+     Untreated, #1C1A2A would come out #15152A under AgX — and #0A0917
+     under ACES, which is nearly black.
+
+   So the composer path gets the colour that tone maps *to* the void,
+   and src/tonemap.js solves for it. The fog needs none of this: three
+   includes `fog_fragment` after both `tonemapping_fragment` and
+   `colorspace_fragment` and uploads `fogColor` through the same
+   colour-space helper, so a fully-fogged fragment already resolves to
+   exactly `fog.color` on both paths.
+
+   Called after the composer decision, and again by `__tonemap`.
+   `_roomshots.mjs` verifies the result against a real `readPixels` of
+   the void and prints the error in 0-255 units. */
+function applyVoidColor() {
+  if (!scene || !renderer) return;
+  const target = new THREE.Color(VOID);
+  scene.background = composer
+    ? tonemapPreimage(target, renderer.toneMapping, renderer.toneMappingExposure)
+    : target;
+  /* The fog is the raw colour on both paths — see above. */
+  scene.fog?.color.set(target);
 }
 
 /* ==========================================
@@ -1001,7 +1325,7 @@ const CAM_NEAR = 0.5;
    `window.__fov` can move it either way. Re-asserted by `setFov` for
    that reason. */
 function camFar() {
-  return FLOOR_SIZE / 2 + distFor(FRUSTUM_MOBILE * homeZoom) + 100;
+  return ROOM_RADIUS + distFor(FRUSTUM_MOBILE * homeZoom) + 20;
 }
 
 function buildCamera() {
@@ -1327,10 +1651,11 @@ function setFov(deg) {
    HOME_ZOOM get compared on one page rather than one build each. See
    `_zoomshots.mjs`.
 
-   It reaches one thing setFov does not: the floor. The FOV does not
-   change `frustumFor()`, so the wordmark's size and row count stay put
-   across a setFov; this *is* that number, so the type has to be laid
-   out again or it keeps the size it had at the old framing. */
+   It used to reach one thing setFov does not — the floor, whose type
+   was sized off `frustumFor()` and so had to be laid out again
+   whenever this number moved. The room is fixed world geometry, so
+   there is nothing left to re-lay-out and this is now a pure camera
+   change. */
 function setHomeZoom(f) {
   if (!camera || !canvasEl) return;
   homeZoom = THREE.MathUtils.clamp(Number(f) || HOME_ZOOM, 0.5, 3);
@@ -1374,7 +1699,6 @@ function reframeHome() {
     controls.minPolarAngle = orbitHome.phi - ORBIT_UP;
     controls.maxPolarAngle = orbitHome.phi + ORBIT_DOWN;
   }
-  fitFloor(floorView(width, height));
   updateScreenOverlay();
   render();
 }
@@ -1590,20 +1914,28 @@ function updateScreenOverlay() {
    to 256x128 (see public/env/LICENSE.txt). It is only ever read through
    PMREM as a blurred reflection, so the small size costs nothing
    visually and saves ~1.4 MB. Loaded after the first frame: the scene
-   stands up fine without it, it just looks flatter.
+   stands up fine without it, it just loses its highlights — which is
+   all it does now. It is not one of the night rig's three lights; see
+   ENV_INTENSITY.
    ========================================== */
 async function loadEnvironment() {
+  /* Off means off: no fetch, not a fetch whose result is scaled to
+     nothing. See ENV_INTENSITY. */
+  if (!ENV_INTENSITY) return false;
   try {
     const url = `${import.meta.env.BASE_URL}env/studio-small-09-256.hdr`;
     const hdr = await new HDRLoader().loadAsync(url);
     const pmrem = new THREE.PMREMGenerator(renderer);
     envMap = pmrem.fromEquirectangular(hdr).texture;
     scene.environment = envMap;
-    /* The HDRI is now the ambient source, so the flat fills have to come
-       down or the cream blows out and the shadow stops reading. */
+    /* **It arrives as a reflection, not as a light.** Under the
+       daylight rig this was the ambient source and the flat fills came
+       *down* when it landed, to stop the cream blowing out. Nothing
+       comes down now: at ENV_INTENSITY the HDRI's diffuse term is
+       below the quantisation of the darkest surface in the room, and
+       all it is still here for is to put something in the CRT's glass
+       and the desk's chrome pulls. See the constant for the A/B. */
     scene.environmentIntensity = ENV_INTENSITY;
-    fillLights.ambient.intensity = AMBIENT_WITH_ENV;
-    fillLights.hemi.intensity = HEMI_WITH_ENV;
     hdr.dispose();
     pmrem.dispose();
     return true;
@@ -1710,6 +2042,13 @@ function initPointer(canvas) {
    moving, `screen-focused` once it has arrived.
    ========================================== */
 function render() {
+  /* The cutaway, here rather than in the rAF loop, so that *every*
+     draw has the right walls up — the orbit's `change` handler, the
+     review scripts' one-off renders and the reduced-motion single
+     frame all come through here and none of them run the loop. Two dot
+     products, and opacity writes only on the frames where a value
+     actually moved. */
+  if (room) updateWallFade(camera);
   if (composer) composer.render();
   else renderer.render(scene, camera);
 }
@@ -2147,11 +2486,51 @@ export async function initScene(canvas) {
   const { clientWidth: w, clientHeight: h } = canvas;
 
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  /* three's default since r152, so this is a statement of intent
+     rather than a change: every texture authored here is sRGB and the
+     canvas is written in sRGB. It is spelled out because the composer
+     path hands the conversion to `OutputPass` instead (see
+     `buildComposer`), and the two having to agree is exactly the kind
+     of thing that is invisible until it is wrong. */
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  /* **Tone mapping, which the daylight scene did without.** A night
+     room has a far wider range than a grey floor under a studio HDRI
+     — a glowing tube and a lamp against walls three stops down — and
+     without an operator the highlights clip to flat white and the
+     shadows crush to the same black.
+
+     **ACES at 0.95, chosen rather than measured into.** The first pass
+     shot AgX and ACES side by side and took AgX, on two counts: ACES's
+     toe drags the plum walls toward black, and its blue-to-cyan skew
+     points straight at the CRT's teal. One of those counts has since
+     gone — the cream wordmark it was also protecting is off the rug —
+     and ACES is what was asked for, so it is what is set. The toe is
+     the thing to watch when the night lighting lands: it is why the
+     exposure is 0.95 rather than 1.0, which is a trim rather than a
+     correction. `window.__tonemap('agx')` switches on a live page and
+     `_roomshots.mjs` shoots all three.
+
+     This is also what makes src/tonemap.js necessary: the operator
+     runs on the background clear too, but only on the composer path,
+     and the void has to come out at exactly #1C1A2A on both. The
+     pre-image is solved numerically, so it follows this exposure
+     rather than needing to be re-derived beside it. See
+     `applyVoidColor`. */
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = TONE_EXPOSURE;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_DPR));
   renderer.setSize(w, h, false);
   renderer.shadowMap.enabled = true;
-  /* PCFSoftShadowMap was removed in three 0.186 and silently degrades to
-     hard PCF. VSM is the remaining soft option. */
+  /* **This is deliberately not `PCFSoftShadowMap`**, which is what the
+     restyle asked for and what every three tutorial still says. The
+     constant survives in 0.186 but the implementation does not:
+     `WebGLShadowMap` checks for it and warns "PCFSoftShadowMap has been
+     removed. Using PCFShadowMap instead." (node_modules/three/src/
+     renderers/webgl/WebGLShadowMap.js:99). Setting it would trade the
+     soft shadow this scene already has for a hard one plus a console
+     warning — the opposite of what asking for it means. VSM is the
+     remaining soft option, and the key's `radius` / `blurSamples` /
+     `bias = 0` beside it are tuned for VSM specifically. */
   renderer.shadowMap.type = THREE.VSMShadowMap;
   /* Nothing in this scene ever casts a different shadow: the light is
      fixed and the machine does not move (`lift` exists but nothing
@@ -2165,11 +2544,12 @@ export async function initScene(canvas) {
   renderer.shadowMap.autoUpdate = false;
   renderer.shadowMap.needsUpdate = true;
 
-  /* The floor's type is drawn with canvas 2D, so the webfont has to be
-     resident before the first paint or it silently falls back to
-     Georgia. The floor module owns both the load and the measurement. */
-  await loadFloorFont();
-
+  /* The CRT's greeting is drawn with canvas 2D, so the webfont has to
+     be resident before the texture is drawn or it silently falls back
+     to Georgia — a canvas does not re-draw itself when a face arrives
+     later. This used to be the rug wordmark's await; the rug no longer
+     sets any type, and the screen is what keeps it alive. */
+  await loadScreenFont();
 
   scene = buildScene();
   camera = buildCamera();
@@ -2178,7 +2558,6 @@ export async function initScene(canvas) {
   scene.updateMatrixWorld(true);
   computer.screen.getWorldPosition(SCREEN_TARGET);
   applyFly(0, w, h);
-  fitFloor(floorView(w, h));
   /* Re-asserted now that the scene (and the key light's shadow camera)
      actually exists. `autoUpdate` is off, so this is the one pass that
      ever renders the map: anything that changes a caster or the shadow
@@ -2192,6 +2571,10 @@ export async function initScene(canvas) {
       composer = null; // fall back to a straight render
     }
   }
+
+  /* After the composer decision, because that is what decides which of
+     the two background colours is the correct one. */
+  applyVoidColor();
 
   /* Handles for the visual-review scripts. `__flyTo` parks the camera
      at a point of the fly-in and draws it, which is how the head-on
@@ -2303,6 +2686,329 @@ export async function initScene(canvas) {
     if (deg !== undefined) setFov(deg);
     return { fov, dist: camDist(), frustum: frustumFor() };
   };
+  /* Switches the tone-mapping operator on a live page and re-derives
+     the void's pre-image with it, which is what let AgX and ACES be
+     compared off one build rather than two. No argument just reports.
+     Materials recompile themselves: three's `setProgram` treats
+     `renderer.toneMapping` as part of the program cache key. */
+  window.__tonemap = (name) => {
+    if (name !== undefined) {
+      const m = TONE_MAPPINGS[name];
+      if (m === undefined) return { error: `unknown: ${name}`, known: Object.keys(TONE_MAPPINGS) };
+      renderer.toneMapping = m;
+      applyVoidColor();
+      render();
+    }
+    const found = Object.entries(TONE_MAPPINGS)
+      .find(([, v]) => v === renderer.toneMapping);
+    const target = new THREE.Color(VOID);
+    return {
+      tonemap: found ? found[0] : renderer.toneMapping,
+      exposure: renderer.toneMappingExposure,
+      path: composer ? "composer" : "direct",
+      void: VOID,
+      /* What the clear is actually set to, and what the void would
+         have come out as with no pre-image — the error this is all
+         here to remove. */
+      background: `#${scene.background.getHexString()}`,
+      untreated: `#${tonemapForward(target, composer ? renderer.toneMapping : THREE.NoToneMapping, renderer.toneMappingExposure).getHexString()}`,
+    };
+  };
+  /* Where the cutaway's two walls currently stand: how square-on each
+     is to the view direction, and what that resolves to as opacity. */
+  window.__walls = () => wallFades();
+  /* **The night rig, on a live page.** Every intensity in it was set
+     through this rather than by rebuilding per candidate — four
+     numbers that only mean anything against each other, so they have
+     to be movable together while looking at one picture. No argument
+     just reports.
+
+     Note `glow` is the *base* the loop multiplies by the picture's
+     brightness and the hover bump, so what is written here is what
+     SCREEN_GLOW means, not what the light is running at this frame. */
+  window.__lights = (next = {}) => {
+    if (next.moon !== undefined) lights.moon.intensity = next.moon;
+    if (next.hemi !== undefined) lights.hemi.intensity = next.hemi;
+    if (next.env !== undefined) scene.environmentIntensity = next.env;
+    if (next.at !== undefined) setMoonAt(...next.at);
+    /* The operator's exposure, which in a night scene is a lighting
+       control rather than a finishing one — see TONE_EXPOSURE. */
+    if (next.exposure !== undefined) {
+      renderer.toneMappingExposure = next.exposure;
+      applyVoidColor(); // the void's pre-image moves with it
+    }
+    if (next.glow !== undefined) {
+      screenGlowBase = next.glow;
+      /* The loop would pick this up on its next frame, but the point
+         of the handle is to see it now — and under reduced motion
+         there is no next frame. `bright` is 1 at rest, so this is what
+         the loop would have written anyway. */
+      computer.screenGlow.intensity = screenGlowBase;
+    }
+    if (Object.keys(next).length) render();
+    return {
+      moon: lights.moon.intensity,
+      hemi: lights.hemi.intensity,
+      env: scene.environmentIntensity,
+      /* Without this the `env` figure above is a number about nothing:
+         ENV_INTENSITY is 0, so no HDRI is fetched at all. */
+      envMap: !!envMap,
+      glow: screenGlowBase,
+      exposure: renderer.toneMappingExposure,
+      moonFrom: lights.moon.position.toArray().map((v) => Number(v.toFixed(2))),
+      moonAt: MOON_AT.toArray(),
+      /* Degrees below the horizon, which is the figure the shadow's
+         length is argued in. */
+      elevation: Number(
+        THREE.MathUtils.radToDeg(Math.asin(-moonDirection().y)).toFixed(2),
+      ),
+    };
+  };
+  /* **What the shadow box has to cover**, in the light's own basis —
+     which is the only frame the question makes sense in. It walks the
+     named objects' world boxes, projects all eight corners of each
+     onto the light's right / up / forward axes, and prints the union
+     beside what the camera is actually set to. Lateral is the half
+     extent the casters need; depth is where the receivers sit.
+
+     This is what the ±22 / 20..80 above was read off, and it is the
+     check to re-run after moving the window, the light or anything on
+     the desk. A receiver outside this box is not merely unshadowed —
+     the wall casts now, so it is a patch of floor flooded with
+     moonlight that should be dark. */
+  window.__shadowfit = (...names) => {
+    const light = lights.moon;
+    const fwd = new THREE.Vector3()
+      .subVectors(light.target.position, light.position)
+      .normalize();
+    const right = new THREE.Vector3(0, 1, 0).cross(fwd).normalize();
+    const up = new THREE.Vector3().crossVectors(fwd, right).normalize();
+    const v = new THREE.Vector3();
+    const out = {};
+    let all = null;
+    for (const n of names.length ? names : ["room", "desk", "computer", "treehouse"]) {
+      const o = scene.getObjectByName(n);
+      if (!o) continue;
+      const b = new THREE.Box3().setFromObject(o);
+      const r = { x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity, z0: Infinity, z1: -Infinity };
+      for (const x of [b.min.x, b.max.x])
+        for (const y of [b.min.y, b.max.y])
+          for (const z of [b.min.z, b.max.z]) {
+            v.set(x, y, z).sub(light.position);
+            const a = v.dot(right), c = v.dot(up), d = v.dot(fwd);
+            r.x0 = Math.min(r.x0, a); r.x1 = Math.max(r.x1, a);
+            r.y0 = Math.min(r.y0, c); r.y1 = Math.max(r.y1, c);
+            r.z0 = Math.min(r.z0, d); r.z1 = Math.max(r.z1, d);
+          }
+      out[n] = r;
+      all = all
+        ? {
+            x0: Math.min(all.x0, r.x0), x1: Math.max(all.x1, r.x1),
+            y0: Math.min(all.y0, r.y0), y1: Math.max(all.y1, r.y1),
+            z0: Math.min(all.z0, r.z0), z1: Math.max(all.z1, r.z1),
+          }
+        : { ...r };
+    }
+    const c = light.shadow.camera;
+    return {
+      perObject: out,
+      union: all,
+      camera: { left: c.left, right: c.right, top: c.top, bottom: c.bottom, near: c.near, far: c.far },
+      /* World units a shadow texel covers, on each lateral axis. */
+      texel: [
+        Number(((c.right - c.left) / light.shadow.mapSize.x).toFixed(4)),
+        Number(((c.top - c.bottom) / light.shadow.mapSize.y).toFixed(4)),
+      ],
+      normalBias: light.shadow.normalBias,
+      bias: light.shadow.bias,
+    };
+  };
+  /* The rain on the window: where its clock stands, how fast it is
+     running and whether reduced motion caught it. A speed in
+     cell-runs per second re-tunes it on a live page, which is how the
+     streaks were set without a rebuild per candidate. */
+  window.__rain = (speed) => {
+    const r = rainState(speed);
+    if (speed !== undefined) render();
+    return r;
+  };
+  /* **What the void actually resolves to on screen**, which is the
+     only way the pre-image in src/tonemap.js is worth trusting. It
+     hides the whole scene, draws, and reads the centre pixel back off
+     the default framebuffer with `readPixels` — so what it reports is
+     the post-operator, post-sRGB value the visitor sees, on whichever
+     render path this page is using. Hiding everything rather than
+     hunting for a corner that happens to be background is what makes
+     it deterministic.
+
+     readPixels on the back buffer is valid here without
+     `preserveDrawingBuffer` because the draw and the read are in the
+     same task. */
+  /* **What the picture resolves to at a handful of named places**,
+     read back off the framebuffer after a draw — so these are the
+     post-operator, post-sRGB values the visitor sees rather than what
+     a material was handed. It is the only way to answer "moody but not
+     pitch black": a dark screenshot is exactly the thing judgement is
+     worst at, and the difference between 12 and 30 out of 255 is the
+     difference between the room being there and not.
+
+     The points are world coordinates on surfaces the home framing can
+     see. `readPixels` on the back buffer is valid here without
+     `preserveDrawingBuffer` for the same reason it is in
+     `__voidcheck`: the draw and the read are in one task. */
+  window.__probes = (extra) => {
+    const pts = {
+      /* Inside the pool the window throws, and outside it — the two
+         numbers the whole rig is set between. */
+      "floor pool": [-4.0, 0.02, 12.0],
+      "floor dark": [9.0, 0.02, 13.5],
+      "floor bare": [14.0, 0.02, 2.0],
+      "rug": [2.0, 0.08, 14.0],
+      "wall far": [6.0, 13.0, -8.85],
+      "wall left": [-12.9, 13.0, 6.0],
+      "desk pool": [-6.0, DESK_TOP_Y + 0.02, 0.0],
+      "desk dark": [7.6, DESK_TOP_Y + 0.02, -4.0],
+      "keyboard": [0.1, DESK_TOP_Y + 0.55, 2.6],
+      ...(extra || {}),
+    };
+    render();
+    const gl = renderer.getContext();
+    const v = new THREE.Vector3();
+    const px = new Uint8Array(4);
+    const out = {};
+    for (const [name, p] of Object.entries(pts)) {
+      v.set(p[0], p[1], p[2]).project(camera);
+      const x = Math.round(((v.x + 1) / 2) * gl.drawingBufferWidth);
+      /* NDC y is up and so is gl's read origin, so no flip here. */
+      const y = Math.round(((v.y + 1) / 2) * gl.drawingBufferHeight);
+      if (x < 0 || y < 0 || x >= gl.drawingBufferWidth || y >= gl.drawingBufferHeight) {
+        out[name] = { hex: "(off frame)", rgb: [], luma: 0 };
+        continue;
+      }
+      gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      const rgb = [px[0], px[1], px[2]];
+      out[name] = {
+        hex: "#" + rgb.map((c) => c.toString(16).padStart(2, "0")).join(""),
+        rgb,
+        luma: Math.round(0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]),
+      };
+    }
+    return out;
+  };
+  /* **How dark the picture actually is**, as a distribution rather
+     than as a handful of points. The named probes above answer "what
+     is this surface doing"; this answers the brief's own question —
+     "moody but not pitch black" is a statement about the whole frame,
+     and a frame can have a bright pool in it and still be 80% void.
+
+     It reads the framebuffer back after a draw and buckets the luma of
+     every pixel that is **not the void**, which is the only honest
+     denominator: the diorama floats in #1C1A2A and most of a desktop
+     frame is backdrop, so counting that would let any scene pass by
+     being mostly empty. Reports the share of the *room* under a few
+     thresholds plus its percentiles. */
+  /* One pixel by *screen* fraction — (0,0) top-left. The world probes
+     above follow the geometry, which is what you want for "is this
+     surface lit"; this is for "is that part of the picture black",
+     where the question is about the frame and a world point can
+     quietly land on the wrong surface. */
+  window.__pixel = (u, v) => {
+    render();
+    const gl = renderer.getContext();
+    const px = new Uint8Array(4);
+    gl.readPixels(
+      Math.min(gl.drawingBufferWidth - 1, Math.max(0, Math.round(u * gl.drawingBufferWidth))),
+      Math.min(gl.drawingBufferHeight - 1, Math.max(0, Math.round((1 - v) * gl.drawingBufferHeight))),
+      1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px,
+    );
+    const rgb = [px[0], px[1], px[2]];
+    return {
+      hex: "#" + rgb.map((c) => c.toString(16).padStart(2, "0")).join(""),
+      rgb,
+      luma: Math.round(0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]),
+    };
+  };
+  /* GTAO's blend, live. It exists because the night rig changed what
+     the AO is *multiplying*: under the daylight key most surfaces had
+     a strong direct term and the AO only deepened creases, where now
+     the floor and the walls are lit by the hemisphere alone — so the
+     occlusion term is the whole value, and a plane that false-occludes
+     itself at a grazing angle goes black rather than merely darker.
+     This is the A/B that found it. */
+  window.__gtao = (blend, margin) => {
+    if (gtaoPass && blend !== undefined) {
+      gtaoPass.blendIntensity = blend;
+      render();
+    }
+    return { blend: gtaoPass ? gtaoPass.blendIntensity : null, margin };
+  };
+  window.__histogram = () => {
+    render();
+    const gl = renderer.getContext();
+    const w = gl.drawingBufferWidth;
+    const h = gl.drawingBufferHeight;
+    const buf = new Uint8Array(w * h * 4);
+    gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+    const voidRgb = new THREE.Color(VOID);
+    const vr = Math.round(voidRgb.r * 255);
+    const vg = Math.round(voidRgb.g * 255);
+    const vb = Math.round(voidRgb.b * 255);
+    const lumas = [];
+    for (let i = 0; i < buf.length; i += 4) {
+      const r = buf[i], g = buf[i + 1], b = buf[i + 2];
+      /* Within a level or two of the backdrop, on every channel. The
+         fog resolves to exactly the void, so this also drops the far
+         corner of the diorama, which is correct — it is backdrop by
+         construction. */
+      if (Math.abs(r - vr) <= 2 && Math.abs(g - vg) <= 2 && Math.abs(b - vb) <= 2) continue;
+      lumas.push(0.2126 * r + 0.7152 * g + 0.0722 * b);
+    }
+    lumas.sort((a, b) => a - b);
+    const n = lumas.length;
+    if (!n) return { room: 0 };
+    const pct = (q) => Math.round(lumas[Math.min(n - 1, Math.floor(q * n))]);
+    const under = (t) => Number((lumas.filter((v) => v < t).length / n).toFixed(3));
+    return {
+      roomPixels: n,
+      roomShare: Number((n / (w * h)).toFixed(3)),
+      p05: pct(0.05),
+      p25: pct(0.25),
+      median: pct(0.5),
+      p75: pct(0.75),
+      p95: pct(0.95),
+      under8: under(8),
+      under16: under(16),
+      under32: under(32),
+    };
+  };
+  window.__voidcheck = () => {
+    const hidden = [];
+    for (const child of scene.children) {
+      if (child.visible) {
+        hidden.push(child);
+        child.visible = false;
+      }
+    }
+    render();
+    const gl = renderer.getContext();
+    const px = new Uint8Array(4);
+    gl.readPixels(
+      Math.floor(gl.drawingBufferWidth / 2),
+      Math.floor(gl.drawingBufferHeight / 2),
+      1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px,
+    );
+    for (const child of hidden) child.visible = true;
+    render();
+    const got = [px[0], px[1], px[2]];
+    const want = [0x1c, 0x1a, 0x2a];
+    const hex = (a) => "#" + a.map((v) => v.toString(16).padStart(2, "0")).join("");
+    return {
+      path: composer ? "composer" : "direct",
+      got: hex(got),
+      want: hex(want),
+      err: Math.max(...got.map((v, i) => Math.abs(v - want[i]))),
+    };
+  };
   /* Scales the establishing shot and re-derives everything downstream
      of it — see setHomeZoom. No argument just reports. */
   window.__zoom = (f) => {
@@ -2382,8 +3088,7 @@ export async function initScene(canvas) {
        establishing shot is home — and the visitor may have swung it
        off. A resize is not a reason to take that away. */
     if (keep) setOrbitAngles(keep.theta, keep.phi);
-    fitFloor(floorView(width, height));
-    updateScreenOverlay();
+      updateScreenOverlay();
     if (!frame && fly.value < 1) render();
   };
   window.addEventListener("resize", onResize);
@@ -2401,6 +3106,17 @@ export async function initScene(canvas) {
   loadEnvironment().then((ok) => {
     if (ok && !frame) render();
   });
+  /* **The walnut is the only asynchronous asset left**, and on a path
+     that draws one frame and stops — reduced motion — nothing would
+     otherwise notice it arriving. This used to be covered by accident:
+     `loadEnvironment` resolved after a 128 kB HDRI, long after three
+     512px jpgs, and re-rendered. Turning the HDRI off (ENV_INTENSITY)
+     took that re-render with it, and the desk top came out flat black
+     under reduced motion. `_winshots.mjs`'s reduced pass is what
+     caught it. */
+  desk.ready.then(() => {
+    if (!frame) render();
+  });
 
   /* Reduced motion: one static frame and no loop. The screen is still
      clickable — the fly-in just arrives instead of flying. */
@@ -2408,8 +3124,9 @@ export async function initScene(canvas) {
 
   /* Vite folds `import.meta.env.DEV` to `false` when building, so this
      branch — and src/perf.js with stats.js inside it — is dropped from
-     the production bundle. */
-  if (import.meta.env.DEV) {
+     the production bundle. `perfWanted()` is the second gate: in dev
+     the panel is off unless it is asked for. See above. */
+  if (import.meta.env.DEV && perfWanted()) {
     try {
       perf = (await import("./perf.js")).createPerfMeter();
     } catch {
@@ -2433,6 +3150,10 @@ export async function initScene(canvas) {
        whatever the frame rate. */
     const dt = clock.getDelta();
     elapsed += dt;
+    /* The rain. One float write — the streaks are computed in the
+       fragment shader from the pane's own coordinates, so there is
+       nothing per-drop to update. */
+    tickRain(dt);
     /* The controls own the camera at the establishing shot and nowhere
        else, so this is a no-op from the moment a flight starts. */
     tickOrbit(dt);
@@ -2446,7 +3167,7 @@ export async function initScene(canvas) {
       1 + 0.018 * Math.sin(elapsed * 11.3) * Math.sin(elapsed * 2.7);
     const bright = (1 + hover.value * 0.45) * flicker;
     screenMat.emissiveIntensity = bright;
-    screenGlow.intensity = SCREEN_GLOW * bright;
+    screenGlow.intensity = screenGlowBase * bright;
 
     /* The fly-in is advanced by the GSAP timeline on its own ticker;
        all this loop owes it is a frame to land in. Once the page has
@@ -2500,6 +3221,8 @@ export function disposeScene() {
   fov = FOV_DEFAULT;
   tanHalfFov = Math.tan(THREE.MathUtils.degToRad(fov) / 2);
   homeZoom = HOME_ZOOM;
+  screenGlowBase = SCREEN_GLOW;
+  lights = null;
   document.getElementById("orbit-hint")?.setAttribute("hidden", "");
   perf?.dispose();
   perf = null;
@@ -2510,7 +3233,8 @@ export function disposeScene() {
   disposeTreehouse();
   computer = null;
   desk = null;
-  disposeFloor();
+  disposeRoom();
+  room = null;
   flyTl?.kill();
   flyTl = null;
   flyState.p = flyState.fade = 0;
