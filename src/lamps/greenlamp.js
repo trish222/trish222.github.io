@@ -293,7 +293,8 @@ const PROFILE_SEGS = 48;
    a flat panel set into a crease at the very end. */
 const END_ROUND = 0.3;
 const END_BULGE = 0.16;
-const END_SEGS = 12;
+const END_SEGS = 18;
+const MID_SEGS = 8;
 
 /* **The radius every long edge is rounded to** — the bottom rim
    here, and the ridge where the two slopes meet (see `roundRidge`,
@@ -448,28 +449,24 @@ function roundRidge(pts) {
   return out;
 }
 
-/* **The rim's height at a given depth** — the line the end dome
-   shrinks onto.
+/* **The level the rim holds and the ends close onto.**
 
-   The dome used to scale the whole section about the pivot, which
-   dragged the bottom rim up toward it as the end closed. That left
-   a notch under each pivot: the green had lifted off the rim line
-   and the cream lining was visible from outside through the gap.
-   Anchoring the vertical scale here instead holds the rim at
-   constant height for the full length while the crown still comes
-   down, so only the top and the end face round inward.
+   This was a function of depth, interpolated between the two lip
+   heights so each lip held its own exactly. That turned out to be
+   the seam: with a *different* y-anchor per profile point, adjacent
+   points shrank toward different targets, so the end face kinked
+   where the rounded top met the level bottom — and the two lips,
+   never converging in y, left the tip as a 0.06 vertical edge
+   rather than a point, which is the jog in the rim.
 
-   It is interpolated across the depth rather than a single number
-   because the two lips are not at the same height — `FRONT_DROP`
-   puts the front one lower. Anchoring on either alone would hold
-   that lip and sweep the other by the drop; interpolating holds
-   **both** exactly, at the cost of the tip closing onto a 0.06
-   vertical edge instead of a point, which is a tenth of a pixel at
-   the home framing. */
-function rimAt(z) {
-  const t = (z + SHADE_HALF_D) / SHADE_DEPTH;
-  return SHADE_LIP_Y + (FRONT_LIP_Y - SHADE_LIP_Y) * t;
-}
+   One constant anchor for the whole section fixes both. At
+   `FRONT_LIP_Y` — the lower of the two lips — the front rim is dead
+   level for the entire length and the back rim, 0.06 above it,
+   sweeps smoothly down to meet it at the tip. The rim is then one
+   closed curve with no step anywhere, the ends close on a single
+   point, and the error is in the safe direction: the shell only
+   ever gains green at the ends, never loses it. */
+const RIM_LEVEL = FRONT_LIP_Y;
 
 const SHADE_PROFILE = roundRidge(shadeProfilePoints());
 
@@ -509,20 +506,30 @@ const PIVOT = profileCentroid();
 const SHADE_CROWN_ACTUAL = Math.max(...SHADE_PROFILE.map((v) => v.y));
 
 /* Where along the length the loft puts a ring, and how big the
-   section is there. Full size through the middle, shrinking onto the
-   pivot axis over the dome at each end. See END_ROUND / END_BULGE. */
+   section is there. See END_ROUND / END_BULGE.
+
+   **The middle is segmented too**, which it was not: the prismatic
+   run between the two domes was a single 2.1-long span against
+   0.004 between the tightest dome rings, a 500:1 ratio. A ruled
+   span is geometrically exact however coarse, so it was not wrong —
+   but it leaves the shell with no vertices anywhere a highlight
+   actually travels, and nothing to interpolate a normal across.
+
+   The dome stays stepped in **angle**. Uniform in x would space the
+   rings evenly and be worse: the turn is all in the last fraction
+   of the length, and that is exactly where the rings need to be. */
 function sweepStations() {
   const straight = SHADE_LEN / 2 - END_ROUND;
   const reach = END_ROUND + END_BULGE;
   const out = [];
-  const ring = (i, sign) => {
+  const dome = (i, sign) => {
     const a = (i / END_SEGS) * (Math.PI / 2);
     return { x: sign * (straight + reach * Math.sin(a)), scale: Math.cos(a) };
   };
-  /* The -x tip first, so the rings come out in increasing x and the
-     loft's index arithmetic stays a plain grid. */
-  for (let i = END_SEGS; i >= 0; i--) out.push(ring(i, -1));
-  for (let i = 0; i <= END_SEGS; i++) out.push(ring(i, 1));
+  for (let i = END_SEGS; i >= 0; i--) out.push(dome(i, -1));
+  for (let i = 1; i < MID_SEGS; i++)
+    out.push({ x: -straight + (2 * straight * i) / MID_SEGS, scale: 1 });
+  for (let i = 0; i <= END_SEGS; i++) out.push(dome(i, 1));
   return out;
 }
 
@@ -788,7 +795,7 @@ const PIVOT_X = (() => {
       dz >= 0
         ? shoulderAt(dz, FRONT_W, FRONT_CURVE)
         : shoulderAt(dz, BACK_W, BACK_CURVE);
-    return rimAt(z) + (yt - rimAt(z)) * sc;
+    return RIM_LEVEL + (yt - RIM_LEVEL) * sc;
   };
   let lo = 0;
   let hi = Math.PI / 2;
@@ -1148,17 +1155,13 @@ function troughGeometry() {
     const u = i / n;
     for (let j = 0; j <= m; j++) {
       const st = stations[j];
-      /* **Depth shrinks toward the ridge line, height toward the
-         rim** — two different anchors, and that is the whole point.
-         A single anchor at the pivot pulled the rim up with
-         everything else and opened a notch under each hook (see
-         `rimAt`). Anchored this way the rim is a straight line at
-         constant height from end to end and only the crown and the
-         depth close in. */
-      const rim = rimAt(p.x);
+      /* Depth shrinks toward the ridge line, height toward the rim
+         level — one anchor each, both constant across the section,
+         so every point of a ring closes on the same place and the
+         end face stays one continuous curve. */
       pos.push(
         st.x,
-        rim + (p.y - rim) * st.scale,
+        RIM_LEVEL + (p.y - RIM_LEVEL) * st.scale,
         PEAK_Z + (p.x - PEAK_Z) * st.scale,
       );
       uv.push(u, j / m);
@@ -1185,6 +1188,33 @@ function troughGeometry() {
      rather than a NaN, and the ring inboard of them does the
      shading. */
   g.computeVertexNormals();
+  /* **The two tip rings take their normals from the ring inboard of
+     them.** Every vertex of a tip ring sits on the same point, so
+     the triangles reaching it are slivers; averaged per vertex that
+     gives each profile index its own answer, and adjacent ones
+     disagreed by up to 160 degrees. No amount of tessellation fixes
+     it, because the ring is degenerate by construction.
+
+     Forcing them all to the axis — the true normal at the apex of
+     an ellipsoidal end — is wrong at the two ends of the profile:
+     those vertices are on the *rim*, where the surface is open and
+     one-sided, and axial was 78 degrees from where their neighbours
+     pointed. Copying the neighbour makes the last band continuous
+     by construction, whatever part of the profile it is. The tip
+     vertices disagree with each other, which costs nothing: they
+     are all the same point and bound no area. */
+  const nrm = g.attributes.normal;
+  for (let i = 0; i <= n; i++) {
+    const row = i * (m + 1);
+    nrm.setXYZ(row, nrm.getX(row + 1), nrm.getY(row + 1), nrm.getZ(row + 1));
+    nrm.setXYZ(
+      row + m,
+      nrm.getX(row + m - 1),
+      nrm.getY(row + m - 1),
+      nrm.getZ(row + m - 1),
+    );
+  }
+  nrm.needsUpdate = true;
   return g;
 }
 
