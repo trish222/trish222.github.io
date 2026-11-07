@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { HDRLoader } from "three/addons/loaders/HDRLoader.js";
 
 /* ==========================================
    THE LAMP LAB
@@ -144,6 +145,49 @@ Object.assign(moon.shadow.camera, {
   far: 44,
 });
 scene.add(moon, moon.target);
+
+/* --- a scene environment, with `&env=1` -----------------
+   **Off by default, and that is the important half.** The room runs
+   `ENV_INTENSITY` at 0 — `scene.environment` is an *ambient light*
+   there, and switching it off is a calibrated decision the night rig
+   depends on (see "The night lighting" in CLAUDE.md). A lab that set
+   one by default would be lighting the glass, the lining and the
+   walnut with a fourth source the room does not have, which is
+   exactly the kind of divergence this harness exists not to have.
+
+   **The brass does not need it.** greenlamp.js gives its polished
+   parts their own `envMap`, and `material.envMap` takes precedence
+   over `scene.environment` — so the metal reflects the same drawn
+   room here as it does on the site, with or without this flag. What
+   the flag is for is the other question: how the fixture reads under
+   a real measured environment, and whether the drawn one is missing
+   anything a photograph of a room has.
+
+   The asset is the one already vendored in `public/env/`: **"Studio
+   Small 09" by Sergej Majboroda via Poly Haven, CC0** — see
+   `public/env/LICENSE.txt`. It is a daylit studio rather than a night
+   interior, which is why it is an inspection tool and not the
+   fixture's own reflection. Nothing new is downloaded and nothing
+   reaches `dist/`: this file is not a build input. */
+if (params.get("env") === "1") {
+  new HDRLoader()
+    .loadAsync("/env/studio-small-09-256.hdr")
+    .then((hdr) => {
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      scene.environment = pmrem.fromEquirectangular(hdr).texture;
+      /* Matched to the 0.1 the room's HDRI was last set at, rather
+         than 1 — at full strength this floods a night rig and the
+         comparison stops being about the metal. `&envint=` overrides
+         it, since that is the one number worth sweeping here. */
+      scene.environmentIntensity = Number(params.get("envint") ?? 0.1);
+      hdr.dispose();
+      pmrem.dispose();
+      /* The shadow map is frozen, and an environment is not an
+         occluder — nothing to re-render but the frame. */
+      draw();
+    })
+    .catch((e) => console.warn("lab env failed to load", e));
+}
 
 /* --- the lamp under test --- */
 const lamp = mod.buildLamp();

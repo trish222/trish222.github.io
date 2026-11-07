@@ -33,14 +33,46 @@ import * as THREE from "three";
    ========================================== */
 
 /* --- Palette ---------------------------------------------
-   Antique brass and cased green glass, after the reference. The two
+   Antique brass and cased green glass, after the reference. The three
    greens are the point of the fixture: GLASS_OUT is the deep bottle
-   green the shade reads as unlit, GLASS_IN the milk-white casing a
-   real banker's shade is lined with. What makes it *glow* is the
-   emissive on both — see EMIT_GLASS. */
-const BRASS = 0x9a7a44;
-const BRASS_DARK = 0x6a5330; // the aged tone in the flutes and the collar
-const GLASS_OUT = 0x1f6b31;
+   green the body reads as unlit, GLASS_RIM the pale line the glass's
+   own thickness shows along the rolled lip, and GLASS_IN the
+   milk-white casing a real banker's shade is lined with. What makes
+   it *glow* is the emissive on the shell and the lining — see
+   EMIT_GLASS.
+
+   **GLASS_OUT came down about a half in value**, from 0x1f6b31, when
+   the shell went to MeshPhysicalMaterial with a clearcoat. The two
+   changes are one decision: a clearcoat puts a sharp specular lobe on
+   top of the body colour, so the shade now reads as glass by its
+   *highlights* rather than by being a bright green, and at the old
+   value those highlights had nothing dark to sit against. Bottle
+   glass is dark; what is light on it is the reflection and the glow. */
+/* **Warm gold, and a metal's colour is not its albedo.** These ran at
+   0x9a7a44 / 0x6a5330, which are olive-browns — the right *apparent*
+   colour for a half-rough `metalness: 0.8` surface, because at 0.8 a
+   fifth of what you see is a diffuse term that darkens and desaturates
+   whatever the base colour is. At `metalness: 1` there is no diffuse
+   term at all: the base colour becomes F0, the specular reflectance,
+   and it is multiplied by what the metal reflects rather than added to
+   it. Keeping the olive would have given dark bronze. Polished brass
+   has an F0 up around here, which is why these read as too bright to
+   be a paint and are correct as a mirror tint. */
+const BRASS = 0xd9b359;
+/* The one fitting that is *not* polished — the socket and the stem
+   under the bulb, where a mirror ring reads as a second filament. It
+   is the same metal, aged and left rough; see BRASS_ROUGH_FITTING. */
+const BRASS_DARK = 0x9c7c38;
+const GLASS_OUT = 0x123a1e;
+/* **The pale line along the bottom edge, and it is albedo rather than
+   a glow.** Where a cased shade's lip curls under you are looking
+   through the thickness of the casing rather than at one face of it,
+   so the green washes out toward the white lining behind it. It is
+   applied as a `map` band at the two ends of the profile's u — see
+   `glassSkinTexture` — and is deliberately *not* in the emissive map,
+   which falls to almost nothing at the same place: the rim is thick
+   glass catching light, not thin glass passing it. */
+const GLASS_RIM = 0x7fae88;
 const GLASS_IN = 0xf6f1e2;
 const BULB = 0xfff4de;
 
@@ -90,6 +122,66 @@ const PLINTH_R = 0.92; // the step above it
 const PLINTH_H = 0.12;
 const DOME_R = 0.76; // the moulded dome the column rises out of
 const DOME_H = 0.27;
+
+/* **Every convex corner on the turned brass is cut by this**, and it
+   is there for the light rather than for the shape.
+
+   A right-angled edge has no area, so it returns no highlight at all:
+   under the polished finish the base's steps were reading as a change
+   of shading between two flats with a hard line between them. A
+   45-degree chamfer of a couple of hundredths gives each step a narrow
+   band whose normal points *between* the two faces — which on a turned
+   ring is a continuous circle facing part-way up and part-way out, and
+   that is precisely the band a moon or a bulb lands a thin bright line
+   along. It is the one detail that reads as *machined* brass rather
+   than as brass-coloured geometry.
+
+   **Only convex corners get one.** A concave corner — the shoulder
+   where a step's top meets the narrower part rising out of it — already
+   returns a dark line, which is the right answer there, and chamfering
+   it would only cost triangles.
+
+   At LAMP_SCALE this is about 0.042 world units, which at the home
+   framing is a little over a pixel. A chamfer is supposed to be a
+   line, not a facet; much past this the steps start reading as cones.
+   Below about 0.015 it falls inside a pixel and the ring goes back to
+   returning nothing. */
+const BEVEL = 0.028;
+
+/* Round segments for everything turned on the base. 44 was the foot's
+   figure and the whole base is one lathe now, so it is the lathe's —
+   and the felt pad's, which has to share the brass's silhouette
+   exactly or the seam between them scallops. */
+const BASE_SEGS = 44;
+
+/* --- The felt pad ----------------------------------------
+   **It is a thin disc at the bottom of the fixture, and the brass's
+   underside was lifted to make room for it rather than the fixture
+   being raised.** That distinction is the whole implementation: the
+   origin sits on the desk top and every height in this file is stated
+   against it, so lifting the lamp by the pad's thickness would have
+   moved the shade, both lights, the seat solve and SHADE_Y. Instead
+   the pad occupies y 0..FELT_H and the brass profile starts its
+   underside at FELT_H — so BASE_H still measures to the same place,
+   nothing above the foot moves, and what is given up is a sliver of
+   brass underside that was flat on the walnut and never visible.
+
+   **It is flush with BASE_R, not inset, and that is forced by the
+   camera.** The room looks down at 20 degrees, so tan(20) = 0.36 of
+   height is hidden per unit of overhang: a pad inset by even the
+   chamfer's own 0.028 would disappear entirely behind the rim above
+   it. Flush, nothing overhangs it — the foot *tapers outward* going
+   down, so BASE_R is the widest point of the brass and also its
+   lowest — and the pad reads as what it is, a thin dark line between
+   the metal and the wood. Which is the whole point of it: the thing
+   that says a fixture is standing on a surface rather than
+   intersecting it is a different material at the join.
+
+   The world box does not move. BASE_R is still the widest radius and
+   y still starts at 0, so the +0.36 margin to the walnut's -x edge
+   and the contact shadow's BASE_R * 3.1 footprint are both untouched. */
+const FELT_H = 0.04;
+const FELT = 0x1a1613; // near-black, a touch warm
 const COL_R = 0.17; // the nominal radius every section is a ratio of
 const COL_BOT = BASE_H + PLINTH_H + DOME_H * 0.7;
 
@@ -140,6 +232,84 @@ const COL_COLLAR_B = 0.865;
 const COL_COLLAR_T = 0.955;
 const COL_LIP_T = 0.992;
 
+/* --- The base, as one lathe ------------------------------
+   **Three meshes became one**, and it is cheaper rather than dearer.
+   The foot and the plinth were tapered cylinders and the dome a
+   SphereGeometry(0.76, 36, 18) whose lower half was buried inside the
+   plinth — about 1,630 triangles over three draw calls, most of them
+   spent on hemisphere nobody can see. Turned as a single profile at
+   BASE_SEGS the whole base comes out around 1,500 triangles in **one**
+   draw call, with the chamfers included and the buried half gone.
+
+   That is also the only sane way to get the chamfers: a step cut on a
+   `CylinderGeometry` means a second mesh per edge, and the point of a
+   lathe is that a corner is two points on a polyline.
+
+   Bottom to top: the underside (lifted clear of the walnut by the felt
+   pad), the foot's outward-tapering flank between two chamfers, the
+   shoulder in to the plinth, the plinth's flank between two more, the
+   short shoulder in to the dome, and the dome itself as an elliptical
+   arc closing on the axis. */
+const DOME_SEGS = 9;
+function baseProfile() {
+  const pts = [];
+  const at = (r, y) => pts.push(new THREE.Vector2(r, y));
+
+  const footTopR = BASE_R * 0.95;
+  const plinthTopR = PLINTH_R * 0.9;
+  const plinthTop = BASE_H + PLINTH_H;
+
+  /* The underside. It starts at FELT_H, not 0 — see the felt pad. */
+  at(0, FELT_H);
+  at(BASE_R - BEVEL, FELT_H);
+  at(BASE_R, FELT_H + BEVEL); // out to the widest ring
+  at(footTopR, BASE_H - BEVEL); // the flank, tapering inward as it rises
+  at(footTopR - BEVEL, BASE_H); // and in over the top
+
+  /* Concave: the step's top running in to the plinth's foot. No
+     chamfer — see BEVEL. */
+  at(PLINTH_R, BASE_H);
+  at(PLINTH_R, BASE_H + BEVEL);
+  at(plinthTopR, plinthTop - BEVEL);
+  at(plinthTopR - BEVEL, plinthTop);
+
+  /* In to the dome, which is narrower than the plinth's top. */
+  at(DOME_R, plinthTop);
+  for (let i = 1; i <= DOME_SEGS; i++) {
+    const ph = (i / DOME_SEGS) * (Math.PI / 2);
+    at(DOME_R * Math.cos(ph), plinthTop + DOME_H * Math.sin(ph));
+  }
+  return pts;
+}
+
+/* **A short collar with both of its outer edges chamfered**, which is
+   what the plain `CylinderGeometry` collars were missing — the joint
+   where the arm meets the yoke's bar, and the one where the tilt pin
+   leaves its cap. Same reasoning as BEVEL: a collar's whole job is to
+   read as a separate turned part, and a right-angled ring returns no
+   line for the eye to separate it by.
+
+   Turned about its own y and left to the caller to rotate, exactly as
+   the cylinders it replaces were. Six profile points, so at 18
+   segments it is around 180 triangles — a handful more than the
+   cylinder, in the same one draw call. */
+function chamferedCollar(r, len, segs = 18) {
+  const b = Math.min(BEVEL, r * 0.3, len * 0.3);
+  const pts = [
+    new THREE.Vector2(0, 0),
+    new THREE.Vector2(r - b, 0),
+    new THREE.Vector2(r, b),
+    new THREE.Vector2(r, len - b),
+    new THREE.Vector2(r - b, len),
+    new THREE.Vector2(0, len),
+  ];
+  const g = new THREE.LatheGeometry(pts, segs);
+  /* Centred on its own middle, so it drops into the positions the
+     cylinders used without re-deriving any of them. */
+  g.translate(0, -len / 2, 0);
+  return g;
+}
+
 /* The profile, bottom to top, as (radius, height). Both ends come
    back to radius 0 so the solid is closed — the foot is buried in
    the base dome and never seen, but an open tube there shows its own
@@ -171,7 +341,13 @@ function columnProfile() {
 
   at(COL_SHAFT_R, b + COL_SHAFT_T * H);
   at(COL_SHAFT_R, b + COL_COLLAR_B * H);
-  at(COL_COLLAR_R, b + (COL_COLLAR_B + 0.021) * H); // the collar steps out
+  /* The collar steps out, and the convex corner at the top of that
+     flare is chamfered — it is the one edge on the column that faces
+     the camera squarely at the home framing, where the base's rings
+     are all seen from above. The flare's own foot is concave and is
+     left sharp; see BEVEL. */
+  at(COL_COLLAR_R - BEVEL, b + (COL_COLLAR_B + 0.021) * H);
+  at(COL_COLLAR_R, b + (COL_COLLAR_B + 0.021) * H + BEVEL);
   at(COL_COLLAR_R, b + COL_COLLAR_T * H);
 
   /* The small rounded lip over the top, then the cap. */
@@ -700,6 +876,30 @@ const BULB_HALF = (SHADE_LEN * 0.4) / 2 + BULB_R;
    flat black blob in the middle of the glowing lining. Moving it to
    the end puts the light outside it, and the collar is lit from
    along the tube the way it would be. */
+/* --- The filament ----------------------------------------
+   **A bulb is not an emissive capsule, and the fix is to put
+   something inside it.** Flat emissive over a tube gives a white bar:
+   every fragment returns the same value, so there is no shading left
+   and nothing in it to read as either glass or a source. Two things
+   together fix that, and neither is expensive.
+
+   The first is this — a thin element down the middle of the tube,
+   hotter than the envelope by about a factor of two, with the
+   envelope turned *translucent* so it shows through. That is the cue
+   the eye actually uses: a bright line with a soft halo around it is
+   a filament in glass, and a uniform shape of any brightness is not.
+   Six radial segments is plenty, because at the size this renders it
+   is two or three pixels wide and will never show a facet.
+
+   The second is the gradient along the envelope — see
+   `bulbGlowTexture`.
+
+   It is short of the ends by FILAMENT_IN: a real tubular lamp's
+   element stops well inside the pinch, and the gap is what the glass
+   has to be seen as glass in. */
+const FILAMENT_R = 0.028;
+const FILAMENT_IN = 0.3; // the share of the tube's half-length it stops short of
+
 const SOCKET_R = 0.15;
 const SOCKET_LEN = 0.34;
 const SOCKET_X = -(BULB_HALF - SOCKET_LEN / 2 + 0.01);
@@ -1010,7 +1210,21 @@ const SPOT_INTENSITY = 26.0 * LAMP_SCALE ** SPOT_DECAY;
      the white it is lighting — the same figure, and the same reason,
      as the cone lamp's. */
 const EMIT_BULB = 5.0;
+/* **The filament is hotter than the glass around it**, and that ratio
+   is the whole reason the bulb stops reading as a bar. See
+   FILAMENT_R. */
+const EMIT_FILAMENT = 11.0;
 const EMIT_LINING = 1.3;
+/* **Unchanged when GLASS_OUT was darkened, and that is deliberate.**
+   Emissive is additive and takes no notice of the body colour, so the
+   shade now puts out exactly the light it did over a green that is
+   about half as bright — which reads as *more* glow for the same
+   number, and is the right direction: a dark bottle green lit from
+   within from behind is what the brief asks for. The two figures in
+   the note above (flat 0.4 too dark, flat 0.85 a lime card) were both
+   measured against the old lighter green and no longer bound
+   anything; the ceiling-plus-map arrangement they argued for still
+   does. */
 const EMIT_GLASS = 1.5;
 
 let disposables = [];
@@ -1024,18 +1238,213 @@ function track(x) {
   return x;
 }
 
-/* Not a mirror. There is no environment map in this scene at all
-   (ENV_INTENSITY is 0 — see scene.js), so a true polished metal would
-   have nothing to reflect and would come out black; a satin, half-
-   rough brass picks the moon and its own lamp up off its roughness
-   instead. */
-function brassMaterial(colour, rough) {
+/* --- The brass finish ------------------------------------
+   **Polished: `metalness: 1`, roughness a quarter, and an environment
+   map of its own.** The three are one decision and the third is what
+   makes the first two possible.
+
+   This used to be a deliberately *un*polished `metalness: 0.8` at
+   roughness 0.34-0.46, and the comment here said a true polished metal
+   "would have nothing to reflect and would come out black" — because
+   `ENV_INTENSITY` is 0 in scene.js and the room has no environment at
+   all. That reasoning was sound and the conclusion was the wrong way
+   round: the fix for a metal with nothing to reflect is to give it
+   something, not to stop it being a metal.
+
+   **So the brass carries its own `envMap` rather than relying on
+   `scene.environment`,** and that scoping is the whole reason this is
+   safe to do. The room's three-light calibration is why the HDRI was
+   switched off: at `scene.environment` an environment is an *ambient
+   light*, and at the 0.1 it was first left at it was still doubling
+   the median room pixel and doing a third of the fill (see "The night
+   lighting" in CLAUDE.md). A per-material map on a `metalness: 1`
+   surface cannot do any of that — a metal has no diffuse term, so
+   there is no fill for it to contribute to. It reaches six brass parts
+   as a reflection and nothing else in the room as anything.
+
+   It also means the lab and the room reflect the same thing, since
+   `material.envMap` takes precedence over `scene.environment`. That is
+   the property worth having: a finish tuned in the lab is the finish
+   that ships.
+
+   **What is no longer lighting it**: at `metalness: 0.8` a fifth of
+   the brass was diffuse, and the hemisphere — the room's bounce, and
+   the only light most surfaces here get — was lifting it. At 1.0 the
+   hemisphere contributes nothing to this material, so the fixture's
+   brass is now lit by the env reflection plus the moon's, the lamp's
+   own and the tube's speculars. That is physically what polished metal
+   in a dark room looks like, and it is a real change in level rather
+   than only in finish — worth a `window.__probes()` read next time
+   `_lampshots.mjs` is run. */
+
+/* Stated as the maximum, because `roughnessMap` *multiplies* this and
+   the grain's mean is about 0.93 — so the surface runs at roughly
+   0.25 with its dullest patches near 0.23. */
+const BRASS_ROUGH = 0.27;
+/* The socket and the stem. Rough enough to stay matt directly under
+   the bulb; see BRASS_DARK. */
+const BRASS_ROUGH_FITTING = 0.62;
+
+/* **Very subtle, and with no per-pixel grain in it.** The desk's paint
+   and the CRT's plastic both put white noise in their roughness maps,
+   which is right for a surface whose texture is its own granularity.
+   Polished metal has none: what makes real brass read as brass rather
+   than as chrome is slow, wide unevenness — where it has been handled,
+   where the lacquer has gone — so this is the low-frequency lattice
+   alone, and the spread is narrow enough (a 16% band) that nothing on
+   it reads as a mark.
+
+   One channel's worth of data, written to all three: three samples
+   `roughnessMap.g`. Left as data rather than sRGB, which is what a
+   non-colour map has to be. */
+const GRAIN_CELLS = 7;
+const GRAIN_SIZE = 256;
+const GRAIN_FLOOR = 0.84; // the dullest multiplier the field reaches
+const GRAIN_REPEAT = 3;
+function brassGrain() {
+  const n = GRAIN_CELLS;
+  const size = GRAIN_SIZE;
+  const cell = size / n;
+  /* The lattice wraps (`% n` on both axes), so the field tiles and the
+     `RepeatWrapping` below cannot show a seam. */
+  const lattice = Array.from({ length: n * n }, () => Math.random());
+  const at = (i, j) => lattice[(j % n) * n + (i % n)];
+  const smooth = (t) => t * t * (3 - 2 * t);
+
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  const ctx = c.getContext("2d");
+  const img = ctx.createImageData(size, size);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const fx = x / cell;
+      const fy = y / cell;
+      const i = Math.floor(fx);
+      const j = Math.floor(fy);
+      const tx = smooth(fx - i);
+      const ty = smooth(fy - j);
+      const a = at(i, j) * (1 - tx) + at(i + 1, j) * tx;
+      const b = at(i, j + 1) * (1 - tx) + at(i + 1, j + 1) * tx;
+      const low = a * (1 - ty) + b * ty;
+      const v = (GRAIN_FLOOR + (1 - GRAIN_FLOOR) * low) * 255;
+      const k = (y * size + x) * 4;
+      img.data[k] = img.data[k + 1] = img.data[k + 2] = v;
+      img.data[k + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+
+  const t = track(new THREE.CanvasTexture(c));
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  /* Every part here is a different primitive with its own 0..1 UV — a
+     cylinder, a lathe, a sphere, a tube — so there is no single world
+     scale to set this against. A few tiles puts the unevenness at a
+     believable size on the two large parts (the foot and the column)
+     and leaves the small ones very nearly uniform, which is correct:
+     a knob the size of a fingertip has no room for a patch. */
+  t.repeat.set(GRAIN_REPEAT, GRAIN_REPEAT);
+  return t;
+}
+
+/* **The room the brass reflects, drawn rather than fetched.**
+
+   An equirectangular canvas, handed straight to `envMap` — three's
+   `WebGLCubeUVMaps` sees the equirect mapping and PMREM-filters it on
+   first use, which is the same path `scene.environment = hdr` takes.
+
+   **Why not the HDRI already vendored in `public/env/`:** it is there,
+   it is CC0, and it is Poly Haven's "Studio Small 09" — a daylit
+   photographic studio. Reflected in a fixture lit by a moon and a
+   tungsten bulb it puts white softboxes down the column, which is a
+   brighter and more legible lie than this is. The content matters more
+   than the provenance here, because at roughness 0.25 the reflection
+   is blurred to broad patches of colour and broad patches of colour
+   are all this needs to be. Zero bytes, no loader, no async, and it
+   cannot arrive late on the reduced-motion path that draws one frame
+   and stops — which is a trap this scene has already fallen into once
+   (see the walnut's `ready` promise in CLAUDE.md).
+
+   **Oriented to the room it stands in.** three's equirect lookup puts
+   `u = atan2(z, x) / 2pi + 0.5`, so -x — the wall the window is in —
+   lands on u 0 and 1, and +x on 0.5; `v` runs 0 down to 1 up. So the
+   bands are ceiling, wall, walnut from top to bottom, the window's
+   cool patch is drawn at both edges so it wraps, and the tube's teal
+   sits at u 0.5 because the machine is to the lamp's +x. Get that
+   backwards and the brass has a bright window reflected on the side
+   facing away from one. */
+const ENV_W = 256;
+const ENV_H = 128;
+function brassEnvironment() {
+  const c = document.createElement("canvas");
+  c.width = ENV_W;
+  c.height = ENV_H;
+  const ctx = c.getContext("2d");
+
+  /* Ceiling to walnut. Dark: this is a night room, and the only bright
+     things in it are drawn on top as patches. */
+  const band = ctx.createLinearGradient(0, 0, 0, ENV_H);
+  band.addColorStop(0.0, "#0e0c16"); // straight up, unlit ceiling
+  band.addColorStop(0.42, "#232038"); // the walls
+  band.addColorStop(0.56, "#2e2a44"); // the horizon, where the fade is
+  band.addColorStop(0.78, "#3a2a1b"); // walnut catching the lamp
+  band.addColorStop(1.0, "#241810"); // straight down, under the base
+  ctx.fillStyle = band;
+  ctx.fillRect(0, 0, ENV_W, ENV_H);
+
+  const blob = (u, v, r, colour, alpha) => {
+    const x = u * ENV_W;
+    const y = (1 - v) * ENV_H; // v is up; canvas y is down
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, colour);
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.globalCompositeOperation = "lighter";
+    ctx.fillStyle = g;
+    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    ctx.restore();
+  };
+
+  /* The window and its moon, at -x. Drawn at both edges of u so the
+     two halves meet seamlessly under RepeatWrapping — it is one patch
+     that happens to straddle the seam, not two windows. */
+  for (const u of [0, 1]) {
+    blob(u, 0.64, 46, "#aebbe4", 0.85); // the sky through the opening
+    blob(u, 0.70, 14, "#e8eeff", 0.9); // the moon itself
+  }
+  /* The tube, at +x, two units away and the one coloured light in the
+     room. Small and weak: it is a 5x4 panel seen nearly edge-on from
+     the lamp, so it is a glint rather than a wall. */
+  blob(0.5, 0.52, 26, "#2f6f69", 0.55);
+  /* The lamp's own pool on the walnut, below and in front. A fixture
+     this polished really does reflect the light it is throwing, and
+     this is most of what keeps the underside of the shade's arm from
+     being a black shape. */
+  blob(0.78, 0.2, 52, "#4a2f14", 0.8);
+
+  const t = track(new THREE.CanvasTexture(c));
+  t.mapping = THREE.EquirectangularReflectionMapping;
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/* `finish` is built once per `buildLamp` and shared by both materials
+   rather than memoised at module scope: `disposeLamp` frees everything
+   `track` holds, so a module-level singleton would be disposed and
+   then handed to the next build. */
+function brassMaterial(colour, rough, finish) {
   return track(
     new THREE.MeshStandardMaterial({
       color: colour,
-      metalness: 0.8,
+      metalness: 1.0,
       roughness: rough,
-      envMapIntensity: 0.55,
+      roughnessMap: finish.grain,
+      envMap: finish.env,
+      /* Full strength, where this was 0.55. At `metalness: 1` the env
+         is not one contribution among several — it is the only thing
+         lighting the metal between the speculars, so scaling it down
+         is scaling the brass down. */
+      envMapIntensity: 1.0,
     }),
   );
 }
@@ -1318,6 +1727,89 @@ function glassGlowTexture() {
   return t;
 }
 
+/* **The gradient the bulb's envelope glows by.**
+   `CapsuleGeometry` runs its `v` along its own length, so a vertical
+   gradient here is a gradient from one end of the tube to the other —
+   and the capsule is laid along x by a quarter turn in the build, so
+   this ends up running the length of the shade without the texture
+   knowing anything about that.
+
+   Hot over the middle, where the filament is, falling to a dim glass
+   at the two ends. It multiplies `emissive`, so EMIT_BULB is a ceiling
+   the way EMIT_GLASS is: the envelope's mean comes out around 0.6 of
+   it. The ends are dim rather than black — unlit glass next to a lit
+   filament still picks up a good deal of it.
+
+   Nothing varies around the circumference, so this is two pixels wide. */
+function bulbGlowTexture() {
+  const c = document.createElement("canvas");
+  c.width = 2;
+  c.height = 128;
+  const ctx = c.getContext("2d");
+  const g = ctx.createLinearGradient(0, 0, 0, 128);
+  g.addColorStop(0.0, "#3a3a3a"); // the pinch at one end
+  g.addColorStop(0.22, "#c4c4c4");
+  g.addColorStop(0.5, "#ffffff"); // over the filament
+  g.addColorStop(0.78, "#c4c4c4");
+  g.addColorStop(1.0, "#3a3a3a");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 2, 128);
+  const t = track(new THREE.CanvasTexture(c));
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/* **The shell's body colour, with the pale rim banded into it.**
+
+   The rim is a `map` rather than a second mesh, and the reason is the
+   geometry: `troughGeometry` lays `u` across the profile and the
+   profile *starts and ends on the two lips*, so the rolled edge is
+   already addressable as the two ends of u. A separate rim mesh would
+   mean a second swept strip following a doubly-curved closed curve,
+   inset far enough not to z-fight along its whole length — for a band
+   that is five profile segments wide.
+
+   **Its width is derived, not written.** `LIP_SEGS` of the profile's
+   own segment count is exactly the curl, so re-rounding the lip
+   (EDGE_RADIUS / LIP_SEGS) or re-tessellating the section
+   (PROFILE_SEGS) carries the band with it instead of leaving it at a
+   fraction that was right for a different mesh. The solid part covers
+   the outer half of the curl — the part genuinely turned under, where
+   the thickness faces the room — and fades out by the time the arc
+   meets the plumb skirt.
+
+   `color` is left white and the real colours are baked in here,
+   because `map` *multiplies* `color`: a white band over a bottle-green
+   base can only ever return bottle green, so there is no way to
+   lighten anything from a greyscale mask. The two hexes above are the
+   only statement of either colour. */
+const RIM_U = LIP_SEGS / (SHADE_PROFILE.length - 1);
+const RIM_SOLID = RIM_U * 0.5; // flat pale out to here
+const RIM_FADE = RIM_U; // back to bottle green where the curl ends
+function glassSkinTexture() {
+  const w = 512;
+  const h = 2; // nothing varies along the length
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const ctx = c.getContext("2d");
+  const hex = (n) => "#" + n.toString(16).padStart(6, "0");
+
+  const g = ctx.createLinearGradient(0, 0, w, 0);
+  g.addColorStop(0.0, hex(GLASS_RIM));
+  g.addColorStop(RIM_SOLID, hex(GLASS_RIM));
+  g.addColorStop(RIM_FADE, hex(GLASS_OUT));
+  g.addColorStop(1 - RIM_FADE, hex(GLASS_OUT));
+  g.addColorStop(1 - RIM_SOLID, hex(GLASS_RIM));
+  g.addColorStop(1.0, hex(GLASS_RIM));
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+
+  const t = track(new THREE.CanvasTexture(c));
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 export function buildLamp() {
   const root = new THREE.Group();
   root.name = "lamp";
@@ -1326,16 +1818,44 @@ export function buildLamp() {
      the caller's placement does not have to know the scale exists. */
   root.scale.setScalar(LAMP_SCALE);
 
-  const brass = brassMaterial(BRASS, 0.34);
-  const brassDark = brassMaterial(BRASS_DARK, 0.46);
+  /* One grain field and one environment, shared by both brass
+     materials — see brassMaterial for why they are built here rather
+     than at module scope. */
+  const finish = { grain: brassGrain(), env: brassEnvironment() };
+  const brass = brassMaterial(BRASS, BRASS_ROUGH, finish);
+  const brassDark = brassMaterial(BRASS_DARK, BRASS_ROUGH_FITTING, finish);
 
+  /* **MeshPhysical rather than MeshStandard, for the clearcoat.**
+     This is the one surface on the fixture where that is worth a
+     second specular lobe: fired glass has a hard, tight highlight
+     sitting *on top of* its body colour, where the brass's sheen is
+     the body colour. Standard has only the one lobe, so the choice
+     was between a dull green and a green that looks polished all
+     over — neither of which is glass.
+
+     It still is not a mirror (no environment map in this scene — see
+     brassMaterial), so the highlights it returns are the moon's, the
+     lamp's own point light and the tube's spill. Those are enough,
+     because a clearcoat lobe this tight is read as a *shape* — a
+     bright line following the ridge — rather than as a reflection of
+     anything identifiable.
+
+     `color` is white deliberately: the body green and the pale rim
+     both live in the map. See `glassSkinTexture`. */
   const glassMat = track(
-    new THREE.MeshStandardMaterial({
-      color: GLASS_OUT,
-      /* Glass, so glossier than the cone lamp's painted shade — but
-         not a mirror, for the reason in brassMaterial. */
-      roughness: 0.18,
+    new THREE.MeshPhysicalMaterial({
+      color: 0xffffff,
+      map: glassSkinTexture(),
+      /* The body under the coat. Lower than the 0.18 this ran at as
+         a MeshStandard material, since it is no longer the only thing
+         carrying the gloss. */
+      roughness: 0.12,
       metalness: 0.0,
+      /* Full coat at a near-mirror roughness — glass has no orange
+         peel. This pair is what makes the highlight sharp; widening
+         clearcoatRoughness past about 0.1 reads as lacquer. */
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.04,
       emissive: new THREE.Color(GLASS_EMISSIVE),
       emissiveMap: glassGlowTexture(),
       emissiveIntensity: 0,
@@ -1347,23 +1867,67 @@ export function buildLamp() {
       side: THREE.FrontSide,
     }),
   );
+  /* The casing. **Slightly rough rather than matt**: it ran at 0.82,
+     which is paper, and opal glass is a sintered white *surface* with
+     a sheen on it — enough of one to pick the filament up as a soft
+     bloom down the inside of the trough, which is most of what says
+     there is a bulb in there from an angle that cannot see the bulb
+     itself. Not lower than this: past about 0.3 the lining starts
+     returning a second hard highlight and competes with the shell's
+     clearcoat for the same job. */
   const liningMat = track(
     new THREE.MeshStandardMaterial({
       color: GLASS_IN,
-      roughness: 0.82,
+      roughness: 0.42,
       metalness: 0,
       emissive: new THREE.Color(LAMP_COLOUR),
       emissiveIntensity: 0,
       side: THREE.BackSide,
     }),
   );
+  /* The envelope. **Translucent, so the filament inside it shows**,
+     and glass-smooth rather than the 0.28 it ran at — it was a
+     ceramic tube before.
+
+     `depthWrite: false` because it is a transparent shell with an
+     opaque emissive element inside it: the filament is drawn in the
+     opaque pass and this blends over it afterwards, which is the
+     order that works, and writing depth from a transparent surface
+     only risks the shell occluding itself where the capsule's two
+     ends overlap in screen space. */
   const bulbMat = track(
     new THREE.MeshStandardMaterial({
       color: BULB,
-      roughness: 0.28,
+      roughness: 0.12,
+      metalness: 0,
+      emissive: new THREE.Color(BULB_EMISSIVE),
+      emissiveMap: bulbGlowTexture(),
+      emissiveIntensity: 0,
+      transparent: true,
+      opacity: 0.55,
+      depthWrite: false,
+    }),
+  );
+  /* The element. No `map` and no gradient: it is a line two or three
+     pixels wide, and all of its brightness is emissive. */
+  const filamentMat = track(
+    new THREE.MeshStandardMaterial({
+      color: BULB,
+      roughness: 0.4,
       metalness: 0,
       emissive: new THREE.Color(BULB_EMISSIVE),
       emissiveIntensity: 0,
+    }),
+  );
+  /* The pad. Matt and nearly black — it is felt, so it is the one
+     surface on the fixture with no specular answer at all, which is
+     what makes it read as a different material rather than as brass
+     in shadow. */
+  const feltMat = track(
+    new THREE.MeshStandardMaterial({
+      color: FELT,
+      roughness: 0.95,
+      metalness: 0,
     }),
   );
 
@@ -1374,28 +1938,32 @@ export function buildLamp() {
     return m;
   };
 
-  /* --- the base: three turned steps and a dome --- */
-  const foot = mesh(
-    new THREE.CylinderGeometry(BASE_R * 0.95, BASE_R, BASE_H, 44),
+  /* --- the base: two steps and a dome, turned as one piece ---
+     Chamfered, and in one draw call where it used to be three. See
+     `baseProfile`, and BEVEL for what the chamfers are for. The dome
+     is still the reference's swell-and-tuck — as an elliptical arc on
+     the profile now rather than as a squashed sphere, which is the
+     same curve with its buried lower half not built. */
+  const base = mesh(
+    new THREE.LatheGeometry(baseProfile(), BASE_SEGS),
     brass,
   );
-  foot.position.y = BASE_H / 2;
-  root.add(foot);
+  root.add(base);
 
-  const plinth = mesh(
-    new THREE.CylinderGeometry(PLINTH_R * 0.9, PLINTH_R, PLINTH_H, 40),
-    brass,
+  /* The felt pad the brass stands on. It shares BASE_SEGS with the
+     lathe above, or the two silhouettes scallop against each other at
+     the seam. It neither casts nor receives: it is 0.04 tall and flat
+     on the walnut, the painted contact shadow is what grounds the
+     fixture, and a 1024-texel map spread over the room has no texel
+     for a hairline. */
+  const felt = mesh(
+    new THREE.CylinderGeometry(BASE_R, BASE_R, FELT_H, BASE_SEGS),
+    feltMat,
+    false,
   );
-  plinth.position.y = BASE_H + PLINTH_H / 2;
-  root.add(plinth);
-
-  /* A sphere scaled flat rather than a cone: the reference's base
-     swells out of the plinth and tucks back in under the column, which
-     a truncated cone cannot do in one piece. */
-  const dome = mesh(new THREE.SphereGeometry(DOME_R, 36, 18), brass);
-  dome.scale.y = DOME_H / DOME_R;
-  dome.position.y = BASE_H + PLINTH_H;
-  root.add(dome);
+  felt.receiveShadow = false;
+  felt.position.y = FELT_H / 2;
+  root.add(felt);
 
   /* --- the column ---
      One lathe through `columnProfile`, in the same polished brass as
@@ -1546,11 +2114,10 @@ export function buildLamp() {
   bar.position.set(0, BAR_Y, BAR_Z);
   yoke.add(bar);
 
-  /* The joint, where the arm arrives at the middle of the bar. */
-  const joint = mesh(
-    new THREE.CylinderGeometry(YOKE_R * 1.9, YOKE_R * 1.9, 0.26, 18),
-    brass,
-  );
+  /* The joint, where the arm arrives at the middle of the bar.
+     Chamfered, like the base's steps and the column's collar — see
+     BEVEL. */
+  const joint = mesh(chamferedCollar(YOKE_R * 1.9, 0.26), brass);
   joint.rotation.z = Math.PI / 2;
   joint.position.set(0, BAR_Y, BAR_Z);
   yoke.add(joint);
@@ -1571,12 +2138,7 @@ export function buildLamp() {
   yoke.add(pin);
 
   const pinCollar = mesh(
-    new THREE.CylinderGeometry(
-      KNOB_COLLAR_R,
-      KNOB_COLLAR_R,
-      KNOB_COLLAR_LEN,
-      18,
-    ),
+    chamferedCollar(KNOB_COLLAR_R, KNOB_COLLAR_LEN),
     brass,
   );
   pinCollar.rotation.z = Math.PI / 2;
@@ -1602,11 +2164,34 @@ export function buildLamp() {
   bulb.receiveShadow = false;
   shell.add(bulb);
 
-  /* The socket: a dark collar round the middle of the tube, so the
-     bulb reads as fitted rather than floating. `brassDark` rather
-     than `brass` — this is the one fitting that should *not* catch
-     the light, since it sits directly under the bulb and a polished
-     ring there reads as a second filament. */
+  /* The element inside it — see FILAMENT_R for why the bulb needs
+     one. A plain cylinder: it is seen through a translucent envelope
+     at two or three pixels wide, so there is nothing a capsule's
+     rounded ends would add. It does not cast, for the bulb's own
+     reason, and it does not receive either — every face of it is
+     inside the glass. */
+  const filament = mesh(
+    new THREE.CylinderGeometry(
+      FILAMENT_R,
+      FILAMENT_R,
+      (BULB_HALF - BULB_R) * 2 * (1 - FILAMENT_IN),
+      6,
+    ),
+    filamentMat,
+    false,
+  );
+  filament.rotation.z = Math.PI / 2;
+  filament.position.set(0, BULB_Y, BULB_Z);
+  filament.receiveShadow = false;
+  shell.add(filament);
+
+  /* The socket, capping the far end of the tube so the bulb reads as
+     fitted rather than floating — the end the stem rises from, which
+     puts it *behind* the bulb from the mouth. `brassDark` at
+     BRASS_ROUGH_FITTING rather than the polished brass, and left
+     unchamfered: this is the one fitting that should not catch the
+     light, since a bright ring directly beside the filament reads as
+     a second one. */
   const socket = mesh(
     new THREE.CylinderGeometry(SOCKET_R, SOCKET_R, SOCKET_LEN, 14),
     brassDark,
@@ -1797,13 +2382,13 @@ export function buildLamp() {
   blob.raycast = () => {};
   root.add(blob);
 
-  parts = { point, spot, liningMat, glassMat, bulbMat, shade, root };
+  parts = { point, spot, liningMat, glassMat, bulbMat, filamentMat, shade, root };
   setLamp(0);
   return { root, shade, point, spot };
 }
 
 /* **What "on" means, in one place.** The caller owns the state and the
-   fade — this is the curve from a 0..1 level to the five things that
+   fade — this is the curve from a 0..1 level to the six things that
    have to move together, so a lamp at 0.3 can never be a bright bulb
    in a dark shade. Linear in the level on purpose, exactly as
    src/lamp.js is: the shaping lives in the caller's loop, so the ease
@@ -1814,6 +2399,7 @@ export function setLamp(level) {
   parts.point.intensity = POINT_INTENSITY * v;
   parts.spot.intensity = SPOT_INTENSITY * v;
   parts.bulbMat.emissiveIntensity = EMIT_BULB * v;
+  parts.filamentMat.emissiveIntensity = EMIT_FILAMENT * v;
   parts.liningMat.emissiveIntensity = EMIT_LINING * v;
   parts.glassMat.emissiveIntensity = EMIT_GLASS * v;
 }
@@ -1897,6 +2483,7 @@ export function lampLevels(next = {}) {
     full: { point: POINT_INTENSITY, spot: SPOT_INTENSITY },
     emissive: {
       bulb: parts ? parts.bulbMat.emissiveIntensity : 0,
+      filament: parts ? parts.filamentMat.emissiveIntensity : 0,
       inner: parts ? parts.liningMat.emissiveIntensity : 0,
       outer: parts ? parts.glassMat.emissiveIntensity : 0,
     },
