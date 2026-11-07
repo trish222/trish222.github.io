@@ -427,6 +427,29 @@
     <span class="orbit-hint-arrows">&#8596;</span> Drag to look around
   </p>
 
+  <!-- THE DESK LAMP, FOR EVERYONE WHO IS NOT HOLDING A POINTER
+
+       The lamp on the desk is toggled by pressing it in the 3D scene,
+       which is a raycast against a canvas and so has no keyboard or
+       assistive equivalent at all. This is that equivalent: the same
+       switch, through the same `setLampOn` in scene.js, so the two can
+       never disagree. `aria-pressed` is the state and scene.js writes
+       it on every toggle, whichever route took it.
+
+       Visually hidden rather than merely off-screen — a `display:none`
+       control is not in the accessibility tree at all, and a `left:
+       -9999px` one drags the viewport sideways when it takes focus.
+
+       Outside #desktop on purpose: the desktop chrome is `opacity: 0;
+       pointer-events: none` until the sign-in, so a control in there
+       would be unreachable for exactly the stretch in which the lamp
+       is the only thing on the page to press.
+
+       `hidden` until scene.js unhides it, like the drag hint: without
+       WebGL there is no lamp, so there must be no switch for one. -->
+  <button id="lamp-toggle" class="visually-hidden" type="button"
+          aria-pressed="true" hidden>Desk lamp</button>
+
   <!-- Only on screen once the camera has flown in, and gone again once
        signed in: from there the way out is Start > Log Off. -->
   <div id="screen-back-bar" class="ui98" hidden>

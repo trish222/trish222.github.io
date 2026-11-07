@@ -14,6 +14,9 @@ and what to take from it.
 - Build 3D objects from primitives in code rather than importing models.
 - Keep the site mobile responsive.
 
+The desk lamp added no dependency and no asset either — a shade is an
+open-ended cone and a base is a disc.
+
 Current third-party inventory: `three` and its `examples/jsm` addons (MIT),
 `gsap` (GreenSock standard licence — the one documented exception to the list
 above; it drives the fly-in timeline, imported as `gsap/gsap-core` so CSSPlugin
@@ -89,6 +92,7 @@ src/computer.js   the CRT machine, built from primitives
 src/desk.js       the steel tanker desk it stands on, likewise
 src/treehouse.js  the brick-built cherry treehouse, and the spare bricks beside it
 src/nightwindow.js  the window in the left wall: joinery, the night sky on the glass, the rain
+src/lamp.js       the desk lamp on the back-left corner, and what "on" means for each of its parts
 public/env/       CC0 studio HDRI — vendored, no longer loaded (see "The night lighting")
 public/textures/  CC0 walnut scan for the desk top, vendored and relit
 src/style.css     Win95 design tokens (:root vars) + all component CSS
@@ -104,7 +108,8 @@ design-references/  local mood board (CRT monitor photos, isometric angles) — 
 
 ### The scene
 
-`src/scene.js`, `src/computer.js`, `src/desk.js` and `src/treehouse.js` are the
+`src/scene.js`, `src/computer.js`, `src/desk.js`, `src/treehouse.js`,
+`src/room.js`, `src/nightwindow.js` and `src/lamp.js` are the
 only modules that import three. Perspective camera on a **20° vertical FOV**, **20° down / 37°
 around** — see "Perspective, and what it replaced" below; it was orthographic
 until the orbit leash reached 2°. The elevation comes from a CAD
@@ -980,6 +985,67 @@ whether its clock stays at zero while the shot still shows streaks);
 whether it fades with its wall at the front and the left clamp; and a
 crop of the window taken off its own NDC box, so the crop follows it
 as it is re-tuned.
+
+`_lampshots.mjs` covers the desk lamp, on desktop / mobile / reduced
+motion. Six jobs, and the first three are the ones a screenshot cannot do: whether
+it fits (`window.__fit("lamp")`, plus the margins to the walnut's -x
+and back edges and the gap to the computer kit — note the `kit ndc`
+figure is against the whole kit, contact shadows included, so it goes
+negative and that is fine); whether the moon's shadow box still covers
+it (`window.__shadowfit()`, where a negative margin means a patch of
+floor flooded with moonlight); whether it reads as a light source
+(`window.__probes()` and `window.__histogram()` with the lamp on and
+off — the local delta on the pool is the number, and the room's median
+barely moving is the exposure lift doing its job); the interaction (a
+real pointer press on the shade toggles and does *not* fly in, a press
+on the monitor flies in and does *not* toggle, the hidden button
+carries `aria-pressed`); the shots, including a crop taken off the
+lamp's own NDC box; and **reduced motion**, which is the only path with
+no render loop — so the fade has nothing to advance it and the toggle
+has to land on the endpoint and draw once, exercised through focus +
+Enter on the hidden button rather than a programmatic click.
+
+`node _lampshots.mjs aim` adds the sweep the shade's two tilts were set
+by, plus the `castShadow` A/B — the method, kept runnable, not a test.
+
+Two things about it. **Read the `curve` row, not the `live` one, for
+the fade** — SwiftShader gives these runs about a frame a second, so
+the whole 0.4s ramp lands between two samples; `curve` is the same ease
+the loop uses, read off the page, and shows the shape on any renderer.
+Since the strike was removed it should climb monotonically, so a dip in
+either row is now a bug rather than the feature it used to be. And the
+height it prints is the conservative `Box3` figure — see "Where it
+stands" above.
+
+`_lampbig.mjs` is the one that answers **"does the bigger lamp get in
+front of the monitor"**, and it is a separate script because it asks a
+different kind of question: not where the fixture is, but what is on
+the ray. It walks a 15x15 grid over the glass (the live overlay's
+client rect *is* the screen plane's on-screen quad), over the kit's
+projected box and over the lamp's own, at home and at **both azimuth
+clamps**, and asks `window.__pick` what a press at each point would
+hit.
+
+**The grid is walked twice and that is the whole point.** A point
+coming back "lamp" only says the lamp is nearest on that ray — over
+bare walnut or an empty corner of a projected box that is simply where
+the lamp is, and most of a projected box is empty space around a yawed
+object. Occlusion is the *conjunction*: this point picks the lamp **and
+would have picked the machine with the fixture out of the way**. So the
+second pass moves the lamp's meshes to layer 1, which `pickTarget`'s
+raycaster does not test, and the script reports where the two passes
+disagree. An NDC-box overlap would have called this wrong in both
+directions — the two boxes already overlap at every azimuth and
+nothing is in front.
+
+`_pool.mjs` is the lighting half of the same question: a transect of
+on/off luma deltas along two **fixed** world lines across the desk top,
+through `window.__probes`. Fixed, because the beam moves when the
+fixture is re-scaled or re-aimed, and a line through the beam's own
+centre then measures two different places at the two scales — a pool
+that has *moved* reads as one that has dimmed. It prints the aim beside
+the rows so the two can be told apart. This is what the falloff
+compensation in `LAMP_SCALE` was set by.
 
 `_orbit.mjs` covers the camera leash, on desktop / mobile / reduced
 motion. It drags with real pointer events so everything goes through
@@ -2123,19 +2189,374 @@ but that is a prediction, not a reading, and the rule on this branch
 is that a frame time without its A/B beside it is worth nothing. Run
 `_perfcheck.mjs` if the number matters.
 
+### The desk lamp
+
+`src/lamp.js` builds a base, a pole and a cone shade from primitives
+and stands them on the back-left corner of the desk. It is **the only
+object in the scene a visitor can change**: pressing it toggles the
+light, and so does a visually hidden button in `index.html` for anyone
+without a pointer.
+
+Local space matches the desk's, the computer's and the treehouse's —
++Z is the front, origin on the **desk top** at the centre of the base —
+so `scene.js` only lifts it by `DESK_TOP_Y`. It is **not yawed**: the
+shade's own two tilts are what point it, and a group rotation on top
+would make "forward" mean two different things.
+
+#### How big it is, and the three things a group scale cannot reach
+
+**`LAMP_SCALE` is 1.75**, applied as a group scale on the root rather
+than by rebuilding the proportions — so the constants in the file stay
+at the sizes the shape was art-directed at (`SHADE_H` still reads as "a
+1.1-unit cone") and the arithmetic in the comments still checks out.
+It is applied about the root's **own origin**, which sits on the desk
+top at the centre of the base, so the fixture grows in place, the base
+stays flat on the walnut at `DESK_TOP_Y`, and `scene.js`'s placement
+does not have to know the scale exists. Same decision, and the same
+reason, as `TREEHOUSE_SCALE`.
+
+**A group scale reaches geometry and transforms and nothing else**, and
+four things here live outside it. Three are stated in world units, so
+each is multiplied explicitly or the fixture grows while its light
+stays the size it was:
+
+- **`distance` on both lights** — the range at which each dies.
+- **the spot's `shadow.camera.near`**. Its `far` is *not* set here in
+  any load-bearing way: `SpotLightShadow.updateMatrices` overwrites it
+  from `light.distance` on every pass, so scaling the distance carries
+  it. The line in the file only keeps the two agreeing before the
+  first shadow pass.
+- **the spot's `shadow.normalBias`**, which walks a sample along the
+  normal by a distance in world units. The shadow frustum's *angle*
+  does not change, so at 1.75x the throw a texel covers 1.75x more
+  world and the bias has to grow with it or the acne comes back under
+  the base.
+
+`shadow.radius` is deliberately **not** scaled: it is a blur width in
+texels, and a texel is now wider in world terms, so the penumbra grows
+on its own — which is what a bigger mouth should give.
+
+**The fourth is the falloff, and it was measured rather than
+predicted.** The bulb is now 1.75x further from the walnut, so at these
+decays the pool arrives dimmer by `LAMP_SCALE ** decay`. That is not a
+rounding error: `_pool.mjs`'s transect put the peak on/off delta at
+**88 against 181** before, a factor of 2.06 against the 1.75^1.3 = 2.11
+the spot's decay predicts. The footprint had grown and flattened
+exactly as it should; the light had halved. So both intensities carry
+`* LAMP_SCALE ** decay`, written as the exponent rather than
+pre-multiplied so that re-scaling the fixture carries the brightness
+with it. Compensated, the same transect reads **peak 130 over a wider
+lit span** (x -7.6..-0.6 against -7.6..-1.3) — a broader, flatter pool
+rather than the small lamp's hot spot, which is what a bigger shade
+further from the surface does.
+
+That compensation is also what keeps the night rig honest: every figure
+in "The night lighting" is calibrated at `lampLevel === 1`, so halving
+the lamp's contribution would have quietly moved the calibration.
+
+**What the scale costs is height**, and it is the one figure that now
+breaks a rule this file states twice. See "Where it stands".
+
+#### Why there are two lights in one fixture
+
+The brief asks for a warm `PointLight` under the shade **with soft
+shadows**, and three 0.186 cannot give one both at once:
+`WebGLShadowMap` refuses VSM shadows for point lights outright
+("VSM shadow maps are not supported for PointLights") and `continue`s,
+so `castShadow` on one is a dead flag plus a console warning — and this
+scene is on `VSMShadowMap` for the moon's penumbra. So the fixture
+carries two:
+
+- **the point light** is the lamp's light. It sits *inside* the shade
+  at the bulb and casts nothing, which is exactly what lets it light
+  the shade's own outside, the pole and the wall behind — a shade
+  really does glow. Short range (4.6), so it stays a bloom around the
+  fixture rather than a second pool.
+- **the spot light** carries the throw and the soft cast shadow. A cone
+  shade *is* a cone of light, so it is also the right shape.
+
+Both are `decay` well under 2, for the same reason the CRT's spill is:
+a lit shade is an area source and these are points, so inverse-square
+blows the shade's own plastic out before anything a hand's width away
+sees light.
+
+**The spot sits 0.06 past the shade's mouth, not at the bulb**, and
+that one offset is what lets every part of the lamp cast for the moon.
+A light inside the shade has the shade's own inner wall in front of it,
+so either the shade casts and the pool is entirely shadowed, or the
+shade does not cast and loses its moon shadow too — `castShadow` is per
+object, not per light. Outside the rim the whole fixture is *behind*
+the light and neither trade has to be made.
+
+The spot's `bias` is 0 and `normalBias` 0.015, for the reason the
+moon's is: VSM compares a depth against a variance-bounded estimate, so
+a constant offset leaks light out from under contacts. 51° over 1024
+texels at a ~3-unit throw is a texel of ~0.007, and this is two of
+them.
+
+**What that shadow actually falls on is the desk top**, and the A/B
+is worth knowing because the first guess was that it falls on nothing.
+`node _lampshots.mjs aim` flips `castShadow` and shoots the pair:
+without it the lamp lights the **centre drawer front and the apron**
+through six-tenths of a unit of solid walnut. The whole-frame
+histogram moves by one level either way — a shadow is a local thing and
+that statistic cannot see it — so the shot pair is the evidence, not
+the number.
+
+#### The shade is tilted, and that is a visibility decision
+
+The camera looks **down** at 20°, so a shade hanging mouth-down shows
+nothing but its outside — the emissive inner wall and the bulb, which
+are most of what says the lamp is lit, would never be in shot. The
+shade therefore leans, forward toward +Z and toward +X.
+
+**The two angles were swept, not chosen**, through
+`window.__lamp({ tilt, swing })` off one page load — they decide three
+things at once (how much of the lit inside the camera sees, where the
+pool falls, and whether anything stands in the beam), so they could not
+be set one at a time. `node _lampshots.mjs aim` re-runs it.
+
+At the first pair, **45° / 18°**, the beam landed at world (-5.95, 1) —
+bare walnut three units short of the keyboard, with the keyboard
+picking up only 21 levels. At the shipped **50° / 24°** it lands at
+(-5.11, 0.69), so the pool runs from the fixture to the keyboard's left
+end (58 unlit to 92), and the mouth turns far enough toward the camera
+to show the bulb inside it. Past about 55° the pool is a broad wash in
+the middle of the desk and stops reading as *this lamp's*.
+
+Three figures were moved once after looking at the fixture from the
+**ends of the orbit leash** rather than only from home, and the second
+is the one that would not have been found any other way:
+
+- **the bulb is hotter than the wall behind it** (5.5 against 1.7). At
+  4.5/2.2 the mouth was one flat white blob with no filament in it.
+- **the outer shade's emissive is 0.07, down from 0.18.** At the left
+  clamp the mouth faces away and nothing else reaches the back of the
+  cone, so that term was the *only* one on those fragments and the
+  shade read as a flat tan kite cut out of paper.
+- **the fitter stands entirely above the cap**, rather than straddling
+  it. At a 45° tilt the mouth shows a good deal of the shade's own
+  ceiling, and a collar hanging through it read as a dark bar across
+  the lit inside.
+
+`aimLamp` in lamp.js is that handle. It re-poses the shade and reports
+where the beam meets the plane the lamp stands on — which it finds from
+the lamp's **own origin's** world y, so it never has to be told how
+tall the desk is. Moving the light is the one change in this scene that
+invalidates the frozen shadow map, and `window.__lamp` is the only
+place outside `window.__lights` that sets `needsUpdate`.
+
+#### Where it stands
+
+`LAMP_X` / `LAMP_Z` are **(-7.0, -3.6)**, and the depth is the figure
+that was tuned. Screen x runs roughly `0.8x - 0.6z` at this azimuth, so
+pushing an object *back* walks it screen-**right** — the opposite of
+what "back left" suggests, and the reason the depth is the interesting
+half.
+
+**`LAMP_X` was -7.6 and moved +0.6 for `LAMP_SCALE`**, which is worth
+understanding before moving it again, because the thing that forced it
+is not geometry. At 1.75 the fixture's world box ran x -9.99..-5.21
+against a walnut edge at -9.75 — **0.24 over the edge**. The part
+hanging off was the **painted contact shadow**, a square of
+`BASE_R * 3.1` that scales with the group, not any part of the lamp:
+the base disc itself was still 1.1 clear. But a contact blob off the
+edge of the desk is a grey patch in mid-air, which is the exact defect
+painted shadows exist to avoid, so it binds. At -7.0 the margin is
+**+0.36**.
+
+The move is +x, which walks the fixture screen-*right*, toward the
+machine — so it was the direction that had to be checked rather than
+assumed, and `_lampbig.mjs` is what checked it. There is no cheaper
+direction: both +x and -z go screen-right at this azimuth, and -x is
+the edge that was already over.
+
+Measured at 1.75 with `_lampshots.mjs` and `_lampbig.mjs`: **0.36 clear
+of the walnut's -x edge, 0.89 of the back edge, and 0.51 in x from the
+computer kit's own box** (against 0.79 / 1.92 / 2.14 at the old size).
+The kit figure is the slackest of the three despite being the smallest
+number — the kit's x extent is the mouse's painted shadow, which sits
+at the desk's *front*, while the lamp is at the back, so the two are
+separated in z and never meet.
+
+**Nothing occludes the monitor, and that is checked on rays rather than
+on boxes.** `_lampbig.mjs` walks a 15x15 grid over the glass, the kit's
+projected box and the lamp's own, at home and at **both azimuth
+clamps**, on both viewports, asking `window.__pick` twice per point —
+once with the fixture present and once with its meshes on a layer the
+raycaster does not test. Points where the two disagree are the
+occluding ones. There are **zero** at every framing, and the glass
+comes back "machine" at all 225 points of all six grids. The NDC boxes
+*do* overlap at every azimuth and always did, which is why the box test
+was not the one to trust.
+
+**The pick precedence is unchanged and was re-checked at the new
+size**: the centre of the glass picks `machine`, the upper shade picks
+`lamp`, and a real pointer press on each does the one thing it should —
+the shade toggles without flying in, the monitor flies in without
+toggling.
+
+It also stands **in front of the window, below the sill**, so the shade
+is silhouetted against the night sky and the moon throws it across the
+desk. **The moon's shadow box did not have to grow for the taller
+fixture**, which was measured rather than assumed because the window
+wall casts and a receiver outside the box is a patch of floor flooded
+with moonlight: `window.__shadowfit()` now puts the lamp at lat
+1.84..8.98, up -3.32..7.48, depth 20.57..31.18, and the union still
+clears the camera by **1.53 or more on every face**.
+
+The `kit ndc` figure `_lampshots.mjs` prints goes **negative**, and
+that is expected rather than a failure: `__fit("computer")` is the
+whole kit — keyboard, mouse and their painted contact shadows — and
+those run far further screen-left than the CRT itself does.
+
+#### Two figures the scale leaves outstanding
+
+Both are reported rather than fixed, because fixing either means
+changing something that was asked for.
+
+- **It is now the tallest thing on the desk, which breaks the rule
+  this file states for the treehouse.** `_lampshots.mjs` prints
+  **8.10** above the desk top; that is the conservative
+  `Box3.setFromObject` bound and the shade is a cone yawed 45°, so the
+  fixture really tops out near **6.8** — still past the CRT's **6.60**.
+  The rule was "nothing else on this desk may come up level with the
+  thing a visitor has to find and press", and the lamp now does. It
+  does not *occlude* the machine from anywhere on the leash (above),
+  so what is at stake is competition for attention rather than a
+  blocked target. The lever is `LAMP_SCALE`: about **1.60** brings the
+  true top back under 6.25, the figure the treehouse was held to.
+- **It reaches NDC y 0.91 at home and 0.92 at the right clamp** on a
+  desktop frame, against 0.65/0.67 before. In shot, but with 8% of
+  the frame to spare — and the precedent in this file is against that:
+  the window's opening came *down* from 7.0 to 6.4 because its head
+  landed at 0.95/0.97 and "3% is not a margin". On a phone the left
+  clamp crops it, x0 **-1.13** against -1.00 before, which is the same
+  trade the desk's own ends and the window take on a portrait
+  viewport.
+
+#### The switch
+
+The state and the fade live in `scene.js`; lamp.js owns only the curve
+from a 0..1 level to five brightnesses (two intensities and three
+emissives), and `setLamp` is **linear** in that level. Same division
+the fly-in draws between GSAP and `applyFly`, and for the same reason:
+the easing can be re-shaped without touching what a lamp at 0.3 looks
+like. It is also what let the strike below come back out without
+touching lamp.js at all.
+
+- **The fade is 0.4s and the two directions get different shapes.** On
+  is `1-(1-p)²` — fast off the mark, settling into the last few
+  percent, which is how a filament behaves. Off is `p²` — most of the
+  way immediately, then a tail, which is a filament cooling. Both are
+  linear in time, so the fade really is 0.4s rather than an exponential
+  that never arrives.
+- **There is no strike.** The lamp used to flicker on: a staircase of
+  held multipliers over the on-ramp — up, out, up brighter, one hitch,
+  full — multiplying the ease rather than replacing it, so the 0.4s
+  arrival was unchanged and the flicker was a stutter *in the rise*.
+  It was **removed on request**, and the one thing worth knowing is
+  that it was the only non-monotonic term in the level: with it gone
+  the two eases above are the whole story in both directions, and
+  `window.__lamp().curve` is the ease alone — which is now also the
+  check, since it should climb monotonically from 0 to 1. Putting one
+  back means multiplying `applyLampLevel`'s argument again, not
+  re-shaping either ease.
+- **The exposure moves a little with the lamp, upward as it goes out.**
+  With the lamp off the room loses its one warm source and ACES's toe
+  takes the walls and floor back toward the void — the thing
+  `TONE_EXPOSURE` exists to stop. Lifting the exposure 0.1 over a base
+  of 1.3 as the lamp dies is dark adaptation. It is snapped to 0.02
+  before being written, because the void's pre-image has to be
+  re-solved whenever it moves (`applyVoidColor`) and a Newton solve per
+  frame for 0.4s buys nothing. Five distinct values across the fade.
+
+  `window.__lights({ exposure })` now sets the **base**, not the live
+  value, or the loop would silently revert it the next time the lamp
+  was switched.
+
+- **The frozen shadow map is not broken by any of this.** Switching the
+  lamp changes an *intensity*, and a shadow map carries occlusion, not
+  brightness, so the lamp's frozen map is as correct at level 0 as at
+  level 1.
+
+#### One press never does two things
+
+`pickTarget` raycasts the lamp and the machine in **one** call and
+takes the nearest hit, with the lamp listed first so it wins a tie.
+`window.__pick(x, y)` is the handle onto it, and `_lampbig.mjs` is what
+reads the precedence off a grid rather than off two sample points.
+Testing the lamp first and returning would toggle it *through* the
+monitor from the azimuths where it sits behind the machine; taking the
+nearest means a press can only ever be one of the two, which is the
+property that actually matters. The decision is recorded on
+`pointerdown` as `press.target` — "lamp", "machine" or null — for the
+same reason the hit always was: by the time the pointer comes up the
+camera has moved.
+
+Only the machine takes the screen's hover brightness. The cursor says
+`pointer` over either, `grab` over the room. The lamp's painted contact
+shadow is `raycast = () => {}`: left pickable it would make a patch of
+empty walnut twice the fixture's own footprint toggle the light.
+
+#### The hidden button
+
+`#lamp-toggle` in `index.html` is the keyboard and screen-reader route
+to the same `setLampOn`, so the two can never disagree; `aria-pressed`
+is the state and is written on every toggle whichever route took it.
+Three things about it:
+
+- **It is outside `#desktop`.** The desktop chrome is `opacity: 0;
+  pointer-events: none` until the sign-in, so a control in there would
+  be unreachable for exactly the stretch in which the lamp is the only
+  thing on the page to press.
+- **It is `hidden` until scene.js unhides it**, like the drag hint:
+  without WebGL there is no lamp, so there must be no switch for one.
+- **`.visually-hidden` is the clip-rect form**, not `display: none`
+  (which leaves the control out of the accessibility tree) and not
+  `left: -9999px` (which scrolls the viewport sideways on focus in some
+  browsers). It is hidden at every moment, including focus — that is
+  what was asked for, and it means a sighted keyboard user gets an
+  invisible tab stop.
+
+#### Frame rate
+
+**Not measured.** The lamp adds one static fixture and one more frozen
+shadow map (1024², rendered once), and the fade writes five numbers for
+0.4s per press — so there is no mechanism by which it should cost
+anything per frame. `LAMP_SCALE` does not change that: a group scale
+changes one matrix, and the geometry, the mesh count and the frozen
+shadow map are all exactly what they were. Removing the strike takes
+work *out* of the fade. But all of that is a prediction, not a reading,
+and the rule on this branch is that a frame time without its A/B beside
+it is worth nothing. Run `_perfcheck.mjs` if the number matters.
+
 ### The night lighting
 
-**Three sources and nothing else.** The daylight rig had five — a warm
-key, an `AmbientLight`, a hemisphere, a studio HDRI and the tube — and
-the first two are *gone* rather than dimmed. An ambient light is a flat
-lift with no direction in it, which is exactly what a night room must
-not have: it is what makes a dark scene read as a grey scene.
+**Four sources and nothing else**, and the fourth has a switch. The
+daylight rig had five — a warm key, an `AmbientLight`, a hemisphere, a
+studio HDRI and the tube — and the first two are *gone* rather than
+dimmed. An ambient light is a flat lift with no direction in it, which
+is exactly what a night room must not have: it is what makes a dark
+scene read as a grey scene.
 
 | | colour | intensity | what it does |
 |---|---|---|---|
 | moon | `#8FA3D8` | 5.5 | the only thing with a direction; casts |
 | hemisphere | `#3A3560` sky / `#1C1A2A` ground | 30 | the bounce, and the only light on most surfaces |
 | CRT spill | `#5FE3D4` | 8.5 × picture brightness | the keyboard and the walnut in front of it |
+| desk lamp | `#FFB866` | 30.6 point + 95.2 spot × lamp level | the pool on the walnut, the shade, the keyboard's left end |
+
+The lamp's two figures live in `src/lamp.js` rather than beside the
+other three, next to the fixture whose geometry sets them — and they
+are written there as `14.0 * LAMP_SCALE ** POINT_DECAY` and
+`46.0 * LAMP_SCALE ** SPOT_DECAY`, not as the products above: the 14
+and the 46 are what the pair was calibrated at, and the exponent is
+what keeps the pool the same brightness as the fixture is re-scaled.
+See "How big it is" for the measurement behind that — see "The
+desk lamp" below for why there are two of them. Every figure in the
+table is calibrated with the lamp **on**, because that is the state
+the page opens in.
 
 Intensities still read ~3x high because three divides by PI. What does
 *not* carry over from the daylight rig is the target: those numbers were
@@ -2353,13 +2774,21 @@ honest denominator, since most of a desktop frame is backdrop and
 counting it would let any scene pass by being mostly empty. Shipped, at
 home on 1440×900:
 
-| | was (daylight trim) | shipped |
-|---|---|---|
-| median room pixel | 4 | **10** |
-| p95 | 47 | **123** |
-| share under luma 8 | 80% | **33%** |
-| back wall | 0 | **9** |
-| desk enamel | 95 | **168** |
+| | was (daylight trim) | night rig | at LAMP_SCALE 1.75 |
+|---|---|---|---|
+| median room pixel | 4 | 10 | **11** |
+| p95 | 47 | 123 | **139** |
+| share under luma 8 | 80% | 33% | **32%** |
+| back wall | 0 | 9 | **9** |
+| desk enamel | 95 | 168 | **168** |
+| the keyboard, on vs off | — | 92 / 58 | **148 / 57** |
+
+The third column is the bigger lamp with its falloff compensated (see
+"How big it is"). The room's own statistics barely move, which is the
+point: the lamp is a *local* light and a whole-frame histogram cannot
+see one. What moved is the keyboard — the surface the beam is aimed
+at — from a 34-level lift to a **91**-level one, because a longer throw
+spreads the pool across more of it.
 
 `window.__probes()` is the per-surface companion and `window.__pixel(u, v)`
 reads one pixel by screen fraction — which is the one to use when the
@@ -2536,8 +2965,12 @@ or the file is fetched twice.
   conversion the renderer would otherwise do, so the lighting calibration below
   holds on both paths.
 
-`window.__scene`, `window.__camera`, `window.__composer` and `window.__fit` are
-debug handles for the review scripts.
+`window.__scene`, `window.__camera`, `window.__composer`, `window.__fit`
+and `window.__pick` are debug handles for the review scripts.
+`__pick(x, y)` takes canvas CSS pixels and runs the **real**
+`pickTarget` — so what it reports is the live precedence rather than a
+restatement of it, which is what lets "does anything stand in front of
+the monitor" be answered on rays. See `_lampbig.mjs`.
 
 ## Notes / known rough edges
 

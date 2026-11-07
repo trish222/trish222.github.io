@@ -27,6 +27,44 @@ import { buildDesk, disposeDesk, DESK_TOP_Y } from "./desk.js";
    own module for the same reason the desk is: it is a self-contained
    object with its own origin on the surface it stands on. */
 import { buildTreehouse, buildSpareBricks, disposeTreehouse } from "./treehouse.js";
+/* The desk lamp — the one object in the scene the visitor can change,
+   and so the only one this module has to carry a *state* for as well
+   as a place. lamp.js owns the shape and what "on" means for each of
+   its parts; the state and the fade are below. */
+import * as shippedLamp from "./lamp.js";
+
+/* **Which lamp module the scene is built with**, so an alternative
+   fixture can be tried in the real room rather than only in
+   `lamp-lab.html`. The lab answers "what does it look like on a
+   slab"; the questions that matter here — does it stand on the
+   *desk*, does it get in front of the machine, does a press still
+   reach the glass — are about the rest of the scene and cannot be
+   asked anywhere else.
+
+   `src/lamp.js` is the default and the only thing production ever
+   sees: `resolveLamp` is behind `import.meta.env.DEV`, which Vite
+   folds to `false` at build, so rollup drops the branch and the
+   alternative module with it. Verify the same way the perf meter is
+   verified — `npm run build && grep -r greenlamp dist/` must find
+   nothing. The dev-only guard is also why these checks run against
+   `npm run dev` rather than `npm run preview`.
+
+   Every call goes through `lampMod` rather than through a bound
+   import, because the contract is the point: a module that satisfies
+   it is interchangeable, and a call site that reached past this
+   object would be the one place that quietly was not. */
+let lampMod = shippedLamp;
+
+async function resolveLamp() {
+  if (!import.meta.env.DEV) return;
+  const name = new URLSearchParams(location.search).get("lamp");
+  if (!name || name === "lamp" || !/^[a-z0-9-]+$/.test(name)) return;
+  try {
+    lampMod = await import(`./lamps/${name}.js`);
+  } catch (err) {
+    console.error(`lamp module "${name}" failed to load`, err);
+  }
+}
 /* The room is its own module — the plank floor, the two cutaway walls,
    the wainscot, the trim and the rug all live there, so the whole
    setting can be swapped without touching the camera. It replaces src/floor.js, which was the opposite idea: an
@@ -294,16 +332,120 @@ const TREEHOUSE_FACING = AZIMUTH - 0.50;
    first fails safe on a yawed InstancedMesh, the second is the truth. */
 const TREEHOUSE_SCALE = 1.1733;
 
+/* --- Where the desk lamp is set down ---------------------
+   On the desk at the **back left as the home view sees it**, which is
+   -X and -Z: the camera sits in the +X/+Z octant, so screen left is
+   desk left and the back edge is the far one (the same convention
+   desk.js states for its pedestals and scene.js for the treehouse).
+
+   Both figures are set against what is already on that half of the
+   desk, and against where the lamp lands **on screen** rather than
+   just in plan. Screen x runs roughly `0.8x - 0.6z` at this azimuth,
+   so pushing an object *back* walks it screen-*right* — which is the
+   opposite of what "back left" suggests, and is why the depth is the
+   figure that was tuned.
+
+   **LAMP_X was -7.6 and moved +0.6 when the fixture was scaled to
+   LAMP_SCALE**, and what forced it is not geometry. At 1.75 the
+   fixture's world box ran x -9.99..-5.21 against a walnut edge at
+   -9.75: 0.24 over it. The part hanging off was the **painted contact
+   shadow**, a square of BASE_R * 3.1 that scales with the group — the
+   base disc itself was still 1.1 clear. But a contact blob off the
+   edge of the desk is a grey patch in mid-air, which is the exact
+   defect a painted shadow exists to avoid, so it binds. Nor is there
+   a cheaper direction: both +x and -z go screen-*right* at this
+   azimuth, toward the machine, and -x is the edge that was already
+   over.
+
+   In plan it now clears the walnut by **0.36 on the -x edge and 0.89
+   on the back**, and sits **0.51 clear in x of the computer kit's own
+   box** (0.79 / 1.92 / 2.14 at the old size). That last figure is the
+   slackest of the three despite being the smallest number: the kit's
+   x extent is the mouse's painted shadow, which sits at the desk's
+   *front*, while the lamp is at the back — the two are separated in z
+   and never meet. `_lampshots.mjs` prints all three off
+   `window.__fit("lamp")`.
+
+   **Moving it +x walks it toward the machine on screen, so that was
+   checked rather than assumed.** `_lampbig.mjs` walks a grid over the
+   glass and over both projected boxes at home and at both azimuth
+   clamps, asking `window.__pick` twice per point — once with the
+   fixture present, once with its meshes on a layer the raycaster does
+   not test — so occlusion is the conjunction rather than a box
+   overlap. Zero occluding points at every framing on both viewports;
+   the glass comes back "machine" at all 225 points of all six grids.
+   The NDC boxes do overlap at every azimuth and always did, which is
+   why the box test is not the one to trust.
+
+   It also stands in front of the window, below the sill, so the shade
+   is silhouetted against the night sky and the moon throws it across
+   the desk. That is on purpose, and **the taller fixture did not make
+   the moon's shadow box grow**, which was measured rather than assumed
+   because the window wall casts and a receiver outside the box is a
+   patch of floor flooded with moonlight: `window.__shadowfit()` puts
+   the lamp at lat 1.84..8.98, up -3.32..7.48, depth 20.57..31.18, and
+   the union still clears the camera by 1.53 or more on every face. */
+const LAMP_X = -7.0;
+const LAMP_Z = -3.6;
+
+/* **The lamp starts on**, which is the state the rig below is
+   calibrated at: the four-source figures in "NIGHT LIGHTING" are the
+   ones that hold at `lampLevel === 1`. Turning it off is a visitor's
+   choice and the room is still meant to read — see LAMP_EXPOSURE_LIFT
+   for the one thing that is allowed to move when they make it. */
+const LAMP_START_ON = true;
+/* How long the light takes to come up or go out, in seconds. The brief
+   asks for ~0.4 and that is also about right physically: a tungsten
+   filament takes a few hundred milliseconds to reach colour and rather
+   less to drop out of it, which is why the two directions get
+   different eases rather than one symmetric curve — see `tickLamp`. */
+const LAMP_FADE_S = 0.4;
+/* **There is no strike.** The lamp used to flicker on — a staircase of
+   held multipliers over the on-ramp, three lit steps and two gaps,
+   multiplying the ease rather than replacing it. It was removed on
+   request, and the thing worth knowing is that it was the *only*
+   non-monotonic term in the level: with it gone the fade below is the
+   whole story in both directions, and `window.__lamp().curve` is the
+   ease alone. Putting one back means multiplying `applyLampLevel`'s
+   argument again, not re-shaping either ease.
+*/
+/* **The exposure moves a little with the lamp, and the direction is
+   the one an eye moves in.** With the lamp off the room loses its one
+   warm source and ACES's toe takes the walls and the floor back down
+   toward the void — which is the thing TONE_EXPOSURE exists to stop
+   (see below). Lifting the exposure as the lamp goes out is dark
+   adaptation: the room stays legible, and the *difference* the lamp
+   makes stays obvious because the lift is far smaller than the light
+   it is standing in for. 0.1 over a base of 1.3 is about 8%.
+
+   It is snapped to EXPOSURE_STEP before being written, because the
+   void's pre-image has to be re-solved whenever it moves (see
+   `applyVoidColor`) and a Newton solve per frame for 0.4s is a cost
+   with nothing to show for it. Five distinct values across the fade;
+   the steps are invisible under a light that is itself changing. */
+const LAMP_EXPOSURE_LIFT = 0.1;
+const EXPOSURE_STEP = 0.02;
+
 /* ==========================================
    NIGHT LIGHTING
 
-   **Three sources and nothing else**: the moon through the window, a
-   hemisphere fill the colour of the room's own surfaces, and the CRT.
-   The daylight rig this replaced had five — a warm key, an ambient, a
-   hemisphere, a studio HDRI and the tube — and the first two of those
-   are gone rather than dimmed. An `AmbientLight` is a flat lift with
-   no direction in it, which is exactly what a night room must not
-   have: it is what makes a dark scene read as a grey scene.
+   **Four sources and nothing else**: the moon through the window, a
+   hemisphere fill the colour of the room's own surfaces, the CRT, and
+   the desk lamp. The daylight rig this replaced had five — a warm key,
+   an ambient, a hemisphere, a studio HDRI and the tube — and the first
+   two of those are gone rather than dimmed. An `AmbientLight` is a
+   flat lift with no direction in it, which is exactly what a night
+   room must not have: it is what makes a dark scene read as a grey
+   scene.
+
+   **The fourth is new and it has a switch**, which is the one thing
+   that makes this rig different from the others: every figure below
+   is calibrated with the lamp *on*, because that is the state the page
+   opens in. What happens when a visitor turns it off is a separate
+   question with a separate answer — see LAMP_EXPOSURE_LIFT above, and
+   `_lampshots.mjs`, which shoots and measures both states. The lamp's
+   own two intensities live in src/lamp.js, next to the fixture whose
+   geometry sets them.
 
    **What the old calibration meant, and why none of it carries over.**
    Intensities read ~3x high because three's physical lighting divides
@@ -662,6 +804,32 @@ let composer = null;
 let computer = null;
 let desk = null;
 let treehouse = null;
+/* { root, shade, point, spot } from buildLamp. The only object in the
+   scene with a state the visitor can change, so it is the only one
+   this module carries more than a handle for:
+
+   - `lampOn` is the switch;
+   - `lampP` is where the fade has got to, 0..1, in LAMP_FADE_S of
+     wall clock either way;
+   - `lampLevel` is what the lights and the emissives are actually
+     running at — `lampP` eased. Nothing else multiplies it any more;
+     see LAMP_FADE_S for what used to.
+
+   All four are reset by disposeScene. */
+let lamp = null;
+let lampOn = LAMP_START_ON;
+let lampP = LAMP_START_ON ? 1 : 0;
+let lampLevel = LAMP_START_ON ? 1 : 0;
+let lampBtn = null;
+let onLampBtn = null;
+/* The exposure the operator runs at with the lamp **on**. The lamp
+   lifts it as it goes out (LAMP_EXPOSURE_LIFT) and `window.__lights`
+   moves this, so the two cannot stomp each other: the loop writes
+   `toneBase + lift`, never a bare number. */
+let toneBase = TONE_EXPOSURE;
+/* Last exposure actually written, so the void's pre-image is re-solved
+   only when it moves. */
+let toneWritten = -1;
 /* { root, walls } from buildRoom — the walls are kept so the cutaway
    has something to fade. */
 let room = null;
@@ -705,8 +873,10 @@ let orbitDirty = false; // the camera moved and the overlay has not caught up
 let onCanvasDown = null;
 let onCanvasUp = null;
 let onCanvasCancel = null;
-/* The press being tracked for the click-or-drag decision. */
-let press = { id: -1, x: 0, y: 0, hit: false };
+/* The press being tracked for the click-or-drag decision. `target` is
+   what `pickTarget` found on the way down — "lamp", "machine" or
+   null — so the two actions are mutually exclusive by construction. */
+let press = { id: -1, x: 0, y: 0, target: null };
 let flyFrom = FLY_FROM;
 /* Which pose the spline's first knot sits at. Null is the isometric
    establishing shot — the definition of home. A pair of orbit angles
@@ -850,6 +1020,28 @@ function buildScene() {
   spares.name = "spares";
   spares.position.set(0, DESK_TOP_Y, 0);
   s.add(spares);
+
+  /* The desk lamp, on the back-left corner. Built with its origin on
+     the surface it stands on like everything else here, so it only
+     has to be lifted by the desk's height — and unyawed, because the
+     shade's own two tilts are what point it and a group rotation on
+     top would make "forward" mean two different things. */
+  lamp = lampMod.buildLamp();
+  /* The module may name its own seat; most do not. An alternative
+     fixture is a different size and shape, so the x and z it has to
+     stand at to clear the walnut's edges are its own facts, not the
+     scene's — see the note in src/lamps/greenlamp.js. */
+  lamp.root.position.set(
+    lampMod.LAMP_X ?? LAMP_X,
+    DESK_TOP_Y,
+    lampMod.LAMP_Z ?? LAMP_Z,
+  );
+  s.add(lamp.root);
+  /* The lights and the emissives at the state the page opens in.
+     There is no loop under reduced motion and none before the first
+     tick, so the one in `tickLamp` cannot be the only writer — same
+     argument as the CRT's spill above. */
+  applyLampLevel(lampLevel);
 
   /* --- the moon ---
      Aimed *through* the window rather than placed, so moving the
@@ -1021,6 +1213,95 @@ function setMoonAt(x, y, z) {
   );
   lights.moon.target.updateMatrixWorld();
   renderer.shadowMap.needsUpdate = true;
+}
+
+/* ==========================================
+   THE DESK LAMP
+
+   The one thing in the room with a switch. Everything about *what* the
+   lamp is lives in src/lamp.js — the shape, the two lights, and the
+   curve from a 0..1 level to five brightnesses. What lives here is the
+   state, the fade, and the one knob the room's exposure lends it.
+
+   The division is the same one the fly-in draws between GSAP and
+   `applyFly`, and for the same reason: `setLamp` is linear in its
+   level, so the easing can be re-shaped without touching anything
+   about how a lamp at 0.3 looks — which is also what let the strike
+   come back out without touching lamp.js at all.
+   ========================================== */
+
+/* Writes a level to the fixture **and to the exposure**, which is the
+   half that cannot live in lamp.js: the operator belongs to the
+   renderer, and the void's pre-image moves with it. */
+function applyLampLevel(level) {
+  lampLevel = level;
+  lampMod.setLamp(level);
+  if (!renderer) return;
+  /* Snapped, because every distinct value costs a Newton solve for the
+     void's pre-image. See EXPOSURE_STEP. */
+  const want =
+    Math.round(
+      ((toneBase + LAMP_EXPOSURE_LIFT * (1 - level)) / EXPOSURE_STEP),
+    ) * EXPOSURE_STEP;
+  if (Math.abs(want - toneWritten) < 1e-6) return;
+  toneWritten = want;
+  renderer.toneMappingExposure = want;
+  applyVoidColor();
+}
+
+/* The switch. One entry point for all three routes in — a press on the
+   fixture, the hidden button, and `window.__lamp` — so the DOM's
+   `aria-pressed` cannot fall out of step with the light.
+
+   `jump` is what reduced motion and dispose take: there is no render
+   loop on that path, so a fade would leave the lamp stuck wherever the
+   last frame put it. It lands on the endpoint and draws once. */
+function setLampOn(on, jump = !frame) {
+  lampOn = !!on;
+  if (jump) {
+    lampP = lampOn ? 1 : 0;
+    applyLampLevel(lampP);
+    if (renderer) render();
+  }
+  lampBtn?.setAttribute("aria-pressed", String(lampOn));
+  return lampOn;
+}
+
+/* Called once a frame from the render loop. Linear in time, so the
+   fade really is LAMP_FADE_S rather than an exponential that never
+   arrives — and the two directions get different shapes:
+
+   - **on** is `1-(1-p)^2`: fast off the mark, settling into the last
+     few percent, which is how a filament behaves.
+   - **off** is `p^2`: the light drops most of the way immediately and
+     then tails out, which is a filament cooling.
+
+   Nothing is written once the ramp has arrived, so a lamp sitting
+   still costs one comparison. */
+function tickLamp(dt) {
+  if (!lamp) return;
+  const target = lampOn ? 1 : 0;
+  if (lampP === target) return;
+  const step = dt / LAMP_FADE_S;
+  lampP = lampOn
+    ? Math.min(1, lampP + step)
+    : Math.max(0, lampP - step);
+  applyLampLevel(lampOn ? 1 - (1 - lampP) * (1 - lampP) : lampP * lampP);
+}
+
+/* The hidden button in index.html — the keyboard and screen-reader
+   route to the same switch. Unhidden here rather than in main.js for
+   the same reason the orbit hint is: without WebGL there is no lamp,
+   so there must be no control for one either. `aria-pressed` carries
+   the state and is written by `setLampOn`, so a press on the fixture
+   updates the button too. */
+function initLampButton() {
+  lampBtn = document.getElementById("lamp-toggle");
+  if (!lampBtn) return;
+  lampBtn.hidden = false;
+  lampBtn.setAttribute("aria-pressed", String(lampOn));
+  onLampBtn = () => setLampOn(!lampOn);
+  lampBtn.addEventListener("click", onLampBtn);
 }
 
 /* ==========================================
@@ -1486,20 +1767,39 @@ function tickOrbit(dt) {
   }
 }
 
-/* Is the point under this event on the machine? The whole machine, not
-   just the glass: it is the same target hover already highlights, and
-   on a phone the monitor alone is a small thing to hit. */
+/* What is under this event: the lamp, the machine, or neither.
+
+   Both targets are the whole object rather than the part that does the
+   work — the machine is the same group hover already highlights, and on
+   a phone the glass alone (or a 0.07-unit pole) is a small thing to hit.
+
+   **One raycast over both, nearest wins, and the lamp wins a tie**,
+   which is how "check the lamp before the monitor" is kept true at
+   every point of the orbit leash rather than just at the home framing.
+   Testing the lamp first and returning would toggle it through the
+   monitor from the azimuths where it sits behind the machine; taking
+   the nearest hit means a press can only ever be one of the two, which
+   is the thing that actually matters. */
 const pickNdc = new THREE.Vector2();
 const pickRay = new THREE.Raycaster();
 
-function pickMachine(e) {
-  if (!computer || !canvasEl || !camera) return false;
+function pickTarget(e) {
+  if (!computer || !canvasEl || !camera) return null;
   const r = canvasEl.getBoundingClientRect();
-  if (!r.width || !r.height) return false;
+  if (!r.width || !r.height) return null;
   pickNdc.x = ((e.clientX - r.left) / r.width) * 2 - 1;
   pickNdc.y = -((e.clientY - r.top) / r.height) * 2 + 1;
   pickRay.setFromCamera(pickNdc, camera);
-  return pickRay.intersectObject(computer.root, true).length > 0;
+  /* The lamp is listed first so three's stable sort leaves it ahead of
+     the machine at equal distance. */
+  const roots = lamp ? [lamp.root, computer.root] : [computer.root];
+  const hits = pickRay.intersectObjects(roots, true);
+  if (!hits.length) return null;
+  for (let o = hits[0].object; o; o = o.parent) {
+    if (lamp && o === lamp.root) return "lamp";
+    if (o === computer.root) return "machine";
+  }
+  return null;
 }
 
 /* The click-or-rotate decision. A press that travelled more than
@@ -1507,22 +1807,35 @@ function pickMachine(e) {
    turning; only a press that stayed put is a click. Both halves are
    recorded on the way down, because by the time the pointer comes up
    the camera has moved and the raycast would be asking about a
-   different frame. */
+   different frame.
+
+   **The lamp is decided in the same raycast as the monitor**, which is
+   what makes "one click never does both" a property of the code rather
+   than of where the two objects happen to sit — see `pickTarget`. */
 function initCanvasPress(canvas) {
   onCanvasDown = (e) => {
     press.id = -1;
     if (!orbitAllowed() || !e.isPrimary) return;
     if (e.pointerType === "mouse" && e.button !== 0) return;
-    press = { id: e.pointerId, x: e.clientX, y: e.clientY, hit: pickMachine(e) };
+    press = {
+      id: e.pointerId,
+      x: e.clientX,
+      y: e.clientY,
+      target: pickTarget(e),
+    };
   };
   /* OrbitControls captures the pointer on this same element, so the up
      still arrives here however far outside the canvas the drag went. */
   onCanvasUp = (e) => {
     if (e.pointerId !== press.id) return;
     const moved = Math.hypot(e.clientX - press.x, e.clientY - press.y);
-    const hit = press.hit;
+    const target = press.target;
     press.id = -1;
-    if (hit && moved <= CLICK_SLOP && orbitAllowed()) enterScreen();
+    if (!target || moved > CLICK_SLOP || !orbitAllowed()) return;
+    /* The lamp first, and it returns — so the monitor's zoom cannot
+       also see this press. */
+    if (target === "lamp") setLampOn(!lampOn);
+    else enterScreen();
   };
   onCanvasCancel = () => {
     press.id = -1;
@@ -1980,6 +2293,7 @@ function buildComposer(width, height) {
   const clip = new THREE.Box3().setFromObject(desk.root);
   clip.union(new THREE.Box3().setFromObject(computer.root));
   clip.union(new THREE.Box3().setFromObject(treehouse.root));
+  if (lamp) clip.union(new THREE.Box3().setFromObject(lamp.root));
   clip.expandByScalar(GTAO_BOX_MARGIN);
   gtao.setSceneClipBox(clip);
   gtao.updateGtaoMaterial({
@@ -2000,7 +2314,8 @@ function buildComposer(width, height) {
 
    One raycast per pointer move, feeding two things: the screen's
    hover brightness, and what the cursor says the canvas will do with
-   a press — the machine is a click, the room around it is a drag.
+   a press — the machine and the lamp are clicks, the room around them
+   is a drag.
 
    Tracked on the window rather than the canvas even though the canvas
    now takes events, because it only takes them while `orbit-live` is
@@ -2021,9 +2336,17 @@ function initPointer(canvas) {
       hover.target = 0;
       return;
     }
-    const on = pickMachine(e);
-    hover.target = on ? 1 : 0;
-    canvas.style.cursor = orbitDragging ? "grabbing" : on ? "pointer" : "grab";
+    const target = pickTarget(e);
+    /* Only the machine takes the screen's hover brightness — the lamp
+       says what it does by being a switch, and brightening the CRT
+       when the pointer is over something else would be a lie about
+       what a press is going to do. */
+    hover.target = target === "machine" ? 1 : 0;
+    canvas.style.cursor = orbitDragging
+      ? "grabbing"
+      : target
+        ? "pointer"
+        : "grab";
   };
   window.addEventListener("pointermove", onPointerMove, { passive: true });
 }
@@ -2532,10 +2855,13 @@ export async function initScene(canvas) {
      remaining soft option, and the key's `radius` / `blurSamples` /
      `bias = 0` beside it are tuned for VSM specifically. */
   renderer.shadowMap.type = THREE.VSMShadowMap;
-  /* Nothing in this scene ever casts a different shadow: the light is
-     fixed and the machine does not move (`lift` exists but nothing
-     animates it any more — see computer.js). So the map is rendered
-     once and then frozen, instead of re-rendering a 2048² VSM depth
+  /* Nothing in this scene ever casts a different shadow: the lights
+     are fixed and the machine does not move (`lift` exists but nothing
+     animates it any more — see computer.js). The desk lamp lives
+     inside that rule rather than breaking it — switching it changes
+     an *intensity*, and a shadow map carries occlusion, not
+     brightness, so the lamp's frozen map is as correct at level 0 as
+     at level 1. So the map is rendered once and then frozen, instead of re-rendering a 2048² VSM depth
      pass with 16 blur samples on every frame of the fly-in.
 
      `needsUpdate` is set rather than cleared — three renders the map on
@@ -2551,6 +2877,7 @@ export async function initScene(canvas) {
      sets any type, and the screen is what keeps it alive. */
   await loadScreenFont();
 
+  await resolveLamp();
   scene = buildScene();
   camera = buildCamera();
   /* The machine never moves, so one update pins the screen plane's
@@ -2734,8 +3061,14 @@ export async function initScene(canvas) {
     /* The operator's exposure, which in a night scene is a lighting
        control rather than a finishing one — see TONE_EXPOSURE. */
     if (next.exposure !== undefined) {
-      renderer.toneMappingExposure = next.exposure;
-      applyVoidColor(); // the void's pre-image moves with it
+      /* The **base**, not the live value: the lamp lifts the exposure
+         as it goes out, and the loop writes `toneBase + lift` every
+         frame it moves. Writing `toneMappingExposure` here instead
+         would be silently reverted the next time the lamp was
+         switched. */
+      toneBase = next.exposure;
+      toneWritten = -1; // force the re-solve below
+      applyLampLevel(lampLevel); // writes the exposure and the pre-image
     }
     if (next.glow !== undefined) {
       screenGlowBase = next.glow;
@@ -2754,7 +3087,12 @@ export async function initScene(canvas) {
          ENV_INTENSITY is 0, so no HDRI is fetched at all. */
       envMap: !!envMap,
       glow: screenGlowBase,
+      /* What the operator is running at this instant, and the figure
+         it would be at with the lamp on — which is the one
+         TONE_EXPOSURE names. They differ only while the lamp is off or
+         fading. */
       exposure: renderer.toneMappingExposure,
+      exposureBase: toneBase,
       moonFrom: lights.moon.position.toArray().map((v) => Number(v.toFixed(2))),
       moonAt: MOON_AT.toArray(),
       /* Degrees below the horizon, which is the figure the shadow's
@@ -2786,7 +3124,9 @@ export async function initScene(canvas) {
     const v = new THREE.Vector3();
     const out = {};
     let all = null;
-    for (const n of names.length ? names : ["room", "desk", "computer", "treehouse"]) {
+    for (const n of names.length
+      ? names
+      : ["room", "desk", "computer", "treehouse", "lamp"]) {
       const o = scene.getObjectByName(n);
       if (!o) continue;
       const b = new THREE.Box3().setFromObject(o);
@@ -2823,6 +3163,77 @@ export async function initScene(canvas) {
       bias: light.shadow.bias,
     };
   };
+  /* **The desk lamp, on a live page.** No argument reports; `on`
+     switches it; `jump` forces the endpoint rather than the fade,
+     which is what a screenshot wants; `point` and `spot` move the two
+     lights against each other, which is how the pair was calibrated
+     (see lamp.js for why there are two of them).
+
+     `level` is what the fixture is running at *now* — the eased ramp —
+     so a report taken mid-fade shows where the fade has got to rather
+     than the endpoint it is heading for. */
+  window.__lamp = (next = {}) => {
+    if (next.on !== undefined) setLampOn(next.on, next.jump !== false);
+    /* Re-aiming moves the light, which is the one change in this scene
+       that invalidates the frozen shadow map — so this is the only
+       place outside `window.__lights` that sets `needsUpdate`. */
+    const aim =
+      next.tilt !== undefined
+        ? (renderer.shadowMap.needsUpdate = true,
+          lampMod.aimLamp(next.tilt, next.swing))
+        : lampMod.aimLamp();
+    const levels = lampMod.lampLevels(next);
+    if (next.point !== undefined || next.spot !== undefined || next.tilt !== undefined)
+      render();
+    return {
+      on: lampOn,
+      level: Number(lampLevel.toFixed(4)),
+      p: Number(lampP.toFixed(4)),
+      fadeSeconds: LAMP_FADE_S,
+      /* **The on-ramp as the loop would write it**, sampled off the
+         same ease rather than described. It exists because the live
+         reading cannot be trusted on a software renderer: SwiftShader
+         gives the review scripts about a frame a second, so a 0.4s
+         fade is over before the second sample. This is the
+         deterministic half — 21 points across the ramp, and with the
+         strike gone it should now climb monotonically from 0 to 1,
+         which is the check. */
+      curve: Array.from({ length: 21 }, (_, i) => {
+        const u = i / 20;
+        return [
+          Number((u * LAMP_FADE_S).toFixed(3)),
+          Number((1 - (1 - u) * (1 - u)).toFixed(3)),
+        ];
+      }),
+      exposure: renderer.toneMappingExposure,
+      exposureBase: toneBase,
+      exposureLift: LAMP_EXPOSURE_LIFT,
+      colour: levels.colour,
+      lights: levels,
+      /* Where the beam lands on the desk top, in world coordinates —
+         which is what "aimed at the keyboard" or "aimed at bare
+         walnut" is actually a statement about. */
+      aim,
+      button: lampBtn
+        ? { pressed: lampBtn.getAttribute("aria-pressed"), hidden: lampBtn.hidden }
+        : null,
+    };
+  };
+  /* **What a press at a screen point would hit** — the same
+     `pickTarget` the pointer handlers use, so this is the real
+     precedence rather than a restatement of it. It is how "does the
+     lamp occlude the monitor" and "does the monitor still win where
+     both are hit" are answered off raycasts rather than off a dark
+     screenshot: walk a grid over the machine's own projected box and
+     count how many points come back "lamp".
+
+     Takes CSS pixels relative to the canvas, which is what
+     `__fit`'s NDC converts to. */
+  window.__pick = (x, y) => {
+    const r = canvasEl?.getBoundingClientRect();
+    if (!r) return null;
+    return pickTarget({ clientX: r.left + x, clientY: r.top + y });
+  };
   /* The rain on the window: where its clock stands, how fast it is
      running and whether reduced motion caught it. A speed in
      cell-runs per second re-tunes it on a live page, which is how the
@@ -2856,6 +3267,19 @@ export async function initScene(canvas) {
      see. `readPixels` on the back buffer is valid here without
      `preserveDrawingBuffer` for the same reason it is in
      `__voidcheck`: the draw and the read are in one task. */
+  /* See the comment at the call site. Returns nothing at all if the
+     lamp is not up, rather than a point about somewhere else. */
+  const lampProbes = () => {
+    if (!lamp) return {};
+    const aim = lampMod.aimLamp();
+    const mouth = lamp.spot.getWorldPosition(new THREE.Vector3());
+    return {
+      ...(aim?.pool
+        ? { "lamp pool": [aim.pool[0], aim.pool[1] + 0.02, aim.pool[2]] }
+        : {}),
+      "lamp shade": mouth.toArray(),
+    };
+  };
   window.__probes = (extra) => {
     const pts = {
       /* Inside the pool the window throws, and outside it — the two
@@ -2869,6 +3293,20 @@ export async function initScene(canvas) {
       "desk pool": [-6.0, DESK_TOP_Y + 0.02, 0.0],
       "desk dark": [7.6, DESK_TOP_Y + 0.02, -4.0],
       "keyboard": [0.1, DESK_TOP_Y + 0.55, 2.6],
+      /* The lamp's own pool, and the lit inside of the shade it comes
+         out of — the two numbers that say whether the fixture reads as
+         a light source rather than as an ornament.
+
+         **Both are derived from where the beam actually points**, not
+         written down: `aimLamp()` reports the world point the axis
+         meets the desk top at, and the spot sits just past the mouth,
+         so projecting it lands on the glowing inner wall behind. A
+         pair of hard-coded points went quietly meaningless the first
+         time the shade was re-aimed — the "shade" one ended up
+         reading the night sky through the window behind it, at luma
+         197, which looks like a brilliantly lit shade and is not
+         one. */
+      ...lampProbes(),
       ...(extra || {}),
     };
     render();
@@ -3103,6 +3541,10 @@ export async function initScene(canvas) {
   initOrbit();
   initPointer(canvas);
   initCanvasPress(canvas);
+  /* The keyboard and screen-reader route to the lamp. After
+     `initOrbit` only so that everything a press can reach exists
+     before anything is unhidden. */
+  initLampButton();
   loadEnvironment().then((ok) => {
     if (ok && !frame) render();
   });
@@ -3157,6 +3599,9 @@ export async function initScene(canvas) {
     /* The controls own the camera at the establishing shot and nowhere
        else, so this is a no-op from the moment a flight starts. */
     tickOrbit(dt);
+    /* The lamp's fade. A no-op once the light has
+       settled, which it is for all but 0.4s per press. */
+    tickLamp(dt);
     const k = 1 - Math.exp(-HOVER_RATE * dt);
     hover.value += (hover.target - hover.value) * k;
     computer.setScreen(hover.value);
@@ -3211,7 +3656,7 @@ export function disposeScene() {
   controls?.dispose();
   controls = null;
   onCanvasDown = onCanvasUp = onCanvasCancel = null;
-  press = { id: -1, x: 0, y: 0, hit: false };
+  press = { id: -1, x: 0, y: 0, target: null };
   orbitDragging = false;
   orbitIdleAt = 0;
   orbitDirty = false;
@@ -3223,6 +3668,17 @@ export function disposeScene() {
   homeZoom = HOME_ZOOM;
   screenGlowBase = SCREEN_GLOW;
   lights = null;
+  if (lampBtn && onLampBtn) lampBtn.removeEventListener("click", onLampBtn);
+  if (lampBtn) {
+    lampBtn.hidden = true;
+    lampBtn.setAttribute("aria-pressed", String(LAMP_START_ON));
+  }
+  lampBtn = onLampBtn = null;
+  lamp = null;
+  lampOn = LAMP_START_ON;
+  lampP = lampLevel = LAMP_START_ON ? 1 : 0;
+  toneBase = TONE_EXPOSURE;
+  toneWritten = -1;
   document.getElementById("orbit-hint")?.setAttribute("hidden", "");
   perf?.dispose();
   perf = null;
@@ -3231,6 +3687,7 @@ export function disposeScene() {
   disposeComputer();
   disposeDesk();
   disposeTreehouse();
+  lampMod.disposeLamp();
   computer = null;
   desk = null;
   disposeRoom();
