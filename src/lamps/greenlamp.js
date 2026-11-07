@@ -267,25 +267,39 @@ const FRONT_CURVE = 1.8;
 const SHADE_T = 0.025; // the lining sits this far inside the glass
 const PROFILE_SEGS = 48;
 
-/* **How far the shade rolls over at its two ends.** The section was
-   swept flat and stopped dead, so each end was a flat cap meeting
-   the side wall at a 90-degree rim — a hard bright line right round
-   the silhouette, which is what made the shade read as a length of
-   extrusion sliced off rather than as a moulded shell.
+/* **How the ends are closed.** They were flat slabs: the section was
+   swept straight and capped with a disc, which is a shape no blown
+   shade has — and the disc met the wall on a 90-degree rim, a hard
+   bright line right round the silhouette.
 
-   This is a real fillet, not a bevel or a scale-down: over the last
-   `EDGE_ROUND` of length the profile is drawn **inward along its own
-   2D normal** on a quarter-circle, so the surface leaves the side
-   tangentially at one end of the roll and meets the end plane
-   perpendicular at the other. The cap then sits flush on the
-   inset profile with nothing to catch. Scaling the profile instead
-   would have been easier and wrong — a scale pulls the crown down
-   faster than it pulls the lips in, so the end would have sagged
-   rather than rounded. */
-const EDGE_ROUND = 0.09;
-const EDGE_SEGS = 6;
+   The sweep is a **loft** now. The section is carried along the
+   length and, over the last stretch, shrunk onto the pivot axis so
+   each end closes as a dome. There are no caps; the surface closes
+   on itself. Two figures describe it, measuring from opposite sides
+   of where the old end plane was:
 
-/* **How far the bottom rim curls under**, the other hard edge. The
+   - `END_ROUND` — how far **in** from the end the shrinking starts.
+   - `END_BULGE` — how far **out** past it the dome reaches.
+
+   So the dome spends `END_ROUND + END_BULGE` of travel going from
+   full section to nothing. **The parameter is the angle**, not x and
+   not the scale: x moves as `sin` and the section as `cos`, which
+   makes an ellipsoidal end — the section's rate of change is zero
+   where it leaves the straight run, so there is no crease there, and
+   `dx` is zero at the tip, so the surface turns to face along the
+   axis and the apex is a smooth dome rather than a cone point.
+   Stepping uniformly in x or in scale instead bunches the rings
+   where the curve is straight and starves the turn, which shows as
+   a flat panel set into a crease at the very end. */
+const END_ROUND = 0.3;
+const END_BULGE = 0.16;
+const END_SEGS = 12;
+
+/* **The radius every long edge is rounded to** — the bottom rim
+   here, and the ridge where the two slopes meet (see `roundRidge`,
+   which needs a different mechanism for the same number).
+
+   **How far the bottom rim curls under**, the other hard edge. The
    shell has no thickness, so where it stopped the green met the
    cream lining on a knife edge that ran the whole length of the
    shade — crisp from every angle and the one thing left reading as
@@ -293,12 +307,12 @@ const EDGE_SEGS = 6;
 
    The curl goes **inward and up, never lower**. That is the whole
    trick of it: the arc is tangent to the plumb skirt at
-   `lip + LIP_ROUND` and bottoms out exactly at the lip, so the
+   `lip + EDGE_RADIUS` and bottoms out exactly at the lip, so the
    shade's lowest point and its widest depth are both where they
    were. Curling it outward-and-under instead would have dropped the
    rim by this much, and the lip's height is what the rod, the seat
    solve and the 1.6-diameter clearance are all stated against. */
-const LIP_ROUND = 0.05;
+const EDGE_RADIUS = 0.12;
 const LIP_SEGS = 5;
 
 /* Derived from the five above; nothing downstream reads the raw
@@ -342,7 +356,7 @@ function shoulderAt(dz, w, n) {
    list and the shell turns inside out. */
 function shadeProfilePoints() {
   const pts = [];
-  const R = LIP_ROUND;
+  const R = EDGE_RADIUS;
 
   /* The front rim, curling up out of its lowest point. `side` is +1
      at the front and -1 at the back; the arc's centre sits one
@@ -383,7 +397,81 @@ function shadeProfilePoints() {
   return pts;
 }
 
-const SHADE_PROFILE = shadeProfilePoints();
+/* **No point on the section is allowed to be sharper than
+   EDGE_RADIUS**, and this is what enforces it on the ridge.
+
+   The rim gets its radius for free — it is built as an arc of
+   EDGE_RADIUS directly. The ridge cannot be done that way: both
+   flanks arrive at the peak with zero slope, so there is no corner
+   to cut and no tangent fillet fits. What makes it read as a crease
+   is curvature, not slope.
+
+   So the fix is stated as the property wanted rather than as a
+   construction: walk the shoulder, and wherever three consecutive
+   samples circumscribe a circle smaller than EDGE_RADIUS, relax the
+   middle one toward the chord. Repeat until nothing is too sharp.
+   The stopping condition *is* the radius, so the invariant is
+   checkable — and it holds whatever PROFILE_SEGS is, which a
+   construction keyed to the sample spacing would not.
+
+   **Worth knowing before tuning it: the ridge is already nearly
+   this round.** Sampled at PROFILE_SEGS the sharpest point on the
+   shoulder measures 0.1014, so at a radius near that this is close
+   to a no-op and the visible change is the rim's bead. The crown
+   drops only when EDGE_RADIUS is pushed past it. */
+function roundRidge(pts) {
+  const out = pts.map((v) => v.clone());
+  const radius = (a, b, c) => {
+    const A = a.distanceTo(b);
+    const B = b.distanceTo(c);
+    const C = a.distanceTo(c);
+    const area2 = Math.abs(
+      (b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y),
+    );
+    return area2 < 1e-12 ? Infinity : (A * B * C) / (2 * area2);
+  };
+  for (let pass = 0; pass < 200; pass++) {
+    let moved = false;
+    for (let i = 1; i < out.length - 1; i++) {
+      if (out[i].y <= 0) continue; // the skirt and the rim are not shoulder
+      if (radius(out[i - 1], out[i], out[i + 1]) >= EDGE_RADIUS) continue;
+      /* Toward the chord midpoint, under-relaxed so neighbouring
+         corrections settle instead of ringing. */
+      out[i].lerp(
+        out[i - 1].clone().add(out[i + 1]).multiplyScalar(0.5),
+        0.35,
+      );
+      moved = true;
+    }
+    if (!moved) break;
+  }
+  return out;
+}
+
+/* **The rim's height at a given depth** — the line the end dome
+   shrinks onto.
+
+   The dome used to scale the whole section about the pivot, which
+   dragged the bottom rim up toward it as the end closed. That left
+   a notch under each pivot: the green had lifted off the rim line
+   and the cream lining was visible from outside through the gap.
+   Anchoring the vertical scale here instead holds the rim at
+   constant height for the full length while the crown still comes
+   down, so only the top and the end face round inward.
+
+   It is interpolated across the depth rather than a single number
+   because the two lips are not at the same height — `FRONT_DROP`
+   puts the front one lower. Anchoring on either alone would hold
+   that lip and sweep the other by the drop; interpolating holds
+   **both** exactly, at the cost of the tip closing onto a 0.06
+   vertical edge instead of a point, which is a tenth of a pixel at
+   the home framing. */
+function rimAt(z) {
+  const t = (z + SHADE_HALF_D) / SHADE_DEPTH;
+  return SHADE_LIP_Y + (FRONT_LIP_Y - SHADE_LIP_Y) * t;
+}
+
+const SHADE_PROFILE = roundRidge(shadeProfilePoints());
 
 /* **The pivot: the centroid of the end-cap face.** A banker's shade
    is hung from the middle of its ends, not from its bottom edge —
@@ -415,63 +503,26 @@ function profileCentroid() {
 }
 const PIVOT = profileCentroid();
 
-/* The outward 2D normal at each profile point, as `(ny, nz)`. Shared
-   by the sweep and by the inset the end roll-over needs, so the two
-   cannot disagree about which way "outward" is. Central difference,
-   and the winding is checked at the crown: there the tangent runs
-   -z and the normal must come out +y. */
-const SHADE_PROFILE_N = SHADE_PROFILE.map((_, i, a) => {
-  const prev = a[Math.max(i - 1, 0)];
-  const next = a[Math.min(i + 1, a.length - 1)];
-  const tz = next.x - prev.x;
-  const ty = next.y - prev.y;
-  const L = Math.hypot(tz, ty) || 1;
-  return { ny: -tz / L, nz: ty / L };
-});
+/* Read off the rounded section rather than the nominal one: opening
+   the ridge lowers the crown by a little under the radius, and the
+   bulb is placed as a share of it. */
+const SHADE_CROWN_ACTUAL = Math.max(...SHADE_PROFILE.map((v) => v.y));
 
-/* The profile drawn in by `d` along those normals. `d` of 0 is the
-   profile itself, so the straight middle of the sweep and the rolled
-   ends are the same code path. */
-function insetProfile(d) {
-  if (!d) return SHADE_PROFILE;
-  return SHADE_PROFILE.map(
-    (p, i) =>
-      new THREE.Vector2(
-        p.x - SHADE_PROFILE_N[i].nz * d,
-        p.y - SHADE_PROFILE_N[i].ny * d,
-      ),
-  );
-}
-
-/* **Where along the length the sweep puts a ring, and how far in.**
-   Flat through the middle, a quarter-circle roll at each end. The
-   locus of `(x, inset)` is a circle of radius EDGE_ROUND centred one
-   radius in from the end plane and one radius in from the surface,
-   which is what makes both joins tangential: `dinset/dx` is 0 where
-   the roll meets the straight run, and `dx/da` is 0 at the end
-   plane, so the cap meets the wall square. */
+/* Where along the length the loft puts a ring, and how big the
+   section is there. Full size through the middle, shrinking onto the
+   pivot axis over the dome at each end. See END_ROUND / END_BULGE. */
 function sweepStations() {
-  const hx = SHADE_LEN / 2;
-  const R = EDGE_ROUND;
+  const straight = SHADE_LEN / 2 - END_ROUND;
+  const reach = END_ROUND + END_BULGE;
   const out = [];
-  for (let i = 0; i <= EDGE_SEGS; i++) {
-    const a = (i / EDGE_SEGS) * (Math.PI / 2);
-    out.push({
-      x: -hx + R - R * Math.cos(a),
-      inset: R - R * Math.sin(a),
-      axial: -Math.cos(a),
-      radial: Math.sin(a),
-    });
-  }
-  for (let i = EDGE_SEGS; i >= 0; i--) {
-    const a = (i / EDGE_SEGS) * (Math.PI / 2);
-    out.push({
-      x: hx - R + R * Math.cos(a),
-      inset: R - R * Math.sin(a),
-      axial: Math.cos(a),
-      radial: Math.sin(a),
-    });
-  }
+  const ring = (i, sign) => {
+    const a = (i / END_SEGS) * (Math.PI / 2);
+    return { x: sign * (straight + reach * Math.sin(a)), scale: Math.cos(a) };
+  };
+  /* The -x tip first, so the rings come out in increasing x and the
+     loft's index arithmetic stays a plain grid. */
+  for (let i = END_SEGS; i >= 0; i--) out.push(ring(i, -1));
+  for (let i = 0; i <= END_SEGS; i++) out.push(ring(i, 1));
   return out;
 }
 
@@ -487,14 +538,6 @@ function sweepStations() {
    now, and at anything other than 0.5 an unmirrored pair would put
    the ridge toward the front on one end cap and toward the back on
    the other. Mirroring one cancels the rotation's own flip. */
-function shadeProfileShape(mirror = false, d = 0) {
-  const base = insetProfile(d);
-  const pts = mirror
-    ? base.map((v) => new THREE.Vector2(-v.x, v.y))
-    : base;
-  return new THREE.Shape(pts);
-}
-
 /* **The shell's front face at a given height** — the profile solved
    for z instead of sampled. Anything fixed to the glass from outside
    wants this rather than a fraction of SHADE_HALF_D: a factor tuned
@@ -511,10 +554,10 @@ function shadeProfileShape(mirror = false, d = 0) {
 function shellDepthAt(y) {
   const front = PEAK_Z + FRONT_W;
   /* Inside the rim's curl the face is the arc, not the plumb skirt. */
-  if (y <= FRONT_LIP_Y) return front - LIP_ROUND;
-  if (y < FRONT_LIP_Y + LIP_ROUND) {
-    const dy = FRONT_LIP_Y + LIP_ROUND - y;
-    return front - LIP_ROUND + Math.sqrt(LIP_ROUND ** 2 - dy ** 2);
+  if (y <= FRONT_LIP_Y) return front - EDGE_RADIUS;
+  if (y < FRONT_LIP_Y + EDGE_RADIUS) {
+    const dy = FRONT_LIP_Y + EDGE_RADIUS - y;
+    return front - EDGE_RADIUS + Math.sqrt(EDGE_RADIUS ** 2 - dy ** 2);
   }
   if (y <= 0) return front;
   if (y >= SHADE_SHOULDER) return PEAK_Z;
@@ -625,7 +668,7 @@ const KNOB_COLLAR_LEN = 0.1;
    sits 0.32 under the roof. Push it much further back and the socket
    starts to foul the rear flank; bring it forward and it comes into
    view through the mouth from the home camera. */
-const BULB_Y = SHADE_CROWN * 0.3;
+const BULB_Y = SHADE_CROWN_ACTUAL * 0.3;
 /* **Derived from the back flank, not written down.** It was -0.55,
    which was comfortably inside a section 1.88 deep and is outside
    one 1.41 deep: at the bulb's own height the back flank now stands
@@ -698,7 +741,7 @@ const SHELL_IN_SHADE = SHELL_OFFSET.clone().applyEuler(SHADE_ORIENT);
 const BACK_LIP_IN_SHADE = new THREE.Vector3(
   0,
   SHADE_LIP_Y + SHELL_OFFSET.y,
-  -(SHADE_HALF_D - LIP_ROUND) + SHELL_OFFSET.z,
+  -(SHADE_HALF_D - EDGE_RADIUS) + SHELL_OFFSET.z,
 ).applyEuler(SHADE_ORIENT);
 
 /* **Where the bar sits, solved against the tilted shell.**
@@ -724,7 +767,40 @@ const BAR_Z = Math.min(
     return dy >= d ? Infinity : v.z - Math.sqrt(d * d - dy * dy);
   }),
 );
-const BAR_HALF = SHADE_LEN / 2 + YOKE_OUT;
+/* **Where the pivot axis actually leaves the glass**, found rather
+   than assumed. It used to be the dome's apex, because the dome
+   closed onto the pivot; now it closes onto the rim, so the apex is
+   down at rim height and the axis exits lower down the end face.
+   Attaching the hooks at the apex would have left them reaching
+   past the glass into air.
+
+   Bisect on the dome's angle for the station whose scaled section
+   still reaches the pivot's height at the pivot's depth. */
+const PIVOT_X = (() => {
+  const straight = SHADE_LEN / 2 - END_ROUND;
+  const reach = END_ROUND + END_BULGE;
+  const topAtPivot = (sc) => {
+    if (sc <= 1e-6) return null;
+    const z = PEAK_Z + (PIVOT.x - PEAK_Z) / sc;
+    if (z > SHADE_HALF_D || z < -SHADE_HALF_D) return null;
+    const dz = z - PEAK_Z;
+    const yt =
+      dz >= 0
+        ? shoulderAt(dz, FRONT_W, FRONT_CURVE)
+        : shoulderAt(dz, BACK_W, BACK_CURVE);
+    return rimAt(z) + (yt - rimAt(z)) * sc;
+  };
+  let lo = 0;
+  let hi = Math.PI / 2;
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2;
+    const v = topAtPivot(Math.cos(mid));
+    if (v === null || v < PIVOT.y) hi = mid;
+    else lo = mid;
+  }
+  return straight + reach * Math.sin(lo);
+})();
+const BAR_HALF = PIVOT_X + YOKE_OUT;
 const SHADE_Y =
   SHADE_BOTTOM + SHELL_IN_SHADE.y - BACK_LIP_IN_SHADE.y;
 
@@ -1060,29 +1136,31 @@ function armCurve(startY) {
    the outward normal must be +y, which `(ty, -tz)` gives. */
 function troughGeometry() {
   const pts = SHADE_PROFILE;
-  const nrm = SHADE_PROFILE_N;
   const n = pts.length - 1;
   const stations = sweepStations();
   const m = stations.length - 1;
 
   const pos = [];
-  const nor = [];
   const uv = [];
   const idx = [];
   for (let i = 0; i <= n; i++) {
     const p = pts[i];
-    const { ny, nz } = nrm[i];
     const u = i / n;
     for (let j = 0; j <= m; j++) {
       const st = stations[j];
-      /* Drawn in along the profile's own normal, which is 0 through
-         the straight middle. */
-      pos.push(st.x, p.y - ny * st.inset, p.x - nz * st.inset);
-      /* On the roll the normal tips toward the end: `axial` is its x
-         component and `radial` scales the section's own normal, and
-         the pair is a unit vector by construction because they are
-         the cosine and sine of the same angle. */
-      nor.push(st.axial, ny * st.radial, nz * st.radial);
+      /* **Depth shrinks toward the ridge line, height toward the
+         rim** — two different anchors, and that is the whole point.
+         A single anchor at the pivot pulled the rim up with
+         everything else and opened a notch under each hook (see
+         `rimAt`). Anchored this way the rim is a straight line at
+         constant height from end to end and only the crown and the
+         depth close in. */
+      const rim = rimAt(p.x);
+      pos.push(
+        st.x,
+        rim + (p.y - rim) * st.scale,
+        PEAK_Z + (p.x - PEAK_Z) * st.scale,
+      );
       uv.push(u, j / m);
       if (i < n && j < m) {
         const k = i * (m + 1) + j;
@@ -1092,30 +1170,22 @@ function troughGeometry() {
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-  g.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3));
   g.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
   g.setIndex(idx);
+  /* **Computed, not written.** The surface is doubly curved now —
+     the section changes along the length as well as round the
+     profile — so the closed-form normal the flat sweep used no
+     longer holds. The winding fixes the direction, and it is the
+     same winding checked at the crown when this was a flat sweep:
+     there the tangent runs -z and the normal must come out +y.
+
+     The ring at each tip is degenerate, every vertex sitting on the
+     pivot. three tolerates that: those triangles have no area and
+     contribute no normal, the vertices keep a zero-length normal
+     rather than a NaN, and the ring inboard of them does the
+     shading. */
+  g.computeVertexNormals();
   return g;
-}
-
-/* **The end cap's outline**, as a 2D shape in (depth, height), cut
-   from the *same* profile points the trough is swept from and closed
-   across the chord between the two lips. Sharing the points is the
-   whole trick: the cap and the shell it closes cannot disagree about
-   the cross-section however the section is re-shaped, where the old
-   pair — an `absarc` here and a `CylinderGeometry` theta range there
-   — agreed only because both happened to be circles, and each needed
-   the squash applying to its mesh afterwards.
-
-   Takes `mirror` straight through — see `shadeProfileShape` for why
-   the two ends cannot share one outline once the section is allowed
-   to be asymmetric. */
-function capShape(mirror = false) {
-  /* On the inset profile, because the end plane is where the roll
-     finishes — a cap cut from the full section would stand proud of
-     the rolled wall all the way round, which is the very rim this
-     is meant to remove. */
-  return shadeProfileShape(mirror, EDGE_ROUND);
 }
 
 /* **The oval the beam is cut to.** three projects `SpotLight.map`
@@ -1390,38 +1460,11 @@ export function buildLamp() {
   lining.receiveShadow = false;
   shell.add(lining);
 
-  /* --- the end caps ---
-     Two meshes an end rather than one extrusion, because the two faces
-     are not the same material and only one of them glows: the green
-     one faces out and the cream one faces in. The cream is the same
-     BackSide lining material the shell uses, so a cap and the roof it
-     meets glow by exactly the same amount — which an independently
-     lit disc would not. */
-  /* One geometry an end, not one shared: `rotation.y = ±90` sends the
-     profile's depth axis to opposite world z, so the +x end gets the
-     mirrored outline to cancel it. See `shadeProfileShape`. */
-  const capGeo = {
-    "-1": track(new THREE.ShapeGeometry(capShape(false))),
-    1: track(new THREE.ShapeGeometry(capShape(true))),
-  };
-  for (const sign of [-1, 1]) {
-    const geo = capGeo[sign];
-    const out = new THREE.Mesh(geo, glassMat);
-    /* The shape is drawn in (depth, height); a quarter turn about y
-       stands it up in the y/z plane with its face along x. The sign
-       picks which end, and turns the face outward. */
-    out.rotation.y = (sign * Math.PI) / 2;
-    out.position.x = (sign * SHADE_LEN) / 2;
-    out.castShadow = true;
-    out.receiveShadow = true;
-    shell.add(out);
-
-    const inn = new THREE.Mesh(geo, liningMat);
-    inn.rotation.y = (sign * Math.PI) / 2;
-    inn.scale.set(1 - SHADE_T, 1 - SHADE_T, 1);
-    inn.position.x = sign * (SHADE_LEN / 2 - 0.02);
-    shell.add(inn);
-  }
+  /* **There are no end caps.** The loft closes each end on itself
+     (see END_ROUND / END_BULGE), so there is no opening to cover and
+     no rim where a flat disc would have met the wall. The lining,
+     being the same geometry a hair inside, closes with it — which is
+     why the cream still reaches right out to the ends. */
 
   /* --- the yoke ---
      **On `root`, not on `shade`.** The shade turns on the pivots;
@@ -1444,7 +1487,9 @@ export function buildLamp() {
      bar respectively. Centripetal, so the uneven spacing between
      the straight run and the turn does not overshoot. */
   for (const sign of [-1, 1]) {
-    const x0 = sign * (SHADE_LEN / 2);
+    /* The apex of the domed end — where the pivot axis comes out of
+       the glass now, not the old cap plane. */
+    const x0 = sign * PIVOT_X;
     const x1 = sign * BAR_HALF;
     const curve = new THREE.CatmullRomCurve3(
       [
@@ -1486,7 +1531,7 @@ export function buildLamp() {
      the cap, and a rounded end — a capsule gives that without a
      ball stuck on the end of it. */
   const knobLen = YOKE_OUT + KNOB_OUT;
-  const knobX = -(SHADE_LEN / 2 + knobLen / 2);
+  const knobX = -(PIVOT_X + knobLen / 2);
   const pin = mesh(
     new THREE.CapsuleGeometry(KNOB_R, knobLen - KNOB_R, 6, 14),
     brass,
@@ -1505,7 +1550,7 @@ export function buildLamp() {
     brass,
   );
   pinCollar.rotation.z = Math.PI / 2;
-  pinCollar.position.set(-(SHADE_LEN / 2 + KNOB_COLLAR_LEN / 2 - 0.02), 0, 0);
+  pinCollar.position.set(-(PIVOT_X + KNOB_COLLAR_LEN / 2 - 0.02), 0, 0);
   yoke.add(pinCollar);
 
   /* The bulb: a tubular lamp lying along the trough, up near the roof
