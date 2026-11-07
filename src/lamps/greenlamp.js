@@ -385,6 +385,36 @@ function shadeProfilePoints() {
 
 const SHADE_PROFILE = shadeProfilePoints();
 
+/* **The pivot: the centroid of the end-cap face.** A banker's shade
+   is hung from the middle of its ends, not from its bottom edge —
+   roughly half way front to back and half way up, which is what the
+   area centroid of the side profile *is*. Computing it instead of
+   writing it down is what keeps it centred when the section is
+   re-proportioned or the lips move: `PEAK_POS`, the two CURVEs and
+   `FRONT_DROP` all feed it.
+
+   Standard polygon centroid over the closed outline — the profile
+   list plus the chord across the mouth that `THREE.Shape` would add,
+   which the `% n` wrap supplies here. The profile is stored as
+   `(z, y)`, so `.x` is depth throughout. */
+function profileCentroid() {
+  const pts = SHADE_PROFILE;
+  const n = pts.length;
+  let a2 = 0;
+  let cz = 0;
+  let cy = 0;
+  for (let i = 0; i < n; i++) {
+    const p = pts[i];
+    const q = pts[(i + 1) % n];
+    const cross = p.x * q.y - q.x * p.y;
+    a2 += cross;
+    cz += (p.x + q.x) * cross;
+    cy += (p.y + q.y) * cross;
+  }
+  return new THREE.Vector2(cz / (3 * a2), cy / (3 * a2));
+}
+const PIVOT = profileCentroid();
+
 /* The outward 2D normal at each profile point, as `(ny, nz)`. Shared
    by the sweep and by the inset the end roll-over needs, so the two
    cannot disagree about which way "outward" is. Central difference,
@@ -539,37 +569,47 @@ const SHADE_BOTTOM = 1.6 * (BASE_R * 2);
 const SHADE_Z = 0.55;
 
 /* --- The holder ------------------------------------------
-   **One brass rod along the back edge, and the shade rotates about
-   it.** That is the whole fitting: a banker's shade is not carried
-   from underneath, it is clipped onto a rod that runs the length of
-   its back lip, and the rod is also the axis the tilt adjuster rocks
-   it on. So the rod's axis is the shade group's **origin**, and the
-   shell hangs off it at a fixed offset — which is what makes "the
-   shade's tilt rotates around this rod's axis" a fact about the
-   scene graph rather than a coincidence of two numbers.
+   **A yoke on the ends, not a rod under the bottom edge.** The shade
+   used to be clipped to a rod running the length of its back lip,
+   which is a fitting no banker's lamp has: the real one carries the
+   shade on two pivots at the centres of its end caps, with a brass
+   hoop round the back joining them to the arm.
 
-   `ROD_Y` / `ROD_Z` are stated in the **shell's** frame, and the one
-   figure that matters is the distance from the back lip at
-   `(SHADE_LIP_Y, -SHADE_HALF_D)`: it is 0.073 against a rod radius of
-   0.085, so the lip sits a little way *inside* the rod. Tangency was
-   tried first and is not enough — two surfaces that meet along a
-   mathematical line still show a sliver of background between them
-   wherever the shading falls away, and "no gap" has to be true of
-   every pixel rather than of the arithmetic. Overlapping costs
-   nothing visible: the rod still stands 0.16 clear of the lip on its
-   far side, which is the brass line the holder reads as. */
-const ROD_R = 0.085;
-const ROD_Y = SHADE_LIP_Y - 0.07;
-/* Inboard by the rim's curl: the rod is tangent to the *lowest*
-   part of the lip, and that point moved in by LIP_ROUND when the
-   rim was rounded. Left at the old depth the two parted by 0.005 —
-   a hairline of background between the shade and its own holder. */
-const ROD_Z = -(SHADE_HALF_D - LIP_ROUND + 0.022);
-/* How far the rod runs past the end cap on the adjuster's side. It
-   has to leave a visible stub of bare rod between the collar at the
-   cap and the knob on the end, or the two fittings merge into one
-   lump. */
-const ROD_EXT = 0.5;
+   The change that matters is not the shape of the brass, it is
+   **what the shade turns about**. The pivot axis is now the line
+   through the two centroids, so tilting the shade rotates it about
+   its own middle instead of swinging it round its bottom edge.
+
+   **The yoke is a child of `root`, not of `shade`.** That is the
+   whole point of a pivot: the shade turns and the yoke does not.
+   It also keeps the arm honest — the arm ends on the bar, and if
+   the bar rotated with the shade then `aimLamp` would tilt the
+   shade and leave the arm reaching at nothing. The old rod got this
+   for free by sitting exactly on the rotation axis; a hoop behind
+   the shade has to be told.
+
+   One consequence to carry: because the yoke does not rotate, every
+   clearance it holds is against the **tilted** shell, so the bar's
+   seat is solved in the yoke's own frame rather than the shell's. */
+const YOKE_R = 0.075; // the hook and bar tube radius
+/* How far each hook stands off the end cap before it turns. The
+   hooks are outboard of the shade for their whole length, which is
+   why only the bar has to hold a clearance. */
+const YOKE_OUT = 0.24;
+/* The clearance the bar keeps from the green. */
+const YOKE_GAP = 0.06;
+/* How far below the shade's lowest back point the bar sits. */
+const YOKE_DROP = 0.1;
+
+/* The tilt knob: the pivot pin itself, continuing straight out of
+   one end cap and past the hook that turns away from it. A plain
+   turned pin with a collar where it leaves the cap and a rounded
+   end — no ball. Narrower than the hook, so the stretch they share
+   reads as the pin passing through the yoke. */
+const KNOB_R = 0.05;
+const KNOB_OUT = 0.2; // how far it stands proud of the hook
+const KNOB_COLLAR_R = 0.095;
+const KNOB_COLLAR_LEN = 0.1;
 
 /* --- What is inside the shade -----------------------------
    **The socket is mounted near the back of the trough, not down its
@@ -638,9 +678,9 @@ const BEAD_N = 14;
    otherwise restate the tilt, and a restated angle is one that can go
    stale. */
 const SHADE_ORIENT = new THREE.Euler(-SHADE_TILT, 0, 0);
-/* The shell's seat within the shade group — the rod offset, negated,
-   because the group's origin *is* the rod. */
-const SHELL_OFFSET = new THREE.Vector3(0, -ROD_Y, -ROD_Z);
+/* The shell's seat within the shade group — the pivot, negated,
+   because the group's origin *is* the pivot axis. */
+const SHELL_OFFSET = new THREE.Vector3(0, -PIVOT.y, -PIVOT.x);
 /* **Derived, not written down.** The rod sits wherever it has to for
    the shell to land on `SHADE_Y` / `SHADE_Z`, so re-tucking the rod
    under the lip moves the pivot and the arm's joint with it and
@@ -660,6 +700,31 @@ const BACK_LIP_IN_SHADE = new THREE.Vector3(
   SHADE_LIP_Y + SHELL_OFFSET.y,
   -(SHADE_HALF_D - LIP_ROUND) + SHELL_OFFSET.z,
 ).applyEuler(SHADE_ORIENT);
+
+/* **Where the bar sits, solved against the tilted shell.**
+
+   The yoke does not rotate, so the shell's profile has to be carried
+   into the yoke's frame before anything can be measured against it —
+   a clearance written in the shell's own coordinates would be out by
+   the tilt. `BAR_Y` is a fixed drop below the shell's lowest point;
+   `BAR_Z` is then the *largest* z at which a tube of radius YOKE_R
+   still clears every point of the section by YOKE_GAP, which is one
+   pass over the profile rather than a number to re-tune whenever the
+   shape moves. */
+const SHELL_IN_YOKE = SHADE_PROFILE.map((v) =>
+  new THREE.Vector3(0, v.y + SHELL_OFFSET.y, v.x + SHELL_OFFSET.z).applyEuler(
+    SHADE_ORIENT,
+  ),
+);
+const BAR_Y = Math.min(...SHELL_IN_YOKE.map((v) => v.y)) - YOKE_DROP;
+const BAR_Z = Math.min(
+  ...SHELL_IN_YOKE.map((v) => {
+    const d = YOKE_R + YOKE_GAP;
+    const dy = Math.abs(v.y - BAR_Y);
+    return dy >= d ? Infinity : v.z - Math.sqrt(d * d - dy * dy);
+  }),
+);
+const BAR_HALF = SHADE_LEN / 2 + YOKE_OUT;
 const SHADE_Y =
   SHADE_BOTTOM + SHELL_IN_SHADE.y - BACK_LIP_IN_SHADE.y;
 
@@ -912,15 +977,19 @@ function contactShadow() {
   return track(new THREE.CanvasTexture(c));
 }
 
-/* **The arm ends on the rod's axis, which is the shade group's own
-   origin — so this is `SHADE_ORIGIN` and nothing else.** Not near it,
-   not offset into the shell: a tube whose end face lies on the axis
-   of the rod it joins is fully inside that rod, so there is no seam
-   to find at any angle and the joint collar below has something solid
-   to close over. Earlier versions aimed the arm at a point under the
-   shell and had to bury the tube by hand; with a real holder to meet,
-   the joint is simply the holder. */
-const ARM_END = SHADE_ORIGIN;
+/* **The arm ends on the axis of the yoke's bar.** Not near it: a
+   tube whose end face lies on the axis of the bar it joins is fully
+   inside that bar, so there is no seam to find at any angle and the
+   joint collar has something solid to close over.
+
+   It used to be `SHADE_ORIGIN` itself, because the holder was a rod
+   lying on the rotation axis. The bar is behind and below the shade
+   now, so the two have parted — and since the yoke does not rotate,
+   this stays put when the shade is re-tilted, which is the property
+   that mattered about the old arrangement. */
+const ARM_END = SHADE_ORIGIN.clone().add(
+  new THREE.Vector3(0, BAR_Y, BAR_Z),
+);
 
 /* **How far back the arm leans where it leaves the collar**, off
    vertical. It straightens as it rises and arrives vertical at the
@@ -1354,65 +1423,90 @@ export function buildLamp() {
     shell.add(inn);
   }
 
-  /* --- the holder ---
-     Every piece here is a child of `shade` rather than of `shell`,
-     and every one of them is a **solid of revolution about the rod's
-     own axis** — so although the group rolls with the tilt, none of
-     them visibly moves. Parenting them to the rod's frame instead of
-     the root is what guarantees the joint cannot open a gap: the arm
-     stops on the axis, the fittings are centred on it, and the
-     shell's lip is tangent to it, all in one frame.
+  /* --- the yoke ---
+     **On `root`, not on `shade`.** The shade turns on the pivots;
+     the yoke holds them and stays where the arm left it. See the
+     holder note at the top of the file.
 
-     The rod runs the length of the shade and a little proud of the
-     far cap, so it reads as a through-rod rather than as two stubs. */
-  const rodA = -(SHADE_LEN / 2 + ROD_EXT); // the tilt-adjuster end
-  const rodB = SHADE_LEN / 2 + 0.05; // just past the far end cap
-  const rod = mesh(
-    new THREE.CylinderGeometry(ROD_R, ROD_R, rodB - rodA, 16),
+     It is placed at the pivot axis and *not* rotated, so its own
+     local frame is the lamp's orientation with the pivot as origin
+     — which is the frame BAR_Y and BAR_Z are solved in. */
+  const yoke = new THREE.Group();
+  yoke.name = "lamp-yoke";
+  yoke.position.copy(SHADE_ORIGIN);
+  root.add(yoke);
+
+  /* Each hook: straight out of the pivot, then one smooth turn back
+     and down onto the end of the bar. Catmull-Rom through four
+     points rather than a Bezier, because what matters here is that
+     it passes through the pivot and lands on the bar — the tangents
+     at the ends are hidden inside the cap's collar and inside the
+     bar respectively. Centripetal, so the uneven spacing between
+     the straight run and the turn does not overshoot. */
+  for (const sign of [-1, 1]) {
+    const x0 = sign * (SHADE_LEN / 2);
+    const x1 = sign * BAR_HALF;
+    const curve = new THREE.CatmullRomCurve3(
+      [
+        new THREE.Vector3(x0, 0, 0),
+        new THREE.Vector3(x1, 0, 0),
+        new THREE.Vector3(x1, BAR_Y * 0.45, BAR_Z * 0.82),
+        new THREE.Vector3(x1, BAR_Y, BAR_Z),
+      ],
+      false,
+      "centripetal",
+    );
+    const hook = mesh(new THREE.TubeGeometry(curve, 40, YOKE_R, 12, false), brass);
+    yoke.add(hook);
+  }
+
+  /* The bar the two hooks land on. It runs the full width between
+     them, so each hook's open end is buried inside it and there is
+     no mitre to show at the corner. */
+  const bar = mesh(
+    new THREE.CylinderGeometry(YOKE_R, YOKE_R, BAR_HALF * 2, 16),
     brass,
   );
-  rod.rotation.z = Math.PI / 2;
-  rod.position.x = (rodA + rodB) / 2;
-  shade.add(rod);
+  bar.rotation.z = Math.PI / 2;
+  bar.position.set(0, BAR_Y, BAR_Z);
+  yoke.add(bar);
 
-  /* The joint, at the middle of the rod where the arm arrives. Its
-     radius takes in the rod *and* the shell's lip tangent to it, so
-     the three surfaces meet inside one brass fitting rather than
-     touching in mid-air — which is the difference between a shade
-     clipped onto a rod and a shade resting near one. */
+  /* The joint, where the arm arrives at the middle of the bar. */
   const joint = mesh(
-    new THREE.CylinderGeometry(ROD_R * 1.9, ROD_R * 1.9, 0.26, 18),
+    new THREE.CylinderGeometry(YOKE_R * 1.9, YOKE_R * 1.9, 0.26, 18),
     brass,
   );
   joint.rotation.z = Math.PI / 2;
-  shade.add(joint);
+  joint.position.set(0, BAR_Y, BAR_Z);
+  yoke.add(joint);
 
-  /* --- the tilt adjuster ---
-     A collar where the rod leaves the end cap and a turned knob on
-     the end of the stub, with bare rod showing between them. On a
-     real banker's lamp this is the clamp the shade rocks against,
-     which is why it belongs on the rod's end and nowhere else — it
-     is the one fitting that says this shade is *meant* to be aimed,
-     and now it sits on the axis it actually rocks about.
-
-     Polished `brass`, not the darker `brassDark` the column's own
-     collar uses: the holder is one continuous piece of hardware with
-     the base and the column, and a darker ring here read as a join
-     in it rather than as a fitting on it. */
-  const endCollar = mesh(
-    new THREE.CylinderGeometry(ROD_R * 2.0, ROD_R * 2.0, 0.12, 18),
+  /* --- the tilt knob ---
+     The pivot pin, straight out of one cap along the pivot axis and
+     past the hook that turns away from it. A collar where it leaves
+     the cap, and a rounded end — a capsule gives that without a
+     ball stuck on the end of it. */
+  const knobLen = YOKE_OUT + KNOB_OUT;
+  const knobX = -(SHADE_LEN / 2 + knobLen / 2);
+  const pin = mesh(
+    new THREE.CapsuleGeometry(KNOB_R, knobLen - KNOB_R, 6, 14),
     brass,
   );
-  endCollar.rotation.z = Math.PI / 2;
-  endCollar.position.x = -(SHADE_LEN / 2 + 0.05);
-  shade.add(endCollar);
+  pin.rotation.z = Math.PI / 2;
+  pin.position.set(knobX, 0, 0);
+  yoke.add(pin);
 
-  /* Squashed along the rod, so it caps the end rather than reading as
-     a ball skewered on it. */
-  const knob = mesh(new THREE.SphereGeometry(ROD_R * 2.4, 20, 14), brass);
-  knob.scale.x = 0.78;
-  knob.position.x = rodA + ROD_R * 0.6;
-  shade.add(knob);
+  const pinCollar = mesh(
+    new THREE.CylinderGeometry(
+      KNOB_COLLAR_R,
+      KNOB_COLLAR_R,
+      KNOB_COLLAR_LEN,
+      18,
+    ),
+    brass,
+  );
+  pinCollar.rotation.z = Math.PI / 2;
+  pinCollar.position.set(-(SHADE_LEN / 2 + KNOB_COLLAR_LEN / 2 - 0.02), 0, 0);
+  yoke.add(pinCollar);
 
   /* The bulb: a tubular lamp lying along the trough, up near the roof
      where a banker's lamp's socket is. **It is placed to be hidden**:
