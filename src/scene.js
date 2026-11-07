@@ -31,36 +31,43 @@ import { buildTreehouse, buildSpareBricks, disposeTreehouse } from "./treehouse.
    and so the only one this module has to carry a *state* for as well
    as a place. lamp.js owns the shape and what "on" means for each of
    its parts; the state and the fade are below. */
-import * as shippedLamp from "./lamp.js";
+import * as greenLamp from "./lamps/greenlamp.js";
 
-/* **Which lamp module the scene is built with**, so an alternative
-   fixture can be tried in the real room rather than only in
-   `lamp-lab.html`. The lab answers "what does it look like on a
-   slab"; the questions that matter here — does it stand on the
-   *desk*, does it get in front of the machine, does a press still
-   reach the glass — are about the rest of the scene and cannot be
-   asked anywhere else.
+/* **Which lamp module the scene is built with.**
+   `src/lamps/greenlamp.js` is the one the room ships with — the
+   green glass banker's lamp. `src/lamp.js`, the cone fixture that
+   used to be it, is kept and still satisfies the same contract; it
+   is reachable with `?lamp=lamp`.
 
-   `src/lamp.js` is the default and the only thing production ever
-   sees: `resolveLamp` is behind `import.meta.env.DEV`, which Vite
-   folds to `false` at build, so rollup drops the branch and the
-   alternative module with it. Verify the same way the perf meter is
-   verified — `npm run build && grep -r greenlamp dist/` must find
-   nothing. The dev-only guard is also why these checks run against
-   `npm run dev` rather than `npm run preview`.
+   The contract is: `buildLamp`, `setLamp`, `aimLamp`, `lampLevels`,
+   `disposeLamp`, `LAMP_SCALE`, `LAMP_COLOUR`, and optionally
+   `LAMP_X` / `LAMP_Z` — a module that names its own seat gets it,
+   and one that does not falls back on the constants below. See the
+   Lamps section of CLAUDE.md.
 
-   Every call goes through `lampMod` rather than through a bound
-   import, because the contract is the point: a module that satisfies
-   it is interchangeable, and a call site that reached past this
-   object would be the one place that quietly was not. */
-let lampMod = shippedLamp;
+   **Every call goes through `lampMod` rather than through a bound
+   import**, because the interchangeability is the point: a call
+   site that reached past this object would be the one place that
+   quietly was not swappable.
+
+   `resolveLamp` is behind `import.meta.env.DEV`, which Vite folds
+   to `false` at build, so rollup drops the branch *and every module
+   only it reaches* — which now means `src/lamp.js` is absent from
+   production rather than greenlamp. Verify the way the perf meter
+   is verified: `npm run build`, then grep `dist/`. It is also why
+   `?lamp=` only works against `npm run dev`, not `npm run preview`. */
+let lampMod = greenLamp;
 
 async function resolveLamp() {
   if (!import.meta.env.DEV) return;
   const name = new URLSearchParams(location.search).get("lamp");
-  if (!name || name === "lamp" || !/^[a-z0-9-]+$/.test(name)) return;
+  if (!name || name === "greenlamp" || !/^[a-z0-9-]+$/.test(name)) return;
   try {
-    lampMod = await import(`./lamps/${name}.js`);
+    /* Two static prefixes rather than one template, so Vite can see
+       both arms: the cone lamp is not under `lamps/`. */
+    lampMod = name === "lamp"
+      ? await import("./lamp.js")
+      : await import(`./lamps/${name}.js`);
   } catch (err) {
     console.error(`lamp module "${name}" failed to load`, err);
   }

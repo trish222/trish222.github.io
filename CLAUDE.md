@@ -92,7 +92,9 @@ src/computer.js   the CRT machine, built from primitives
 src/desk.js       the steel tanker desk it stands on, likewise
 src/treehouse.js  the brick-built cherry treehouse, and the spare bricks beside it
 src/nightwindow.js  the window in the left wall: joinery, the night sky on the glass, the rain
-src/lamp.js       the desk lamp on the back-left corner, and what "on" means for each of its parts
+src/lamps/greenlamp.js  **the desk lamp the room ships with** — green glass banker's lamp
+src/lamp.js       the cone lamp it replaced; still builds, still reachable with ?lamp=lamp
+lamp-lab.html     dev harness for one lamp on a slab under the room's night rig (not a build input)
 public/env/       CC0 studio HDRI — vendored, no longer loaded (see "The night lighting")
 public/textures/  CC0 walnut scan for the desk top, vendored and relit
 src/style.css     Win95 design tokens (:root vars) + all component CSS
@@ -2189,7 +2191,71 @@ but that is a prediction, not a reading, and the rule on this branch
 is that a frame time without its A/B beside it is worth nothing. Run
 `_perfcheck.mjs` if the number matters.
 
-### The desk lamp
+### Lamps
+
+**The desk lamp is a swappable module, and `src/lamps/greenlamp.js`
+is the one the room ships with.** `src/lamp.js` — the cone fixture
+documented in the next section — is kept, still builds, and still
+satisfies the contract; it is no longer the default.
+
+**The contract.** A lamp module exports:
+
+| | |
+|---|---|
+| `buildLamp()` | returns `{ root, shade, point, spot }`; origin on the **desk top** at the centre of the base, +Z the front, unyawed |
+| `setLamp(level)` | 0..1 → every brightness the fixture has. **Linear in the level** — the easing lives in scene.js's loop, so the curve can be re-cut without changing what a lamp at 0.3 looks like |
+| `aimLamp(tiltDeg, swingDeg)` | re-aims and reports the pool, read off the **world matrices** rather than restated from the angles |
+| `lampLevels(next)` | the dev readout `window.__lamp` drives |
+| `disposeLamp()` | frees what `buildLamp` tracked |
+| `LAMP_SCALE`, `LAMP_COLOUR` | the group scale and the warm tint |
+| `LAMP_X`, `LAMP_Z` | **optional.** A module that names its own seat gets it; one that does not falls back on scene.js's constants. greenlamp names its own, because a different fixture is a different size and the x and z it has to stand at to clear the walnut's edges are its own facts |
+
+scene.js calls all of it through one `lampMod` object rather than
+bound imports. That indirection *is* the interchangeability: a call
+site reaching past it would be the one place that quietly was not
+swappable.
+
+**`?lamp=<name>` swaps the fixture in the real room**, and it is
+**dev only** — the resolver sits behind `import.meta.env.DEV`, which
+Vite folds to `false` at build, so rollup drops the branch and every
+module only it reaches. Today that means **`src/lamp.js` is absent
+from production**, not greenlamp. Verify it the way the perf meter is
+verified: `npm run build`, then grep `dist/` for a marker only that
+module has (`0x3d5a4e`, the cone's shade green — `lamp-shade` will
+not do, both modules use it).
+
+```
+?lamp=lamp        the cone lamp (src/lamp.js)
+?lamp=<name>      src/lamps/<name>.js
+```
+
+Because the flag is dev-only, anything exercising it runs against
+`npm run dev`, not `npm run preview`. The `_*.mjs` lamp scripts take
+a `SCENE_URL` env var for that.
+
+**`lamp-lab.html` is the harness for one fixture on its own**, under
+the room's night rig, without the desktop, the fly-in or the rest of
+the scene: `lamp-lab.html?lamp=<name>&view=<view>`. Views are `home`
+(the room's own 20-down / 37-round), `front`, `side` and `under` —
+the last framing the shell's interior, which the other three cannot
+see into. `&helpers=1` draws the spot's cone, the point's position
+and the **shadow camera's frustum**, that last being the only way to
+see where the near plane sits. It is not a `vite build` input, so
+none of it reaches `dist/`.
+
+The rig in it is **copied from scene.js, not imported** — importing
+would drag in the computer, the desk, the treehouse and GSAP, and the
+lab would be measuring all of them. Four numbers and an operator; if
+the room is re-graded they have to be re-copied.
+
+Readouts it adds that a screenshot cannot give: `window.__pool(y01)`
+(on/off luma transect across a framebuffer row), `window.__poolWorld(axis)`
+(the pool's width in **world** units along a line through the beam's
+own aim point — read the `"x"` figure; the `"z"` line runs under the
+base and its peak is the lit base, not the pool), `window.__fit()`,
+`window.__aim(t, s)`.
+
+### The desk lamp (src/lamp.js — the cone fixture, no longer the default)
 
 `src/lamp.js` builds a base, a pole and a cone shade from primitives
 and stands them on the back-left corner of the desk. It is **the only
