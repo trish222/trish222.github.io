@@ -56,7 +56,21 @@ const CHROME = 0xd8dbdf;
 const WOOD_TINT = 0xffffff;     // the map carries the colour; see deskWood
 
 /* --- Proportions ----------------------------------------- */
-const DESK_W = 19.0;            // along +X
+/* Along +X. Was 19.0 and went up 20% on request, which is a change of
+   *width only* — DESK_D, DESK_TOP_Y and the height stack are all
+   untouched, so the desk gets longer rather than bigger. Everything
+   below is written against this constant rather than against 19:
+   BASE_W, KNEE_W and CENTRE_W all fall out of it, so the pedestals
+   stay hung at the two ends and the knee hole takes the whole of the
+   extra length. The walnut's UV repeat is DESK_W / 7, so the scan
+   tiles across the extra width instead of stretching over it.
+
+   What it costs is that the slab's ends run to x +/-11.4 against the
+   left wall's inner face at ROOM_PLAN.X0 = -13.0 — 1.6 clear of the
+   wall, and 1.22 clear of the skirting bead, which at BASE_CAP_OUT
+   0.38 is the widest thing standing proud of it. So the desk still
+   does not touch the room. */
+const DESK_W = 22.8;
 /* Along +Z, and set by what has to stand on it rather than by taste:
    the CRT's funnel runs 4.8 units back from the stand and the keyboard
    2.6 forward of it, so the kit occupies very nearly 12 units of depth

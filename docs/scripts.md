@@ -52,6 +52,14 @@ and `window.__shadowfit` exist for.
   both viewports. Prints the NDC box of the desk, the machine and the
   two together, where ±1 is the frame edge. What `FRUSTUM`,
   `FRUSTUM_MOBILE` and `ISO_TARGET` are set against.
+- **`_pedfit.mjs`** — the one question `_deskfit.mjs` cannot answer,
+  because the pedestals are not named objects: it projects the far
+  (-x, screen-left) pedestal's drawer front by hand off
+  `window.__camera` and prints what fraction of its width is inside
+  the frame. That is the criterion `FRUSTUM_MOBILE` is actually set
+  against, and the pedestals move whenever `DESK_W` does — the
+  constants at the top of the script are derived from desk.js's, so
+  **re-derive them if the desk's proportions change again**.
 - **`_deskshots.mjs`** — the room with the chrome hidden from home and
   both ends of the leash. **Shoot both after moving anything on the
   desk**: the first version's monitor overhung the back edge, and only a
@@ -101,6 +109,58 @@ and `window.__shadowfit` exist for.
   follows it as it is re-tuned. **Out of date** in one job: it reads
   `window.__walls()` to check the window faded with its wall, and there
   is no fade any more.
+- **`_probe-win.mjs`** — candidate openings, projected. Prints the head
+  and sill of several (sill, height, width, z) candidates in NDC on both
+  viewports off the live camera, so "how tall can the window be and keep
+  its head in shot" is a number. This is how the portrait 9.5 x 12 was
+  arrived at, and how the two-thirds-of-the-desk brief was shown not to
+  fit. **Read it with `_winhead.mjs` beside it now**: the frame's top
+  edge is a diagonal across the receding wall, not the single 18.6 this
+  script's note quotes, and the landscape 14 x 8.2 was set against the
+  middle of it.
+- **`_winhead.mjs`** — **where the home frame cuts the left wall**, by
+  binary search on the projection, swept across the z the opening
+  spans and printed per viewport. 17.88 at the opening's back edge,
+  18.87 at its centre, 19.86 at its front on desktop; mobile is seven
+  units higher throughout, so desktop is always the binding one.
+- **`_winhome.mjs`** — the whole home frame on both viewports with the
+  desktop chrome hidden, plus the opening's world box and NDC box. The
+  shot the window has to sit inside.
+- **`_winposes2.mjs`** — the opening at the four ends of the leash plus
+  the `prefers-reduced-motion` single frame, which is the path with
+  nothing to paper over a late asset.
+- **`_boxfit.mjs`** — `__shadowfit` over the furniture only (the room's
+  own box is useless now the room is bigger than its lighting), and the
+  beam's direction and elevation. Run it with `_castfit.mjs` after
+  anything that re-aims the moon.
+- **`_parallaxfit.mjs`** — **how big each backdrop plane has to be.**
+  For every pose the leash allows, on both viewports, it casts the four
+  corners of the opening from the camera onto a plane `d` behind the
+  wall and unions the footprints. Prints the needed extent, its centre
+  and which pose was worst. It skips poses where the window is off
+  screen — that filter is the difference between 60-unit planes and
+  180-unit ones. Run it after anything that moves the window or changes
+  the leash; the sizes in `LAYERS` are its figures plus a unit.
+- **`_layerview.mjs`** — the other half of the same question: **what
+  patch of each plane the opening actually shows**, in the window's own
+  local space and as canvas uv, per pose and per viewport. This is the
+  frame the art on each layer has to be composed inside, and composing
+  against the canvas instead is what made the first layered build a flat
+  wash. It is also where the moon's placement comes from.
+- **`_castfit.mjs`** — the casting rectangle in the moon's own basis.
+  Projects room.js's `CAST_H` x `CAST_Z1` core into the light's space
+  and prints it beside the six faces of the shadow box, so "is any of
+  the one caster in the room being clipped out of the map" is a
+  comparison rather than a guess. It caught `CAST_H` 19 -> 23 poking
+  through `bottom` and `near`.
+- **`_bisolate.mjs`** — one crop of the opening per backdrop layer, with
+  everything in front of it hidden, so a stray shape can be attributed
+  to the plane it is on. How the pale tower beside the moon was traced
+  to a flat-filled far rank.
+- **`_wincrop.mjs`** / **`_winposes.mjs`** — a crop of the window taken
+  off its own NDC box at four poses, and the full-frame sweep with the
+  NDC box printed at each. The sweep is the one that catches a backdrop
+  plane peeking over a wall top at the steep end of the leash.
 - **`_lightshots.mjs`** — the night rig, desktop and mobile. Whether the
   picture is moody rather than black (`window.__histogram` over the
   non-void pixels, plus `__probes` and `__pixel`); whether the shadow

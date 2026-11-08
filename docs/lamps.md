@@ -112,17 +112,43 @@ the desk's, the computer's and the treehouse's.
 - **`LAMP_SCALE` is 1.4875**, a group scale on the root about its own
   origin, so the base stays flat on the walnut and the caller's
   placement does not have to know the scale exists.
-- **`LAMP_X` / `LAMP_Z` are (-6.75, -4.35), and z did the work.** At
+- **`LAMP_X` / `LAMP_Z` are (-8.05, -2.75).** They were (-6.75, -4.35)
+  and both moved when the desk went 20% wider; z then went forward a
+  second time, so it is 1.6 ahead of where it started.
+
+  *How the old seat was reached, because the argument still holds.* At
   scene.js's -7.0 the adjuster knob — solid brass, not a painted shadow
   — hung 0.16 past the walnut's -x edge. The obvious correction was +x,
   and swept against occlusion it made things *worse*: +x walks the
   fixture screen-right, toward the machine, and at the left clamp this
   lamp is tall enough to graze the CRT's silhouette. Moving it **back**
-  is what clears it — over a 4x4 sweep the occlusion count fell to zero
-  at every x once z passed about -4.2. So the seat is a small +x for the
-  desk edge and a larger -z for the clamp, and the back edge pays:
-  **-x edge 0.09, back edge 0.08**, both positive and both thin. There
-  is no slack left in either.
+  is what cleared it — over a 4x4 sweep the occlusion count fell to zero
+  at every x once z passed about -4.2. So that seat was a small +x for
+  the desk edge and a larger -z for the clamp, and the back edge paid:
+  -x edge 0.09, back edge 0.08, both positive and both thin.
+
+  *What the wider desk changed.* The 1.9 units of new walnut on the -x
+  end is pure slack, so x takes 1.3 of it: the -x margin goes 0.09 ->
+  **0.74** against the desk group's box (0.49 against the walnut) and
+  the gap in x to the CRT's bezel 0.82 -> **2.12**. z then goes
+  *forward* 0.8, asked for so the lamp sits where someone sitting at
+  the desk would reach it — and it repays a debt, because the 0.08
+  above is against the desk group's box, whose back extreme is the
+  pedestals' contact shadow at z -6.88. The **walnut** stops at -6.3,
+  and the fixture's own contact blob ran to -6.80: half a unit off the
+  back of the slab. At -2.75 the group runs z -5.20..-0.30 — **1.10
+  clear of the walnut behind** (1.68 of the desk group's box) and 6.00
+  clear of the front edge, comfortably on the wood in both directions
+  for the first time — and it sits within 0.75 of the window's centre
+  line rather than away from it.
+
+  +z is the direction the sweep above says makes occlusion worse —
+  forward is *toward the camera*, so the fixture looms larger even as
+  it walks screen-left — so `_lampbig.mjs` was re-run at **each** step
+  rather than reasoned about, because a seat clear at +0.8 is not
+  thereby clear at +1.6. Zero occluding points at home and at both
+  azimuth clamps on both viewports; all 225 glass points still pick
+  "machine". Re-run it before moving this any further forward.
 - **The gap `_lampbig.mjs` prints to the computer kit is not a clearance
   and should not be optimised against.** It is a pure x-interval
   comparison, and the kit's -x extreme is the *keyboard's* painted

@@ -78,11 +78,24 @@ further back. `ISO_TARGET` rose with it to `(0, 7.05, 0)`; at the
 origin the assembly sat in the top half of the frame with bare floor
 underneath.
 
-Portrait deliberately **crops the desk's ends**: a 19-unit desk across
-a 390px frame would want a frustum near 50 and leave the CRT a tenth of
-the picture. 37 is the point at which the far pedestal's drawer front is
-still in shot, and is as far as this should go — every unit of it costs
-the machine, which is the thing a visitor has to find and press.
+Portrait deliberately **crops the desk's ends**: fitting the whole desk
+across a 390px frame would want a frustum near 50 and leave the CRT a
+tenth of the picture. 37 is the point at which the far pedestal's
+drawer front is still in shot, and is as far as this should go — every
+unit of it costs the machine, which is the thing a visitor has to find
+and press.
+
+**Neither constant moved when `DESK_W` went 19 -> 22.8**, and that was
+checked rather than assumed. On desktop the desk's NDC box is
+-0.62..0.65 across and -0.93..0.40 up (`_deskfit.mjs`), so it still
+fits the frame with a third of a half-width to spare and `FRUSTUM`
+needs nothing. Portrait crops harder, as it is meant to, and the
+criterion above still holds — `_pedfit.mjs` projects the far
+pedestal's drawer front and reports it in shot at NDC
+-1.27..-0.84, with **37% of its width inside the frame** against ~73%
+before. That is the cost of the wider desk in portrait, and it was
+taken rather than paid for out of `FRUSTUM_MOBILE`: raising it is what
+shrinks the CRT.
 
 The room needs no re-tuning when either moves: it is fixed geometry in
 world units, so a change of frustum only changes how much is in shot.

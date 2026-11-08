@@ -271,7 +271,8 @@ ladder.
 ## Placement, and the batching
 
 Placement is `TREEHOUSE_X` / `TREEHOUSE_Z` in `scene.js`, at
-**(6.9, -2.1)**, set against what is already on that half of the desk
+**(8.1, -2.1)** — x moved +1.2 when the desk went 20% wider, z did
+not — set against what is already on that half of the desk
 rather than by eye: the mouse's painted contact shadow runs x 3.5..5.7
 over z 2.0..4.6 and its cord crosses x 1.5..4.5 over z 0.4..2.6. The
 depth is the less obvious half — screen x is roughly `0.8x - 0.6z` and
@@ -327,16 +328,29 @@ desk that says somebody put the tree together rather than bought it.
   tree would quietly move the front-edge margin it reports.
   `__fit("spares")` reads this one.
 - **Their frame is the desk's, not the model's**, with the origin on the
-  desk top at the desk's own centre, so `scene.js` only lifts them by
-  `DESK_TOP_Y` and applies no yaw. Every clearance they have to hold is
-  stated in the desk's frame. Measured with `_spares.mjs`: **0.98 clear
-  in x of the computer kit's +x extent** (the mouse's painted contact
-  shadow), 0.78 to the desk's +x edge and 3.32 to its front; the cord
-  never comes near. The gap `_tightfit.mjs` prints against the treehouse
-  is **+0.42**. These four figures are the budget `SPARE_SCALE` spends,
-  and the treehouse is the binding one — `_spares.mjs` reads the
-  *conservative* box there, so watch for it going negative while the
-  true gap is still positive.
+  desk top at the desk's own centre, so `scene.js` lifts them by
+  `DESK_TOP_Y`, shifts them by `SPARES_X` and applies no yaw. Every
+  clearance they have to hold is stated in the desk's frame. Measured
+  with `_spares.mjs`: **2.18 clear in x of the computer kit's +x
+  extent** (the mouse's painted contact shadow), 1.48 to the desk's +x
+  edge and 3.32 to its front; the cord never comes near. The gap
+  `_tightfit.mjs` prints against the treehouse is **+0.42**.
+- **`SPARES_X` is 1.2, and it is the same +1.2 the model took** when
+  the desk went 20% wider — a *group translation*, not an edit to
+  `SPARE_PLAN`, so the plan's four x figures stay the numbers they were
+  measured as. Moving the two together by one delta is what preserves
+  the clearances above: the canopy's +z overhang and the desk's +x edge are
+  relative to the model and so untouched by construction, and the
+  mouse clearance is the one that *improves* (0.98 -> 2.18), since the
+  mouse does not move and the bricks walk 1.2 away from it. Note this
+  is the one thing `SPARE_SCALE`'s note warns against doing at the
+  group — but that warning is about *scaling* there, which would walk
+  the pieces back toward the mouse. A translation has no such effect.
+
+  Those four clearances are the budget `SPARE_SCALE` spends, and the
+  treehouse is the binding one — `_spares.mjs` reads the *conservative*
+  box there, so watch for it going negative while the true gap is still
+  positive.
 - **`SPARE_SCALE` is 0.7784, carried in each piece's own matrix rather
   than on the group.** The group's origin is the desk's centre, so
   scaling there would walk all four bricks a share of seven units back
@@ -398,15 +412,22 @@ quietly pass. Read `_tightfit.mjs` beside it before acting, in either
 direction.
 
 The free corridor on that half of the desk bounds any future increase:
-it runs from the computer kit's +x extent (5.7) to the desk's own edge
-at 9.75, so **4.05 units wide**. The model spans **4.60** of that, which
-is why the +x margin is thin rather than comfortable — it fits because
-the canopy's overhang clears the desk's edge in y rather than in x.
+it runs from the computer kit's +x extent (5.7) to the desk's own edge,
+which the 20% widening took from 9.75 to **11.65** — so **5.95 units
+wide** where it was 4.05. The model still spans **4.60** of it, and the
++x margin that used to be thin is now comfortable: `_tightfit.mjs`
+reports **1.23** against the old 0.53, and the gap from the canopy to
+the live glass roughly doubled, 45px to **80px**. That gap is the
+figure to watch rather than the margin, because it is what keeps the
+monitor the obvious thing to press.
 
 **One framing is still cropped, and it is the portrait one.**
-`_finalshots.mjs` reports the model's NDC box at `x1` **1.25** at home on
-a phone and 1.23 at eye level, against 0.57 on desktop — so a sliver of
-the canopy's right side is outside the frame there. Part of that is the
+`_finalshots.mjs` reports the model's NDC box at `x1` **1.36** at home on
+a phone (1.25 before the +1.2 move), against 0.62 on desktop — so a
+sliver of the canopy's right side is outside the frame there, and the
+move made that sliver wider: about 60% of the model's projected width
+is inside a portrait frame now, against 72% before. That is the price
+paid for the desktop clearance above, and it was taken deliberately. Part of that is the
 conservative box again, but the picture really is clipped. It is the
 same trade the desk's own ends take on a portrait viewport, and the
 lever is `TREEHOUSE_X` at the portrait breakpoint, not the scale.

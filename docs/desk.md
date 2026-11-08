@@ -14,7 +14,12 @@ overhanging the steel on three sides.
 Local space matches the computer's — **+Z is the front**, origin on the
 floor at the centre of the desk — and `DESK_TOP_Y` (9.0) is exported
 because it is what everything standing on the desk is placed against.
-`DESK_W` is 19.0, `DESK_D` 12.6.
+`DESK_W` is 22.8, `DESK_D` 12.6 — the width went up 20% from 19.0 on
+request, and only the width. `BASE_W`, `KNEE_W` and `CENTRE_W` are all
+written against `DESK_W`, so the pedestals stay hung at the two ends
+and the knee hole absorbs the whole of the extra length. The slab's
+ends reach x +/-11.4, which clears the left wall's inner face
+(`ROOM_PLAN.X0`, -13.0) by 1.6 and its skirting bead by 1.22.
 
 **Which pedestal is which is stated in screen terms, not the desk's
 own.** The camera is in the +X/+Z octant, so +X is screen right; the

@@ -1173,8 +1173,43 @@ export const LAMP_SCALE = 1.4875;
    overlap in z at all. The real nearest thing inside the lamp's own
    z and y band is the CRT's bezel at x -3.25, and the gap to that is
    comfortable. */
-export const LAMP_X = -6.75;
-export const LAMP_Z = -4.35;
+/* **Both moved when the desk went 20% wider**, and the two moves are
+   different in kind. The 1.9 units of new walnut on the -x end is
+   pure slack, so x takes 1.3 of it and the seat stops being the
+   pinched thing described above: the -x margin goes 0.09 -> 0.74
+   against the desk group's box (0.49 against the walnut itself), and
+   the gap in x to the CRT's bezel 0.82 -> 2.12. The margin gains less
+   than the move spends because the move is *into* the new slack —
+   1.9 of fresh walnut less the 1.3 the fixture walks out onto it.
+
+   z going *forward* is the deliberate one, asked for so the lamp sits
+   where someone sitting at the desk would reach it. It went +0.8 and
+   then +0.8 again on a second pass, so the seat is 1.6 forward of the
+   -4.35 above.
+
+   It also repays a debt. The 0.08 back margin quoted above is against
+   the *desk group's* box, whose back extreme is the pedestals' painted
+   contact shadow at z -6.88 — the **walnut** stops at -6.3, and the
+   fixture's own contact blob ran to -6.80, half a unit off the back of
+   the slab. The group now runs z -5.20..-0.30: **1.10 clear of the
+   walnut behind** (1.68 of the desk group's box) and 6.00 clear of the
+   front edge, so it is comfortably on the wood in both directions for
+   the first time. It also puts the base within 0.75 of the window's
+   centre line (WINDOW_Z -2.0, the opening spanning z -6..2), so the
+   silhouette the note below depends on is better rather than worse.
+
+   The occlusion sweep is what had to be re-run at **each** step,
+   because +z is the direction the note above says made things worse:
+   forward is *toward the camera*, so the fixture looms larger even as
+   it walks screen-left, and a seat that is clear at +0.8 is not
+   thereby clear at +1.6. The -x move is what pays for both —
+   `_lampbig.mjs` comes back zero occluding points at home and at both
+   azimuth clamps on both viewports, and all 225 glass points still
+   pick "machine". Re-run it before moving this any further forward:
+   it is the only thing standing between the fixture and the one
+   object a visitor has to find and press. */
+export const LAMP_X = -8.05;
+export const LAMP_Z = -2.75;
 
 /* --- The lights, and what "spreads all around" costs ------
    The brief: the light spreads **all around and down from under the

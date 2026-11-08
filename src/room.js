@@ -195,18 +195,40 @@ const CROWN_OUT = 0.46;
    was calibrated against.** The left wall is the one thing in the room
    that casts, and the moon is aimed through its window — so the wall's
    top edge and its far end are both *lighting* figures, not just
-   geometry: light passing over a 19-tall wall lands on the floor from
-   x 3.6 onward, and that boundary is in the shot. Growing the wall to
-   34 would have walked it out to x 13 and taken the lit wedge in front
-   of the desk with it, which is a lighting change dressed up as a
-   composition one.
+   geometry: light passing over a 23-tall wall lands on the floor from
+   x 2.8 onward, and that boundary is in the shot. Letting the whole
+   34 of it cast would walk that out past x 11 and take the lit wedge
+   in front of the desk with it, which is a lighting change dressed up
+   as a composition one.
 
    So only this rectangle of the panel casts. Everything the room grew
-   by is a non-caster, the frozen map is the same map, and the two
-   numbers below are exactly what WALL_H and Z1 were before the room
-   became a room. Move them and the moonlight moves; see scene.js's
-   shadow box, whose six faces are fitted to this. */
-const CAST_H = 19.0;
+   by is a non-caster, the frozen map is the same map, and CAST_Z1 is
+   exactly what Z1 was before the room became a room. Move either and
+   the moonlight moves; see scene.js's shadow box, whose six faces are
+   fitted to this.
+
+   **CAST_H is no longer the old WALL_H, and it had to move.** The
+   hole is cut in this rectangle — a hole in a non-caster throws no
+   sash stripes, and the window pool is made of them — so the core has
+   to contain the opening. That is why it went to 23 when the opening
+   was portrait and its head stood at 22, and it is why **23 stayed
+   when the opening went landscape and the head came down to 19**:
+   the core still contains the hole with four units to spare, and this
+   figure is a lighting constant before it is a geometric one. Lowering
+   it to hug the new head would walk the lit wedge in front of the desk
+   back out toward x 3.6 for nothing.
+
+   Raising it does change the light, which is the thing the old note
+   warned about, and the change is smaller than that warning implies
+   because the beam steepened at the same time. The moon is aimed from
+   the opening's *centre*, which rose from 12.6 to 16 — so the rake
+   went from 36.5 to 43 degrees below the horizon, and light clearing
+   the top of a taller wall at a steeper angle lands in nearly the
+   same place: the lit wedge in front of the desk starts at x 2.8
+   where it started at 3.6. The pool itself did not move at all; it is
+   pinned at MOON_AT by construction. What did move is the shadow box,
+   which `window.__shadowfit()` re-measured — see scene.js. */
+const CAST_H = 23.0;
 const CAST_Z1 = 19.0;
 
 /* --- The window ------------------------------------------
@@ -218,19 +240,36 @@ const CAST_Z1 = 19.0;
    Both figures are set against what else is on that wall. The sill
    clears the cap rail (7.88) and the desk top (9), so the opening is
    the one large bright area above the desk's left end rather than
-   something half-hidden behind the machine. The centre is set back
-   toward the corner rather than forward, because at this azimuth
+   something half-hidden behind the machine. The centre wants to be as
+   far back toward the corner as it can get, because at this azimuth
    screen-x runs roughly 0.8x - 0.6z: moving the window *back* along
    -z walks it toward the middle of the frame, which is what keeps it
    in shot on a portrait viewport, where the frame sees far less world
-   width. It cannot go much further — WINDOW_OPENING is 8 wide and the
-   corner is at z -9, so this leaves 3 clear of it, which the casing,
-   the sill's ears and the back wall's own thickness have to live in. */
-const WINDOW_Z = -2.0;
-/* Came down from 9.6 with the opening's height, to buy the head some
-   frame at the top — see OPEN_H in src/nightwindow.js. The apron now
-   reaches down to 8.58, which still leaves 0.7 clear of the cap rail. */
-const WINDOW_SILL_Y = 9.4;
+   width.
+
+   **It is at 0 and not -2 because the opening went landscape**, and
+   the back corner is what set the figure. The sill's ear reaches half
+   the opening plus the casing plus the ear — 7 + 0.65 + 0.4 = 8.05 —
+   so at 14 across and z -2 it would have come to -10.05, a unit
+   *through* the back wall's inner face at -9. At z 0 it reaches -8.05
+   and clears the corner by 0.95, which is the clearance the 9.5-wide
+   opening had at -2. There is no slack left in either direction:
+   widening further or moving back puts the ear through the corner
+   again, and moving forward walks the window off a portrait frame. */
+const WINDOW_Z = 0.0;
+/* **A sill height, not a clearance.** It went 9.6 -> 9.4 -> 10.0, and
+   only the last of those was chosen for the reason a sill is chosen:
+   a window sits a little above the work surface in front of it, and
+   the desk top is at 9. A unit is about 3.2 inches here, so this is
+   the 3-inch step a 32-inch sill makes over a 29-inch desk.
+
+   What it costs is the top, and the landscape opening is what stopped
+   it costing much: the head is at 19 against a home desktop frame
+   that ends at about 18.6, so the sill now buys its realism out of
+   half a unit rather than out of the three and a half the 12-tall
+   opening spent above the cut. The apron hangs to 9.02, which still
+   leaves 1.14 clear of the cap rail. */
+const WINDOW_SILL_Y = 10.0;
 
 /* --- The rug ---------------------------------------------
    In the open floor in front of the desk (whose front edge is z 6.3).
@@ -706,6 +745,16 @@ function buildWallPanel(width, colour, opening = null, cast = null) {
     });
     win.group.position.set(opening.x, opening.y, 0);
     g.add(win.group);
+    /* **The night outside goes in beside the window, not inside it.**
+       The backdrop is the stack of parallax planes behind the hole
+       (see LAYERS in nightwindow.js); it is placed at the same point
+       as the joinery and in the same local space, and the only reason
+       it is a second group is that `__fit("wall-window")` has to go
+       on meaning the window rather than the seventy units of sky
+       behind it. Both hang off the panel, so both travel with the
+       wall. */
+    win.backdrop.position.copy(win.group.position);
+    g.add(win.backdrop);
   }
 
   return { group: g };

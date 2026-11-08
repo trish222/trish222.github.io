@@ -72,7 +72,7 @@ index.html        all markup — canvas, windows, taskbar, Start menu, hint (sta
 src/main.js       window manager: focus/open/close/minimize/maximize, drag, taskbar, clock
 src/scene.js      camera, lighting, hover/pick, the orbit, the fly-in, the lamp state
 src/room.js       the room: plank floor, two walls, wainscot, skirting, crown, rug, fog, the void
-src/nightwindow.js  the window in the left wall: joinery, the night sky on the glass, the rain
+src/nightwindow.js  the window in the left wall: joinery, the parallax night backdrop behind it, the rain
 src/computer.js   the CRT machine, keyboard and mouse, built from primitives
 src/desk.js       the steel tanker desk it stands on, likewise
 src/treehouse.js  the brick-built cherry treehouse, and the spare bricks beside it

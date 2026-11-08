@@ -300,7 +300,20 @@ const COMPUTER_Z = KIT_FRONT_Z - KIT_Z_MAX;
    separation for 1.6 units of depth behind the glass, and
    `window.__fit("treehouse", "computer")` is how the pair was checked
    rather than the screenshot. */
-const TREEHOUSE_X = 6.9;
+/* **x moved +1.2 when the desk went 20% wider**, z did not. The 1.9
+   units of new walnut on this end is what pays for it, and the point
+   is screen separation rather than plan clearance: at this azimuth
+   screen x runs roughly `0.8x - 0.6z`, so +1.2 in x is about a unit of
+   screen width opening up between the canopy and the CRT's right
+   flank — which is the breathing room, the monitor being the thing
+   that has to stay the obvious target. In plan the conservative box
+   goes to x 10.95 against the walnut's new 11.4 edge, so the model is
+   still inside the slab by the figure that fails safe.
+
+   z is untouched on purpose: the 1.6 units of depth behind the glass
+   that -2.1 buys is the whole reason the canopy does not cross the
+   bezel, and nothing about a wider desk changes that argument. */
+const TREEHOUSE_X = 8.1;
 const TREEHOUSE_Z = -2.1;
 /* Turned to put the house's front — the door, the porch — toward the
    viewer, and its windowed flank into the light, without facing dead
@@ -336,6 +349,24 @@ const TREEHOUSE_FACING = AZIMUTH - 0.50;
    `_canopyfit.mjs` *and* `_tightfit.mjs` after touching this — the
    first fails safe on a yawed InstancedMesh, the second is the truth. */
 const TREEHOUSE_SCALE = 1.1733;
+
+/* The loose bricks travel with the model, by exactly the same +1.2 the
+   model took, and this is a **group translation** rather than an edit
+   to `SPARE_PLAN`. Two reasons, and the second is the one that matters:
+   the plan's four x figures stay the numbers they were measured as, so
+   they can still be read against the treehouse's own base plate; and
+   moving the two together by one delta is what preserves the three
+   clearances `_spares.mjs` holds — the canopy's +z overhang, the
+   desk's +x edge and the mouse's painted contact shadow. The first two
+   are relative to the model, so they are untouched by construction;
+   the third is the one that *improves*, since the mouse does not move
+   and the bricks walk 1.2 away from it.
+
+   Note this is the one thing `SPARE_SCALE`'s own note in treehouse.js
+   warns against doing at the group — but that warning is about
+   *scaling* there, which would walk the pieces a share of seven units
+   back toward the mouse. A translation has no such side effect. */
+const SPARES_X = 1.2;
 
 /* --- Where the desk lamp is set down ---------------------
    On the desk at the **back left as the home view sees it**, which is
@@ -1057,7 +1088,7 @@ function buildScene() {
      `__fit("treehouse")` still measures only the model. */
   const spares = buildSpareBricks();
   spares.name = "spares";
-  spares.position.set(0, DESK_TOP_Y, 0);
+  spares.position.set(SPARES_X, DESK_TOP_Y, 0);
   s.add(spares);
 
   /* The desk lamp, on the back-left corner. Built with its origin on
@@ -1147,13 +1178,44 @@ function buildScene() {
 
      Re-run `__shadowfit` after anything that moves the window, the
      aim or the furniture: the basis turns with the light, so these
-     six numbers do not survive a re-aim. */
+     six numbers do not survive a re-aim.
+
+     **`bottom` and `near` moved when the window was re-sized, and the
+     other four did not** — which is the basis telling on itself. The
+     taller opening raised the aim's origin, so the beam steepened
+     from 36.5 to 43 degrees below the horizon, but its *azimuth* did
+     not change: the horizontal part of the direction was still (11,
+     13). A pure change in elevation leaves the light's right vector
+     alone, so the lateral extents were the same figures to four
+     decimals, and only the up/depth pair had to be re-read.
+
+     **The landscape opening turned the azimuth, and none of the six
+     had to move anyway.** Its centre dropped to 14.1 and came forward
+     to z 0, so the horizontal part of the direction is now (11, 11) —
+     a dead 45 degrees in plan, about 5 off the old one — and the rake
+     eased to 42.2. That turns the basis, so every figure here had to
+     be *re-read* rather than reasoned about: `_castfit.mjs` puts the
+     caster at -6.4..13.9 across, -15.0..15.6 up and 13.0..43.4 deep,
+     and `__shadowfit('desk', 'computer', 'treehouse', 'lamp')` puts
+     the furniture at -3.7..22.3, -13.1..12.8 and 21.1..49.8. Both sit
+     inside the faces below with margin on all six, so the box is left
+     where it is — the texel stays 0.023 and `normalBias` stays
+     calibrated against it.
+
+     The caster is the thing that outgrew them. Measured in the
+     light's basis, room.js's casting rectangle — now 23 tall rather
+     than 19 — runs -4.5..14.0 across, **-15.6..16.1 up and 12.7..44.3
+     in depth**, so at the old -15.5 and 13 the wall's own bottom
+     corner and its outer face were being clipped out of the map:
+     parts of the one caster in the room, not casting. -17.5 and 11
+     clear it by about 1.7 either way, and cost a texel 0.0222 world
+     units wide against 0.0215. */
   const cam = moon.shadow.camera;
   cam.left = -16;
   cam.right = 31;
-  cam.bottom = -15.5;
+  cam.bottom = -17.5;
   cam.top = 28.5;
-  cam.near = 13;
+  cam.near = 11;
   cam.far = 64;
   cam.updateProjectionMatrix();
   s.add(moon, moon.target);
@@ -1194,11 +1256,13 @@ function buildScene() {
      top, so the patch of floor the window throws lands clear of the
      desk's own shadow instead of inside it.
 
-   The elevation that falls out is ~14° below the horizon, which is
-   within half a degree of the angle the daylight key raked in at —
-   kept deliberately, because that shallow angle is what makes the
-   shadows long and diagonal, and it is the one thing about the old rig
-   that was worth carrying over.
+   The elevation that falls out is 42.2° below the horizon. It is much
+   steeper than the daylight key's 13°, and consistent rather than a
+   compromise: the moon is hung high in the window's own sky, so the
+   beam has to come down from up there. Both ends of the line are
+   derived, which is why re-sizing the opening re-aims the light on its
+   own — and why the shadow box above has to be re-measured when it
+   does.
 
    `MOON_DIST` only decides where the shadow camera sits along the
    axis; the light itself is parallel. It is short because the box's
@@ -1208,7 +1272,7 @@ function buildScene() {
 /* **Where the beam lands, and it is the one figure here that was
    genuinely searched for rather than tuned.** The light has to clear
    the desk to reach any floor at all: the window's centre is at y
-   12.6 and the desk top is at 9 only 3.2 units in from the wall, so a
+   14.1 and the desk top is at 9 only 3.2 units in from the wall, so a
    beam shallow enough to run the length of the room is already below
    the desk top before it has left the wall, and one steep enough to
    land inside the 32-unit room lands *on* the desk. Six aims were
@@ -1219,7 +1283,7 @@ function buildScene() {
    across in +x**: by the time it has reached the desk's near edge it
    is already past it in depth, so it crosses the desk top, clears the
    front edge and lands on the floor and the rug in front. That is the
-   pool in the shot — striped by the sash and the two mullions, which
+   pool in the shot — striped by the sash and its three bars, which
    is what the casting wall buys. */
 const MOON_AT = new THREE.Vector3(-2.0, 0, 11.0);
 const MOON_DIST = 45;
@@ -3050,6 +3114,11 @@ export async function initScene(canvas) {
      at a point of the fly-in and draws it, which is how the head-on
      framing gets tuned without trying to catch it mid-animation. */
   window.__scene = scene;
+  /* The room's own plan, so the fit scripts can read the opening
+     instead of restating it. Three of them hardcoded WINDOW_Z, the
+     sill and the opening's two sides, and all three went stale the
+     first time the window was re-sized. */
+  window.__room = ROOM_PLAN;
   /* Exposed for the same reason the scene is: a review script that
      wants to project its own points — `_tightfit.mjs` reads the
      model's true corners rather than the conservative box `__fit`

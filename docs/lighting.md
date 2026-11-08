@@ -38,7 +38,7 @@ wall. `MOON_AT` is where the beam is pointed.
 
 **`MOON_AT` was searched for rather than tuned**, and the search is
 worth keeping because the answer is not obvious. The window's centre is
-at y 12.6 and the desk top is at 9 only 3.2 units in from the wall, so:
+at y 14.1 and the desk top is at 9 only 3.2 units in from the wall, so:
 
 - a beam shallow enough to run the length of the room is already below
   the desk top before it has left the wall — it lights the pedestal's
@@ -51,16 +51,22 @@ mostly **forward in +z rather than across in +x**: by the time it
 reaches the desk's near edge it is already past it in depth, so it
 crosses the desk top, clears the front edge and lands on the floor and
 the rug. That is the pool in the shot. `_lightshots.mjs sweep` re-runs
-all six. The elevation that falls out is **28°**, much steeper than the
-old daylight key's 13°, which is consistent rather than a compromise:
-the moon is drawn high in the window's own sky texture.
+all six. The elevation that falls out is **42.2°**, much steeper than
+the old daylight key's 13°, which is consistent rather than a
+compromise: the moon is drawn high in the window's own sky. Both ends
+of the line are derived, so the landscape opening re-aimed the light by
+itself — the centre dropped 16 -> 14.1 and came forward z -2 -> 0,
+which eased the rake 43° -> 42.2° and turned the azimuth about 5°, to a
+dead 45° in plan. The azimuth is the half that matters, because it
+turns the light's own basis and with it every figure in the shadow box
+below.
 
 ## The window wall casts, and only the window wall
 
 Nothing else in the room casts — a dollhouse's light comes through its
 missing walls. The exception is the left wall, and it is what turns the
-beam into a window-shaped pool **striped by the sash and the two
-mullions**: the field around the opening is a real hole and the joinery
+beam into a window-shaped pool **striped by the sash and its three
+bars**: the field around the opening is a real hole and the joinery
 casts too. It is the single thing that makes the light read as coming
 from somewhere.
 
@@ -98,13 +104,17 @@ work is **`normalBias`, 0.035**, which walks the sample along the
 surface normal by a distance in *world* units — so the right figure is a
 function of how much world a texel covers.
 
-`window.__shadowfit()` projects the room, the desk, the machine and the
-treehouse into the light's own basis and prints the union against the
-camera. The union is **-14.0..29.3 across, -13.8..27.0 up, 15.0..60.8
-deep**, and the box clears it by about 1.5 on every face:
+`window.__shadowfit()` projects whatever you name into the light's own
+basis and prints the union against the camera; `_castfit.mjs` does the
+same for room.js's casting rectangle, which is the one caster in the
+room. Re-measured after the landscape opening re-aimed the light, the
+caster runs **-6.4..13.9 across, -15.0..15.6 up, 13.0..43.4 deep** and
+`__shadowfit('desk', 'computer', 'treehouse', 'lamp')` puts the
+furniture at **-3.7..22.3, -13.1..12.8, 21.1..49.8**. The box clears
+both on every face:
 
 ```
-left -16  right 31   bottom -15.5  top 28.5   near 13  far 64
+left -16  right 31   bottom -17.5  top 28.5   near 11  far 64
 ```
 
 **Deliberately asymmetric** — the light comes in over one corner of a
