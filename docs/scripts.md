@@ -75,8 +75,10 @@ and `window.__shadowfit` exist for.
   counts a frame longer than 250ms as 250ms, so on SwiftShader a 1.1s
   tween takes several seconds of wall clock), and `window.__orbit(swing,
   rise)` takes degrees relative to **home** while reporting azimuth in
-  both frames. **It still asserts the old ±90° azimuth leash and will
-  fail until updated for ±60°.**
+  both frames. **It still asserts the old ±90° azimuth
+  leash and will fail until updated**: the azimuth is clamped off the
+  two wall planes now, about -1°..+88° on desktop, with a 6° spring band
+  past each end.
 - **`_scene-shot.mjs`** — the scene with the Win95 chrome hidden, for
   looking at the 3D on its own.
 
@@ -85,17 +87,20 @@ and `window.__shadowfit` exist for.
 - **`_probe-room.mjs`** projects candidate room corners into NDC off the
   live camera at home, so the slab and the walls were sized to the frame
   by measurement rather than by squinting at a shot.
-- **`_roomshots.mjs`** — the room shell: floor, both cutaway walls,
-  wainscot, trim and rug. Also verifies the void's pre-image on both
-  render paths (it should report err 0).
+- **`_roomshots.mjs`** — the room shell: floor, both walls, wainscot,
+  trim and rug. Also verifies the void's pre-image on both render paths
+  (it should report err 0). **Out of date**: it walks the leash watching
+  `window.__walls()`, which went with the wall fade.
 - **`_winshots.mjs`** — the window on the left wall, on desktop /
   mobile / reduced motion. Four jobs, the first two of which a
   screenshot cannot do: whether the assembly lands in frame
   (`window.__fit("wall-window")` — the portrait figure is the one to
   watch); whether the rain is running (`window.__rain()`, and under
   reduced motion whether its clock stays at zero while the shot still
-  shows streaks); whether it fades with its wall; and a crop taken off
-  its own NDC box, so the crop follows it as it is re-tuned.
+  shows streaks); and a crop taken off its own NDC box, so the crop
+  follows it as it is re-tuned. **Out of date** in one job: it reads
+  `window.__walls()` to check the window faded with its wall, and there
+  is no fade any more.
 - **`_lightshots.mjs`** — the night rig, desktop and mobile. Whether the
   picture is moody rather than black (`window.__histogram` over the
   non-void pixels, plus `__probes` and `__pixel`); whether the shadow
@@ -156,6 +161,36 @@ and `window.__shadowfit` exist for.
   centre then measures two different places at the two scales — a pool
   that has *moved* reads as one that has dimmed. It prints the aim
   beside the rows so the two can be told apart.
+- **`_poolcentre.mjs`** is the same transect taken *through the pool's
+  own centre*, which is what "brightest right under the shade" is a
+  claim about. Read it with the fixture in mind: from the home camera
+  the lamp stands between the camera and its own pool, so the samples
+  directly behind it come back 0/0 (occluded by the shade) and the
+  three in front of it come back enormous (that is the lit fixture, not
+  the walnut). The readable rows are the ones either side, and they are
+  the A/B for anything that changes the cookie or `SPOT_INTENSITY`.
+- **`_spillab.mjs`** and **`_spillsweep.mjs`** are for the fixture's
+  three faint lights. `_spillab` is the A/B: one page load, each light
+  alone and then all together, read as a whole block of the framebuffer
+  rather than at named points — a spill "on the underside of the arm"
+  is a *where* claim and a probe point is one guess at where. It
+  reports the lift per band up the fixture, a separate green-shift
+  measure (a hue claim needs its own number), how many pixels have gone
+  white, and a control on the walnut and the CRT's glass that must not
+  move. `_spillsweep` is the search those seats were found by: it walks
+  one light over a grid at four intensities and prints the same
+  per-band figures, `base` / `arm` / `rim` / `rimx` selecting which.
+  Both drive the lights through `window.__lamp({ spillBase, spillArm,
+  rim })` separately — moving them together could not attribute what it
+  saw.
+- **`_spillmap.mjs`** answers the same question as a picture, and it is
+  the one to reach for first: it reads the framebuffer with each light
+  on and off, amplifies the difference tenfold, draws it into a canvas
+  over the page and screenshots that, with the lamp's projected box
+  outlined so a patch can be told from the part it is on. Takes the
+  gain as its argument. It is what showed the green landing on the
+  chain, the shade's end cap and the CRT's bezel — which no count per
+  band could have said.
 - **`_lampshot.mjs`** / **`_poolw.mjs`** / **`_helpshot.mjs`** are the
   lamp-lab equivalents: one fixture from the lab's three framings, the
   world-unit pool width, and the helper overlays.

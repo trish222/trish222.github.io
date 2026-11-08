@@ -114,11 +114,10 @@ pan, no wheel zoom (with `enableZoom` off, OrbitControls returns before
 it would `preventDefault`, so the page still scrolls), and both angles
 clamped — but the two clamps are expressed in **different frames**:
 
-- **Azimuth is measured off the monitor's front.** `ORBIT_SWING` is
-  **±60°** of it, and the front is azimuth `FACING`. Home is 37° round
-  from the front, so the swing runs −97° one way and +23° the other.
-  Nothing recenters it; the far side of the machine is simply further
-  away than the near side.
+- **Azimuth is clamped off the room's two walls and nothing else.**
+  There was a monitor-relative cap (`ORBIT_SWING`, ±60° about azimuth
+  `FACING`); it is gone — see "The walls are the leash" below. Nothing
+  recenters the range; home sits inside it rather than in the middle.
 - **Elevation is measured off home**, where `ORBIT_UP` / `ORBIT_DOWN`
   give 10° steeper and **18° flatter** — home is 20°, so the flat end is
   2° above the floor. That is the desk's own height: the eye lands at
@@ -126,20 +125,81 @@ clamped — but the two clamps are expressed in **different frames**:
   drawer fronts are both seen square on. Steeper than +10° walks toward
   a plan view of a desk.
 
-**The swing came down from 90° to 60° when the room went in, and the
-room is the reason.** The diorama has two walls, each fading out as the
-camera comes round behind it. What sets the leash is the wall that must
-*not* fade: the -Z wall's facing bottoms out at
-`cos(elevation) * cos(swing)`, which at ±60° is 0.47, comfortably above
-the 0.30 at which fading starts. At ±90° it reached 0, so both walls
-would have gone and the extremes would have shown a bare floor slab
-adrift in the void.
+### The walls are the leash
 
-One consequence: at ±60° the glass is never near edge-on at the clamps —
-`screenFacing()` bottoms out around 0.43 against `FACE_MIN`'s 0.17 — so
-the overlay no longer comes off the glass at the ends of the swing.
-`FACE_MIN` is a guard again rather than a working part. **`_orbit.mjs`
-still asserts the old ±90° behaviour and will fail until updated.**
+**The camera is not allowed out of the room, and that is what replaced
+the cutaway.** The walls used to fade as the camera came round behind
+them; they are opaque at every pose now and `wallAzimuthRange` clamps
+the azimuth instead. Both inner faces are planes — `ROOM_PLAN.X0` with
+normal +X, `ROOM_PLAN.Z0` with normal +Z — and the camera rides a circle
+of horizontal radius `radius · sin(polar)` about the target, so where
+the circle crosses each plane is one `asin` or `acos` of room.js's own
+figures. Move a wall and the leash moves with it; nothing is typed in as
+an angle.
+
+`AZ_WALL_MARGIN` (9°) is how far short of each plane the camera comes to
+rest — at the plane itself a wall is exactly edge-on, a grazing sliver
+of field filling that side of the frame. The derivation uses the
+*flattest* polar angle the elevation leash allows, where the horizontal
+radius is widest and the crossing closest to the monitor's front, so one
+pair of scalars holds at every elevation instead of a clamp that creeps
+about as the visitor tilts.
+
+**The two ends are wildly different, and the room is why, not the
+leash.** The -X wall's plane passes 13 units from the pivot while the
+camera stands 75 out, so the circle crosses it only 10° short of the
+monitor's front. The -Z wall's is 9 units out on the other axis and
+almost parallel to the circle there, so it is not crossed until 97°:
+
+```
+            wall planes        resting leash      hard clamp
+ desktop   -10.0° .. +96.9°   -1.0° .. +87.9°   -7.0° .. +93.9°
+ phone      -6.5° .. +94.5°   +2.5° .. +85.5°   -3.5° .. +91.5°
+```
+
+That is 89° of swing on desktop and 83° on a phone, nearly all of it to
+the right of home at 37°, all of it on the near side of both walls —
+**and the camera cannot get in front of the machine.** That is not a
+tuning choice: there is a wall in the way.
+
+**Removing the cap cost `FACE_MIN` its holiday**, and that is where the
+trade sits. The far end of the swing turns the glass edge-on well before
+the -Z wall comes in, so the live login stands down over roughly the
+last 8° and the baked still underneath carries the picture. `FACE_MIN`
+is a working part again rather than a formality — see
+[screen-overlay.md](screen-overlay.md).
+
+It also opened poses the room had never been sized for. On a 16:9
+desktop frame nothing is uncovered anywhere on the leash; a portrait
+frame at the far clamp wanted 4 more units of floor on +X (`X1` 62 → 66,
+see [room.md](room.md)), and past about a 2:1 aspect the frame's top
+corner can look over a wall top at the *steepest* elevation, where the
+eye stands above it. That last one is symmetric and no wall height fixes
+it.
+
+**The limit is soft.** `AZ_WALL_STRETCH` (6°) is how far a drag may pull
+past the resting pair, and `easeAzimuthLimits` takes a share of that
+overshoot back every frame (`AZ_EASE_RATE`, 9/s, the same exponential
+form as the hover ease). One exponential does both halves of the feel:
+pushing in meets a resistance that grows the further it goes — the drag
+adds a fixed delta per frame while the spring takes a fraction of the
+*whole* overshoot, and the two balance short of the stop — and letting
+go eases out of the band instead of leaving the camera parked against
+something it hit. OrbitControls' own clamp sits at the stretched figure
+and is what makes the wall a guarantee: at full stretch there are still
+**3° of clearance** before the plane, so the stretch can only ever spend
+margin. Writing the camera from the spring needs nothing kept in sync —
+`update()` re-derives its angles from the camera position on every call,
+the same reason the walk home can tween it.
+
+Reduced motion gets no stretch, so the hard clamp *is* the resting
+limit: the spring is motion, there is no render loop to run it in, and a
+visitor who asked for less of it should not be the one who finds the
+camera parked inside the margin.
+
+**`_orbit.mjs` asserts the old ±90° behaviour and will fail until
+updated** — and so will `_roomshots.mjs` and `_winshots.mjs`, which read
+a `window.__walls` that went with the fade.
 
 Three things keep the leash from fighting the rest of the file:
 

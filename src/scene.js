@@ -83,9 +83,7 @@ import {
   ROOM_PLAN,
   ROOM_RADIUS,
   setFogRange,
-  updateWallFade,
   VOID,
-  wallFades,
 } from "./room.js";
 /* The rain on the window in the left wall is the only thing in the
    room that moves, so it is the only thing here this module owes a
@@ -593,35 +591,70 @@ const MAX_DPR = 1.5;
      on the glass stands aside for the same stretch (see the CSS), so a
      drag that starts over the picture rotates like any other.
    ========================================== */
-/* Azimuth, either side of the **monitor's front** — not either side of
-   home. The screen looks down the machine's local +Z and the machine is
-   turned by FACING, so a camera dead in front of the glass sits at
-   azimuth FACING; the leash is that angle ± this.
+/* --- The azimuth leash is the room, and nothing else ---------
+   **There is no longer a monitor-relative cap.** The azimuth used to be
+   clamped to `ORBIT_SWING` either side of the machine's front — ±90°,
+   then ±60° once the diorama's two walls had a fade to protect — and
+   that constant is gone. It was asymmetric against the walls in a way
+   that showed: home sits 37° round from the front, so ±60° let the
+   visitor reach the -X wall's own limit going one way and stopped them
+   23° short of anything on the other, at a diagonal of the monitor with
+   the -Z wall still 37° off. Both ends come off the walls now and the
+   two sides behave the same way.
 
-   Anchoring it to the machine rather than to the camera is what makes
-   it asymmetric: home is 37° round from the front, so the swing is
-   -127° one way and +53° the other. That is deliberate. The home pose
-   is unchanged and is still where the walk home goes — what moved is
-   only how far either side of it the visitor may get, and the far side
-   of the machine is simply further away than the near one.
+   What that costs is `FACE_MIN`, and it is worth stating where the
+   trade is. The -Z wall does not come in until about +88°, and the
+   glass is edge-on well before that, so the live login stands down over
+   the last few degrees of the right-hand swing and the baked still
+   underneath carries the picture. That guard went back to being a
+   working part rather than a formality; see `updateScreenOverlay`.
 
-   **It came down from 90° to 60° when the room went in, and the room
-   is the reason.** The diorama has two walls, on the desk's -X and -Z
-   sides, and each fades out as the camera comes round to see it from
-   behind (see `updateWallFade` in room.js). What sets the leash is the
-   wall that must *not* fade: the -Z wall's facing bottoms out at
-   `cos(elevation) * cos(swing)`, which at ±60° is 0.47 — comfortably
-   above the 0.30 at which fading starts. At ±90° it reached 0, so both
-   walls would have gone and the extremes of the leash would have shown
-   a bare floor slab adrift in the void.
+   **`_orbit.mjs` asserts the old ±90° behaviour and will fail until it
+   is updated** — and so will `_roomshots.mjs` and `_winshots.mjs`,
+   which read a `window.__walls` that went with the fade. */
+/* --- The walls' own limit, which is now the only one --------
+   **The azimuth is clamped so the camera never leaves the room.** It
+   replaces the cutaway outright: the two walls used to fade as the
+   camera came round behind them, and now they stay opaque and there is
+   nowhere behind them to get. Both ends of the leash are this; the
+   margin below is the same on each side, so the two walls are reached
+   the same way.
 
-   One consequence: at ±60° the glass is no longer anywhere near
-   edge-on at the clamps — `screenFacing()` bottoms out around 0.43
-   against FACE_MIN's 0.17 — so the overlay no longer comes off the
-   glass at the ends of the swing. FACE_MIN goes back to being a guard
-   rather than a working part. **`_orbit.mjs` asserts the old
-   behaviour and will fail until it is updated.** */
-const ORBIT_SWING = THREE.MathUtils.degToRad(60);
+   Both inner faces are planes — `ROOM_PLAN.X0` with normal +X and
+   `ROOM_PLAN.Z0` with normal +Z — and the camera rides a circle about
+   the target. Where that circle crosses each plane is one `asin` or
+   `acos` of room.js's own figures, which is the whole reason the limits
+   are derived rather than typed in: move a wall and the leash moves
+   with it.
+
+   **`AZ_WALL_MARGIN` is how far short of each plane the camera comes to
+   rest.** At the plane itself a wall is exactly edge-on — a grazing
+   sliver of field filling that side of the frame — and 9° off it reads
+   as a wall again.
+
+   **The two sides are not symmetric, and the room is why, not the
+   leash.** The -X wall's plane passes 13 units from the pivot while the
+   camera stands 75 out, so the circle crosses it only 10° short of the
+   monitor's front; the -Z wall's is 9 units out on the other axis and
+   almost parallel to the circle there, so it is not crossed until 97°.
+   Off the front, that is about -1°..+88° on desktop and +2.5°..+85° on
+   a phone — 89° and 83° of swing, most of it to the right of home at
+   37°. **The camera cannot get in front of the machine**, and that is
+   not a tuning choice: there is a wall in the way. */
+const AZ_WALL_MARGIN = THREE.MathUtils.degToRad(9);
+/* How far a drag may pull past that resting limit while the spring in
+   `easeAzimuthLimits` pulls back. Deliberately less than the margin:
+   at full stretch there are still 3° of clearance before the plane, so
+   the stretch can only ever spend margin — it cannot show the back of
+   a wall. OrbitControls' own clamp sits at the stretched figure and is
+   what makes that a guarantee rather than a hope. */
+const AZ_WALL_STRETCH = THREE.MathUtils.degToRad(6);
+/* The spring's rate, per second — the same exponential form as the
+   hover ease, so it is frame-rate independent. At 9 the overshoot is
+   90% spent in a quarter of a second: slow enough to read as a pull
+   rather than a snap, quick enough that letting go at the end of the
+   swing does not feel like waiting. */
+const AZ_EASE_RATE = 9;
 /* Elevation is still measured off home, and is still asymmetric — but
    the flat end now goes all the way down to **2° above the floor**, so
    the visitor can drop to the desk's own height and look at the screen
@@ -837,8 +870,7 @@ let toneBase = TONE_EXPOSURE;
 /* Last exposure actually written, so the void's pre-image is re-solved
    only when it moves. */
 let toneWritten = -1;
-/* { root, walls } from buildRoom — the walls are kept so the cutaway
-   has something to fade. */
+/* { root } from buildRoom. */
 let room = null;
 let envMap = null;
 let hover = { target: 0, value: 0 };
@@ -1673,6 +1705,107 @@ function setOrbitAngles(theta, phi) {
   orbitDirty = true;
 }
 
+/* Where the camera's orbit circle crosses each wall's inner face, in
+   azimuth. `phi` is the **flattest** polar angle the elevation leash
+   allows, because that is where the horizontal radius is widest and
+   the crossing closest to the monitor's front: one pair of scalars
+   that holds at every elevation, rather than a clamp that creeps about
+   underneath the visitor as they tilt.
+
+   A wall the circle cannot reach constrains nothing, which is what the
+   out-of-range branches are — and they are not hypothetical, since the
+   radius is the framing and a phone's is half again a desktop's. */
+function wallAzimuthRange(radius, phi) {
+  const R = radius * Math.sin(phi);
+  let lo = -Math.PI;
+  let hi = Math.PI;
+  /* The -X wall: camera.x >= X0, and camera.x - target.x = R sin(t),
+     so sin(t) >= s. That bounds t below at asin(s) and above at its
+     reflection, pi - asin(s). */
+  const sx = (ROOM_PLAN.X0 - ISO_TARGET.x) / R;
+  if (sx > -1) {
+    const a = Math.asin(Math.min(1, sx));
+    lo = Math.max(lo, a);
+    hi = Math.min(hi, Math.PI - a);
+  }
+  /* The -Z wall: camera.z >= Z0, and camera.z - target.z = R cos(t),
+     so cos(t) >= s, which is the band |t| <= acos(s). */
+  const sz = (ROOM_PLAN.Z0 - ISO_TARGET.z) / R;
+  if (sz > -1) {
+    const a = Math.acos(Math.min(1, sz));
+    lo = Math.max(lo, -a);
+    hi = Math.min(hi, a);
+  }
+  return { lo, hi };
+}
+
+/* The leash in force: where the camera rests, and where OrbitControls'
+   own hard clamp sits a stretch beyond it. */
+const orbitLeash = { min: 0, max: 0, softMin: 0, softMax: 0 };
+
+/* Both clamps, from the room and from home. Called wherever the radius
+   or the home pose is (re-)seeded — initOrbit and reframeHome — because
+   the azimuth half depends on the radius now, which the viewport
+   decides.
+
+   Reduced motion gets no stretch, so the hard clamp *is* the resting
+   limit: the spring is motion, there is no render loop to run it in,
+   and a visitor who asked for less of it should not be the one who
+   finds the camera parked inside the margin. */
+function applyOrbitLimits() {
+  const wall = wallAzimuthRange(orbitHome.radius, orbitHome.phi + ORBIT_DOWN);
+  orbitLeash.softMin = wall.lo + AZ_WALL_MARGIN;
+  orbitLeash.softMax = wall.hi - AZ_WALL_MARGIN;
+  /* A room small enough for the two to cross would leave no leash at
+     all; collapse to home rather than hand OrbitControls an inverted
+     pair, which it would resolve by dragging the camera to one end. */
+  if (orbitLeash.softMin > orbitLeash.softMax) {
+    orbitLeash.softMin = orbitLeash.softMax = orbitHome.theta;
+  }
+  const stretch = controls.enableDamping ? AZ_WALL_STRETCH : 0;
+  orbitLeash.min = orbitLeash.softMin - stretch;
+  orbitLeash.max = orbitLeash.softMax + stretch;
+  controls.minAzimuthAngle = orbitLeash.min;
+  controls.maxAzimuthAngle = orbitLeash.max;
+  controls.minPolarAngle = orbitHome.phi - ORBIT_UP;
+  controls.maxPolarAngle = orbitHome.phi + ORBIT_DOWN;
+}
+
+/* **The soft end of the leash.** OrbitControls' clamp is hard and it is
+   still there — it is what makes the wall a guarantee — but it sits
+   AZ_WALL_STRETCH past where the camera is meant to come to rest, and
+   this takes a share of the overshoot back every frame.
+
+   One exponential does both halves of the feel. Pushing into the band
+   meets a resistance that grows the further it goes, because the drag
+   adds a fixed delta per frame while this takes a fraction of the
+   *whole* overshoot, and the two balance short of the stop. Letting go
+   leaves only the pull, so the camera eases out of the band instead of
+   sitting against a wall it hit.
+
+   Writing the camera here needs nothing kept in sync: `update()`
+   re-derives its angles from the camera position on every call, which
+   is the same reason the walk home can tween it. */
+function easeAzimuthLimits(dt) {
+  const theta = controls.getAzimuthalAngle();
+  const over =
+    theta < orbitLeash.softMin
+      ? theta - orbitLeash.softMin
+      : theta > orbitLeash.softMax
+        ? theta - orbitLeash.softMax
+        : 0;
+  if (!over) return;
+  setOrbitAngles(
+    theta - over * (1 - Math.exp(-AZ_EASE_RATE * dt)),
+    controls.getPolarAngle(),
+  );
+  /* The spring moves the camera without going through the controls, so
+     no `change` fires for it — without this `cameraMoving()` would read
+     at rest while the band is still unwinding, and the CRT would take a
+     raster per frame of it. */
+  orbitChangedAt = performance.now();
+}
+
 function orbitOffHome() {
   if (!controls) return false;
   return (
@@ -1758,8 +1891,13 @@ function tickOrbit(dt) {
   if (!orbitAllowed()) return;
   /* Damping glides on for a few frames after the pointer stops, which
      is the whole of the "weighted" feel; that needs update() every
-     frame, not just on input. */
-  if (!orbitTween) controls.update(dt);
+     frame, not just on input. The soft limit rides immediately behind
+     it, on the same condition: the walk home writes angles of its own
+     and neither of these may argue with it. */
+  if (!orbitTween) {
+    controls.update(dt);
+    easeAzimuthLimits(dt);
+  }
 
   if (!orbitDragging && !orbitTween && orbitIdleAt &&
       performance.now() - orbitIdleAt > IDLE_MS) {
@@ -1902,17 +2040,17 @@ function initOrbit() {
   /* Home is whatever applyFly(0) just produced, and nothing here moves
      it: it is the opening framing, and it is where the walk home goes.
      The *elevation* leash is still expressed against it, so it follows
-     ELEVATION; the azimuth leash is not — see ORBIT_SWING. */
+     ELEVATION; the azimuth leash is not — it is the room's, and comes
+     off the two wall planes. */
   orbitHome.theta = controls.getAzimuthalAngle();
   orbitHome.phi = controls.getPolarAngle();
   orbitHome.radius = camera.position.distanceTo(controls.target);
-  /* Around the machine's front, not around home — see ORBIT_SWING.
-     orbitHome.theta sits inside the range rather than in the middle of
-     it, which is the whole point. */
-  controls.minAzimuthAngle = FACING - ORBIT_SWING;
-  controls.maxAzimuthAngle = FACING + ORBIT_SWING;
-  controls.minPolarAngle = orbitHome.phi - ORBIT_UP;
-  controls.maxPolarAngle = orbitHome.phi + ORBIT_DOWN;
+  /* Azimuth off the room's own two walls, elevation off home.
+     orbitHome.theta sits inside the azimuth range
+     rather than in the middle of it, which is the whole point — and it
+     has to sit inside it, or the walk home would be tugging against
+     the leash. See applyOrbitLimits. */
+  applyOrbitLimits();
 
   controls.addEventListener("start", () => {
     orbitDragging = true;
@@ -2016,8 +2154,9 @@ function reframeHome() {
     orbitHome.theta = controls.getAzimuthalAngle();
     orbitHome.phi = controls.getPolarAngle();
     orbitHome.radius = camera.position.distanceTo(controls.target);
-    controls.minPolarAngle = orbitHome.phi - ORBIT_UP;
-    controls.maxPolarAngle = orbitHome.phi + ORBIT_DOWN;
+    /* Both clamps, not just the elevation pair: the azimuth half comes
+       off the orbit radius, and the radius is what a resize changed. */
+    applyOrbitLimits();
   }
   updateScreenOverlay();
   render();
@@ -2165,9 +2304,13 @@ function updateScreenOverlay() {
   if (!width || !height) return;
 
   /* Seen from behind, a plane projects to a mirrored quad: the matrix
-     below would fold the login inside out rather than hide it. Inside
-     the current orbit leash the glass never turns that far — this is
-     what keeps widening ORBIT_SWING from being able to break it. */
+     below would fold the login inside out rather than hide it. **The
+     leash does now reach this**, which it did not while a ±60° cap off
+     the monitor's front was in front of it: the right-hand end of the
+     swing is the -Z wall at about +88°, and the glass goes edge-on
+     around +80°. So the last few degrees of that swing hand the picture
+     to the baked still, and this is a working part rather than a
+     guard. */
   screenAway = screenFacing() < FACE_MIN;
   syncScreenVisibility();
   if (screenAway) return;
@@ -2372,13 +2515,6 @@ function initPointer(canvas) {
    moving, `screen-focused` once it has arrived.
    ========================================== */
 function render() {
-  /* The cutaway, here rather than in the rAF loop, so that *every*
-     draw has the right walls up — the orbit's `change` handler, the
-     review scripts' one-off renders and the reduced-motion single
-     frame all come through here and none of them run the loop. Two dot
-     products, and opacity writes only on the frames where a value
-     actually moved. */
-  if (room) updateWallFade(camera);
   if (composer) composer.render();
   else renderer.render(scene, camera);
 }
@@ -2962,10 +3098,13 @@ export async function initScene(canvas) {
       orbitIdleAt = 0;
       spendGlide();
       setOrbitAngles(
+        /* The *resting* range, not the stretched one: a pose parked
+           inside the spring's band would unwind out of it on the next
+           tick, under whatever is being shot. */
         THREE.MathUtils.clamp(
           orbitHome.theta + THREE.MathUtils.degToRad(swing),
-          controls.minAzimuthAngle,
-          controls.maxAzimuthAngle,
+          orbitLeash.softMin,
+          orbitLeash.softMax,
         ),
         THREE.MathUtils.clamp(
           orbitHome.phi - THREE.MathUtils.degToRad(rise || 0),
@@ -2987,13 +3126,27 @@ export async function initScene(canvas) {
       facing: screenFacing(),
       limits: {
         front: [
-          deg(controls.minAzimuthAngle - FACING),
-          deg(controls.maxAzimuthAngle - FACING),
+          deg(orbitLeash.softMin - FACING),
+          deg(orbitLeash.softMax - FACING),
         ],
         swing: [
-          deg(controls.minAzimuthAngle - orbitHome.theta),
-          deg(controls.maxAzimuthAngle - orbitHome.theta),
+          deg(orbitLeash.softMin - orbitHome.theta),
+          deg(orbitLeash.softMax - orbitHome.theta),
         ],
+        /* How far past the resting pair the spring allows, and where
+           the walls themselves are — the first is what a drag can
+           reach, the second is what it is being kept off. */
+        stretch: [
+          deg(orbitLeash.min - orbitHome.theta),
+          deg(orbitLeash.max - orbitHome.theta),
+        ],
+        walls: (() => {
+          const w = wallAzimuthRange(
+            orbitHome.radius,
+            orbitHome.phi + ORBIT_DOWN,
+          );
+          return [deg(w.lo - FACING), deg(w.hi - FACING)];
+        })(),
         rise: [-deg(ORBIT_DOWN), deg(ORBIT_UP)],
       },
     };
@@ -3048,9 +3201,6 @@ export async function initScene(canvas) {
       untreated: `#${tonemapForward(target, composer ? renderer.toneMapping : THREE.NoToneMapping, renderer.toneMappingExposure).getHexString()}`,
     };
   };
-  /* Where the cutaway's two walls currently stand: how square-on each
-     is to the view direction, and what that resolves to as opacity. */
-  window.__walls = () => wallFades();
   /* **The night rig, on a live page.** Every intensity in it was set
      through this rather than by rebuilding per candidate — four
      numbers that only mean anything against each other, so they have
@@ -3190,7 +3340,14 @@ export async function initScene(canvas) {
           lampMod.aimLamp(next.tilt, next.swing))
         : lampMod.aimLamp();
     const levels = lampMod.lampLevels(next);
-    if (next.point !== undefined || next.spot !== undefined || next.tilt !== undefined)
+    if (
+      next.point !== undefined ||
+      next.spot !== undefined ||
+      next.spillBase !== undefined ||
+      next.spillArm !== undefined ||
+      next.rim !== undefined ||
+      next.tilt !== undefined
+    )
       render();
     return {
       on: lampOn,

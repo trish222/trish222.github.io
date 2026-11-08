@@ -61,10 +61,14 @@ direction, which was the right question only for an orthographic camera
 (with a pinhole the two differ by up to half the FOV, and it is the ray
 that actually reaches the glass that decides). `FACE_MIN` is 0.17, about
 80° off the normal: past 90° the plane projects to a *mirrored* quad and
-the matrix would fold the login inside out. At the current ±60° leash
-nothing comes near it, so it is a guard rather than a working part. It
-and the still share `syncScreenVisibility`, so neither can clear the
-other's hiding.
+the matrix would fold the login inside out. **The leash reaches this
+now**, which it did not while a ±60° cap off the monitor's front stood in
+front of it: the azimuth is clamped off the room's walls, so the
+right-hand end of the swing is the -Z wall at about +88° and the glass
+goes edge-on around +80°. The last few degrees of that swing therefore
+hand the picture to the baked still, which is a working part rather than
+a guard. It and the still share `syncScreenVisibility`, so neither can
+clear the other's hiding.
 
 ## The fly-in
 

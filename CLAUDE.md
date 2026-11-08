@@ -3,7 +3,7 @@
 ## Brief
 
 A portfolio branch: Windows 98 retro theme with a 3D isometric intro.
-The visitor opens on a dollhouse diorama of a night-time room — a steel
+The visitor opens on the corner of a night-time room — a steel
 tanker desk with a CRT on it, a brick-built cherry treehouse beside it,
 a green banker's lamp, a rainy window in the left wall. Pressing the
 monitor flies the camera into the screen; signing in on the Win98 login
@@ -71,7 +71,7 @@ model.
 index.html        all markup — canvas, windows, taskbar, Start menu, hint (static, no templating)
 src/main.js       window manager: focus/open/close/minimize/maximize, drag, taskbar, clock
 src/scene.js      camera, lighting, hover/pick, the orbit, the fly-in, the lamp state
-src/room.js       the diorama: plank floor, two cutaway walls, wainscot, trim, rug, fog, the void
+src/room.js       the room: plank floor, two walls, wainscot, skirting, crown, rug, fog, the void
 src/nightwindow.js  the window in the left wall: joinery, the night sky on the glass, the rain
 src/computer.js   the CRT machine, keyboard and mouse, built from primitives
 src/desk.js       the steel tanker desk it stands on, likewise
@@ -116,9 +116,10 @@ ever be one of the two. Anything new that is pressable goes through
 `renderer.shadowMap.autoUpdate = false`. Anything animated back into the
 scene has to either not cast, or this has to be reverted — and reverting
 it costs a 2048² VSM pass with 16 blur samples every frame. The frozen
-map is also what keeps the cutaway honest: it is rendered at the home
-framing with the left wall visible, and re-rendering it with that wall
-culled would flood the room with moonlight.
+map is also what lets the room be bigger than its own lighting: only
+`CAST_H` x `CAST_Z1` of the left wall casts — the panel at the size the
+map was calibrated against — and everything the room grew by is a
+non-caster. See [docs/room.md](docs/room.md).
 
 **4. Frame budget: 16.7ms median on both viewports, zero janky frames.**
 And **never read a frame time without its A/B beside it, on one machine
@@ -235,7 +236,7 @@ Plain paths, deliberately — read the one you need.
 | [docs/camera-and-orbit.md](docs/camera-and-orbit.md) | touching the camera's angles, the frustum/zoom constants, or the orbit leash and its click-vs-drag decision |
 | [docs/screen-overlay.md](docs/screen-overlay.md) | touching the live HTML on the glass, its homography, the still, the fly-in timeline, or the sign-in hand-over |
 | [docs/lighting.md](docs/lighting.md) | touching the moon, the fill, the CRT's spill, the shadow box, the exposure or the tone mapping |
-| [docs/room.md](docs/room.md) | touching the diorama — floor, walls, cutaway fade, rug, fog — or the window, its night sky and its rain |
+| [docs/room.md](docs/room.md) | touching the room — floor, walls, mouldings, rug, fog — or the window, its night sky and its rain |
 | [docs/desk.md](docs/desk.md) | touching the desk, its paint, its walnut top, or where the kit sits on it |
 | [docs/computer.md](docs/computer.md) | touching the CRT, the keyboard, the picture on the glass or the hover |
 | [docs/lamps.md](docs/lamps.md) | touching either lamp, the lamp-module contract, `?lamp=`, the lamp lab, or the press precedence |
@@ -254,8 +255,11 @@ Plain paths, deliberately — read the one you need.
   the login screen too — one knob, not two. An OFL pixel face was fitted
   here and reverted on request; see docs/desktop-ui.md for what fitting
   one costs.
-- **`_orbit.mjs` is out of date**: it asserts the old ±90° azimuth leash
-  and will fail until updated for the current ±60°.
+- **Three review scripts are out of date.** `_orbit.mjs` asserts the
+  old ±90° azimuth leash; the azimuth is clamped off the walls now
+  (about -1°..+88° on desktop) — see docs/camera-and-orbit.md.
+  `_roomshots.mjs` and `_winshots.mjs` read a `window.__walls` that went
+  with the wall fade.
 - The scene chunk is ~215 kB gzipped plus ~106 kB of walnut for the desk
   top, all lazy-loaded after the desktop paints. The entry chunk is
   ~3.9 kB gzipped. GSAP is ~26 kB of the scene chunk (importing

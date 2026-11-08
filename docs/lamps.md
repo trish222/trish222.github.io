@@ -18,7 +18,7 @@ A lamp module exports:
 
 | | |
 |---|---|
-| `buildLamp()` | returns `{ root, shade, point, spot }`; origin on the **desk top** at the centre of the base, +Z the front, unyawed |
+| `buildLamp()` | returns `{ root, shade, point, spot }` — the two *sources*; the faint ones are internal; origin on the **desk top** at the centre of the base, +Z the front, unyawed |
 | `setLamp(level)` | 0..1 → every brightness the fixture has. **Linear in the level** — the easing lives in scene.js's loop, so the curve can be re-cut without changing what a lamp at 0.3 looks like |
 | `aimLamp(...)` | re-aims and reports the pool, read off the **world matrices** rather than restated from the angles |
 | `lampLevels(next)` | the dev readout `window.__lamp` drives |
@@ -130,7 +130,7 @@ the desk's, the computer's and the treehouse's.
   -6.8..-1.9 and the two do not overlap in z at all. The real nearest
   thing in the lamp's own band is the CRT's bezel at x -3.25.
 
-### Why there are two lights in one fixture
+### Why there are five lights in one fixture
 
 The brief asks for a warm `PointLight` under the shade **with soft
 shadows**, and three 0.186 cannot give both at once: `WebGLShadowMap`
@@ -148,19 +148,79 @@ scene is on `VSMShadowMap` for the moon's penumbra. So:
   is no hard edge anywhere in it, and it is cut to an oval by a drawn
   `SpotLight.map` cookie — a trough's pool is not round.
 
+**The pool is brightest right under the shade** and tapers from there
+with nothing in the falloff for the eye to catch on. That shape is the
+cookie's, not the cone's: `beamCookie` samples a raised cosine into
+sixteen stops, which has zero slope at both the centre and the rim, so
+there is no radius where the rate of falloff changes. It replaced four
+hand-set stops that held 0.91 brightness at 0.45 of the way out — a
+flat disc with a soft edge rather than something with a peak.
+`SPOT_INTENSITY` went 26 → 28 to pay for it: measured through the
+pool's own centre, the peak held (66 → 67 and 74 → 77 at the two
+readable points either side of the fixture) while the shoulder came in
+by a fifth to a third and the far tail did not move at all. The spot is
+also a touch more golden than the fixture's own amber — `SPOT_COLOUR`,
+nudged in the green channel only, because light that has bounced off a
+cream lining on its way out is not the colour of the bulb.
+
 Both are `decay` well under 2 (1.35 / 1.25), for the same reason the
 CRT's spill is: a lit shade is an area source and these are points, so
 inverse-square blows the shade's own plastic out before anything a
 hand's width away sees light.
 
 **The intensities carry the falloff compensation explicitly** —
-`15.0 * LAMP_SCALE ** POINT_DECAY` and `26.0 * LAMP_SCALE ** SPOT_DECAY`
+`15.0 * LAMP_SCALE ** POINT_DECAY` and `28.0 * LAMP_SCALE ** SPOT_DECAY`
 — because a group scale moves the bulb further from the walnut and the
 pool arrives dimmer by exactly that factor. The base figures are what
 the pair was calibrated at; the exponent is what keeps the pool the same
 brightness as the fixture is re-scaled. That compensation is also what
 keeps the night rig honest: every figure in
 [lighting.md](lighting.md)'s table is calibrated at `lampLevel === 1`.
+
+### The three faint lights, and the one fact that shapes them
+
+Beside the two sources are three very faint point lights that are not
+sources at all: two warm ones for the spill on the top of the base and
+the underside of the arm, and a green one for the tint a lit cased
+shade lays on what is beside it. They stand in for bounces three has no
+path for, and **none of them casts** — the shadow map is frozen, and an
+intensity change needs no depth pass, so switching the lamp still costs
+nothing in shadows.
+
+**The fact that shapes all three: this fixture's brass is
+`metalness: 1`, so it has no diffuse term.** A dim light parked next to
+it cannot wash it — there is nothing to wash. All it can do is put a
+specular streak wherever the half-vector happens to point at the
+camera. A first pass parked a light on the column and got one clipped
+white dot on the base dome over 0.5% of the fixture; dropping its
+intensity eightfold moved the peak from 221 to 177, because a clipped
+specular only shrinks, it does not dim.
+
+So they are placed the way a practical lighter places a bounce card —
+**by where the reflection lands** — and `_spillsweep.mjs` is that
+search. Three things came out of it that no amount of reasoning would
+have:
+
+- **the base and the arm need separate seats.** Curved brass facing
+  different ways: the camera sees a highlight on one or the other and
+  never both from one position. Hence two warm lights.
+- **all of them belong in *front* of the fixture**, which is also where
+  the bounce they stand in for comes from — and where the module's env
+  map already paints that same bounce, at u 0.78.
+- **the green one belongs off the shade's +x *end*, not its front.** In
+  front it tinted the shade's own crown, which is green already. The
+  one adjacent surface in this room with a diffuse term is the CRT's
+  bezel, a hand's width off that end — and a closed cased end cap
+  really is a green panel facing sideways. Behind the shade every
+  position read exactly zero lifted pixels, because the yoke and the
+  rod are occluded by the shade itself.
+
+The intensities are set by **where the specular clips**, not by what
+the surface receives: they are the largest figures at which
+`_spillsweep.mjs` reports no white pixels, and the arm seat clips at
+about four times its figure. All three together lift 1% of the
+fixture's pixels by a mean of 0.13 luma; the pool, the walnut and the
+CRT's glass do not move at all.
 
 A group scale reaches geometry and transforms and nothing else, so three
 world-unit figures are multiplied explicitly: `distance` on both lights,

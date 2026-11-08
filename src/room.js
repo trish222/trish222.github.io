@@ -15,10 +15,20 @@ import {
 /* ==========================================
    THE ROOM
 
-   A finite dollhouse diorama — plank floor, two walls, wainscot, trim
-   and a rug — floating in a flat #1C1A2A void. It replaces
-   src/floor.js, whose job was the opposite: an effectively endless
-   grey plane whose edges were hidden by fog in its own colour.
+   The corner of a room — plank floor, two walls, wainscot, skirting,
+   crown and a rug — standing in a flat #1C1A2A void that is only ever
+   seen past the open sides. It replaces src/floor.js, whose job was
+   the opposite: an effectively endless grey plane whose edges were
+   hidden by fog in its own colour.
+
+   **It used to be a dollhouse diorama and the geometry is the only
+   thing that changed.** The walls were 19 units tall and the slab 32 x
+   28, both deliberately cropped by the frame so the model read as a
+   cut-away model of a room. They are 34 and 76 x 66 now, sized so that
+   no top and no end edge is in shot at any pose the leash allows — the
+   frame cuts the walls, rather than the walls ending inside the frame.
+   What did *not* change is the lighting: see `cast` in buildWallPanel
+   for how the frozen shadow map survived the room growing around it.
 
    **Nothing here is typeset.** floor.js tiled the name across the
    ground and the first version of this module set it once on the rug;
@@ -26,13 +36,14 @@ import {
    still loaded, but for the CRT's greeting rather than for anything on
    the ground — see computer.js.
 
-   Why a diorama rather than a room: the camera swings 60 degrees
-   either side of the monitor's front, so any wall the camera can get
-   *behind* has to go. Only the two walls behind the desk at the home
-   framing are built, and the near one fades out as the camera comes
-   round to see it from the back — see "The cutaway" below. There is no
-   ceiling and there are no near walls, so nothing is ever between the
-   visitor and the desk.
+   Why only two walls: the camera swings 60 degrees either side of the
+   monitor's front, so any wall the camera can get *behind* has to go.
+   Only the two walls behind the desk at the home framing are built,
+   and the near one fades out as the camera comes round to see it from
+   the back — see "The cutaway" below. There is no ceiling and there
+   are no near walls, so nothing is ever between the visitor and the
+   desk, and at the far end of the swing the open sides are what the
+   fog is for.
 
    Local space is the desk's and the computer's: origin on the floor at
    the desk's centre in plan, +Z toward the viewer, +X screen right at
@@ -59,27 +70,74 @@ const WALL_RIGHT = "#353152"; // the -Z wall, normal +Z
 const WALL_LEFT = "#2b2842"; // the -X wall, normal +X
 const WAINSCOT = "#231f36";
 const TRIM = "#40395c";
-const PLANK = "#3a2f40";
+/* The lighter value, used on the beads: the fillet under the crown and
+   the cap on the skirting. A moulding reads as a moulding because one
+   of its faces takes more light than the field it stands on, and at
+   this scale that is cheaper to say in the palette than to model in
+   geometry. */
+const TRIM_LIT = "#4b4368";
+/* **Dark walnut, not near-black.** It was #3a2f40, a value set when
+   the slab was a small lit island in the void — in a room that closes
+   over it, the same colour reads as a hole in the floor rather than as
+   a floor. Lifted about 60% in luminance and walked toward brown,
+   which is what keeps it *wood*: the planks are the one large warm
+   surface in a picture whose walls, fog and moonlight are all cool. */
+const PLANK = "#644c3d";
 const RUG_FIELD = "#5a3e52";
 const RUG_EDGE = "#83607a";
 
 /* --- Plan ------------------------------------------------
    The desk is 19 x 12.6 centred on the origin, so it spans x -9.5..9.5
-   and z -6.3..6.3. The floor slab is sized around that: a little
-   breathing room behind and to the left, where the walls are, and a
-   long run of open floor in front for the rug.
+   and z -6.3..6.3. The corner it stands in is where it always was —
+   `X0` and `Z0` have not moved, so the window, the moon's aim and the
+   whole lighting calibration read against the same two faces.
 
-   The slab's own edges are deliberately *in frame* — that is what makes
-   it a diorama rather than a room with the walls cropped off. The home
-   framing reads about 77 world units of floor depth, so a 28-deep slab
-   has void beyond it at the bottom of the picture by design. */
+   **What moved is the open pair, and they moved a long way.** They
+   were 19 and 19, which put the slab's own edges in frame on purpose.
+   For the floor to run off the picture instead they have to clear the
+   near edge of the frame at the *flattest* pose the leash allows,
+   which is the widest-seeing one: the eye drops to y ~9.7 on desktop
+   and ~11 on a phone, the bottom of the frame is then 12 degrees below
+   the horizon, and it meets the floor some 45 units (desktop) to 52
+   units (phone, where the camera stands 115 out rather than 75) ahead
+   of the camera. Projected back onto the plan that is floor needed out
+   to x ~57 and z ~53 at the corners of the frame, on a portrait
+   viewport at either azimuth clamp.
+
+   **X1 went 62 -> 66 when the azimuth leash lost its old cap.** The
+   leash is both wall planes now and nothing else (see scene.js), so
+   the camera reaches ~+88 degrees off the monitor's front instead of
+   stopping at +60 — nearly over the +X axis, looking back along the
+   room. From there a portrait frame's bottom corner landed 1.4 units
+   past x 62. 66 puts it 0.1 inside, which is the slab's own edge
+   softness. Z1 is untouched and still has the one exposure it had:
+   on a phone at the flattest elevation near the *near* clamp, the
+   frame's bottom edge reaches about 7 units past the front edge of the
+   floor.
+
+   The walls are sized off the same figures: the right wall runs the
+   whole floor width and the left one the whole depth, so neither ends
+   anywhere the frame can see. Far more of each is built than is ever
+   in shot at the home framing, and that is the point — it costs two
+   boxes and an extrude, and the alternative is an edge in the
+   picture. */
 const X0 = -13.0; // the left wall's inner face
-const X1 = 19.0; // the open right edge
+const X1 = 66.0; // the open right edge
 const Z0 = -9.0; // the right wall's inner face
-const Z1 = 19.0; // the open front edge
+const Z1 = 56.0; // the open front edge
+/* A plan figure as much as an elevation one, which is why it is up
+   here: the floor is sized from the walls' *outer* faces. */
+const WALL_T = 0.6;
 
-const FLOOR_W = X1 - X0;
-const FLOOR_D = Z1 - Z0;
+/* **The floor runs under both walls, not up to their inner faces.**
+   It used to stop at X0/Z0, which left each panel's cut edge standing
+   on a seam; the skirting hides that from most angles and not from the
+   flat one. Half a unit of boards under the wall costs nothing and
+   there is no join to find. */
+const FLOOR_X0 = X0 - WALL_T;
+const FLOOR_Z0 = Z0 - WALL_T;
+const FLOOR_W = X1 - FLOOR_X0;
+const FLOOR_D = Z1 - FLOOR_Z0;
 
 /* --- Elevation -------------------------------------------
    One world unit is about 3.2 inches here: desk.js's DESK_TOP_Y is 9
@@ -87,25 +145,69 @@ const FLOOR_D = Z1 - Z0;
    does not become a detail on top of a cabinet. Every figure below is
    in that same compressed scale, so they read low against a tape
    measure and right against the furniture. */
-/* **The wall height is a cut line, not a ceiling height.** At the home
-   framing the frame reads about 30 world units of height at the back
-   wall's depth, centred a little above the desk top — so a wall tall
-   enough to be a real room (26-30 units, 7-8ft at this scale) fills the
-   top of the picture and the diorama stops floating in anything. 19
-   leaves a few units of void above the wall tops, which is the whole
-   dollhouse read: walls that have been *cut off*, with nothing above
-   them. It is why there is no crown moulding either — a crown implies
-   a ceiling to meet. */
-const WALL_H = 19.0;
-const WALL_T = 0.6; // the cut edge shows this, so it is not zero
+/* **The wall height is a ceiling height now, and it is set by the
+   phone.** It was 19, a cut line chosen to leave void above the wall
+   tops. For no top to be in shot it has to clear the top of the frame
+   at the back corner, which is a different number on each viewport
+   because the portrait frustum is 1.54x the landscape one: solving
+   "this point sits exactly on the top edge" at the back corner gives
+   y 17.6 at the home desktop framing, 24.8 on a phone at home, and
+   29.4 on a phone at the flattest elevation the leash allows. 34 is
+   that worst case with a few units to spare, and reads as a 9ft
+   ceiling at this scale, which is what a 20 x 17ft room wants.
+
+   **The pose that used to defeat this is now unreachable.** The figure
+   above was set against the -60 degree azimuth clamp, where the camera
+   stood outside a faded left wall and the frame looked lengthwise down
+   the right one. There is no fade and no such clamp: the leash is the
+   two wall planes, so the camera cannot get outside either of them and
+   the lengthwise view down a wall is gone with them.
+
+   What is left is the *steep* end, and no height fixes it. At the +10
+   degree rise the eye stands at y 44 on desktop and 64 on a phone —
+   above these wall tops either way — so from near an azimuth clamp a
+   wide frame's top corner can look over one of them into the void. It
+   is symmetric (the left wall does it at the near clamp, the right at
+   the far one), it wants an aspect past about 2:1 to show at all, and
+   a taller wall only moves the aspect at which it starts: the camera
+   is above the top edge, not below it. FOG_SPAN's 55 is what keeps the
+   far reaches of both walls dark rather than a silhouette. */
+const WALL_H = 34.0;
 const WAINSCOT_H = 7.5; // cap rail sits *below* the 9-unit desk top
-const BASE_H = 1.2; // skirting
+const BASE_H = 1.9; // skirting board
+const BASE_CAP_H = 0.26; // the bead on top of it
 const CAP_H = 0.38; // the wainscot's cap rail
-/* How far each moulding stands off the wall field. The cap rail is the
-   proudest because it is the one the key will eventually catch. */
-const BASE_OUT = 0.22;
+const CROWN_H = 1.4; // the cove at the ceiling line
+const CROWN_FILLET_H = 0.3; // and the fillet under it
+/* How far each moulding stands off the wall field. Each pair steps
+   out as it goes up, which is the whole trick: a band that is merely a
+   different colour reads as paint, and one that is proud of its
+   neighbour reads as a board. The crown is the proudest because it is
+   the one furthest from the eye. */
+const BASE_OUT = 0.28;
+const BASE_CAP_OUT = 0.38;
 const WAINSCOT_OUT = 0.1;
 const CAP_OUT = 0.3;
+const CROWN_FILLET_OUT = 0.3;
+const CROWN_OUT = 0.46;
+
+/* **The casting silhouette, frozen at the dimensions the shadow map
+   was calibrated against.** The left wall is the one thing in the room
+   that casts, and the moon is aimed through its window — so the wall's
+   top edge and its far end are both *lighting* figures, not just
+   geometry: light passing over a 19-tall wall lands on the floor from
+   x 3.6 onward, and that boundary is in the shot. Growing the wall to
+   34 would have walked it out to x 13 and taken the lit wedge in front
+   of the desk with it, which is a lighting change dressed up as a
+   composition one.
+
+   So only this rectangle of the panel casts. Everything the room grew
+   by is a non-caster, the frozen map is the same map, and the two
+   numbers below are exactly what WALL_H and Z1 were before the room
+   became a room. Move them and the moonlight moves; see scene.js's
+   shadow box, whose six faces are fitted to this. */
+const CAST_H = 19.0;
+const CAST_Z1 = 19.0;
 
 /* --- The window ------------------------------------------
    On the left wall, stated in *world* z and world y so it can be read
@@ -149,42 +251,45 @@ const RUG_INSET = 0.055; // the border's own width, as a share of the whole
    the two disagree exactly where the eye goes. */
 const RUG_RADIUS = 1.1;
 
-/* --- The cutaway -----------------------------------------
-   Each wall fades on the angle between its inner normal and the
-   camera's view *direction*. Direction rather than the vector to the
-   camera, so the fade is about which face is turned toward the lens
-   rather than which side of an infinite plane the eye is on — the
-   walls are finite panels, and past about 20 degrees off the front the
-   eye is already outside the left wall's plane while the panel itself
-   is nowhere near the line of sight.
+/* --- No cutaway ------------------------------------------
+   **Both walls are opaque at every pose and nothing here fades.**
+   There used to be a cutaway: each wall dimmed on the angle between
+   its inner normal and the view direction, and vanished as the camera
+   came round to see it from behind. What replaced it is the camera's
+   own leash — scene.js clamps the azimuth off `ROOM_PLAN.X0` and
+   `ROOM_PLAN.Z0`, so there is no pose from which the back of a wall
+   can be seen and nothing left for a fade to hide. See
+   `wallAzimuthRange` there, which is where the two figures below are
+   now read.
 
-   `facing` below is -dot(normal, viewDir): 1 is square on, 0 is edge
-   on, negative is seen from behind. The band is set so the left wall
-   is solid through the whole right-hand half of the leash, is gone
-   before the camera reaches the monitor's front, and never catches the
-   right wall — whose facing bottoms out at 0.47 at either clamp, well
-   above FADE_IN. That headroom is exactly what tightening the azimuth
-   leash to +/-60 bought; at +/-90 the right wall would fade too and
-   the diorama would come apart into bare floor at the extremes. */
-const FADE_OUT = 0.05; // fully transparent at or below
-const FADE_IN = 0.3; // fully opaque at or above
-/* Below this a wall is skipped outright rather than drawn at zero
-   alpha — a transparent draw still costs sorting and a full raster. */
-const FADE_CULL = 0.004;
+   Two things followed the fade out of this file: the panel materials
+   are plain opaque `MeshStandardMaterial` again (they were
+   permanently `transparent: true` so the fade never had to toggle the
+   flag and re-sort), and the per-wall list of materials and normals
+   that the fade walked is gone with it.
 
 /* --- Texture resolution ----------------------------------
    The floor is drawn as **one** non-tiling texture rather than a tiled
-   cell, which is only affordable because the slab is 32 x 28 units
-   rather than the 1700 the old plane was. It buys the thing a tile
-   cannot have: butt joints that fall where they actually fall across
-   the room, and no repeat to spot. */
+   cell, which was affordable at 32 x 28 units and is still affordable
+   at 76 x 66. It buys the thing a tile cannot have: butt joints that
+   fall where they actually fall across the room, and no repeat to
+   spot.
+
+   **The number did not go up with the room, so the density came
+   down**: 2048 over 76 units is 27 texels per world unit against 64
+   before. That is held deliberately. The canvas is 2048 x 1778 either
+   way — about 15MB, the same bill as before — and 27 texels is still
+   about one per screen pixel at the home framing, where the frame
+   reads 26 units of height over a ~900px viewport. Matching the old
+   density would have meant a 3900px canvas and 53MB, most of it spent
+   on floor that the fog takes to the void. What *is* affected is every
+   figure drawFloor draws in pixels — see the grain below. */
 const FLOOR_TEX_W = 2048;
 const WALL_TEX = 512; // value noise only, tiled
 const RUG_TEX_W = 1024;
 
 /* --- State ----------------------------------------------- */
 let disposables = [];
-let walls = [];
 let anisotropy = 1;
 /* Passed through to the window, whose rain is the only thing in this
    module that moves. */
@@ -272,12 +377,27 @@ function drawFloor() {
     ctx.fillRect(0, y + rowH - 1.3, w, 1.3);
   }
 
-  /* Grain: short strokes along the boards, very low contrast. */
+  /* Grain: strokes along the boards, very low contrast.
+
+     **Counted per canvas pixel and measured in world units**, which is
+     the split the drop in texel density forces. The count has to go on
+     the canvas or the loop grows with the room — 5.8 strokes per world
+     unit over a 4959-unit floor is 29,000 of them, which is a tenth of
+     a second of canvas time on the load path for grain nobody can
+     resolve. The *length* has to go on the room, or the same 12-90px
+     stroke that was a third of a board long becomes most of one. So
+     the scatter is sparser than it was per unit of floor and the
+     streaks are longer, which is the right way round: long grain is
+     what wood looks like, and it is what stops a thinner scatter from
+     reading as flat. */
+  const grainMin = 0.25 * px; // world units, not pixels
+  const grainRun = 1.9 * px;
   ctx.globalAlpha = 0.05;
-  for (let i = 0; i < 5200; i++) {
+  const strokes = Math.round((w * h) / 450);
+  for (let i = 0; i < strokes; i++) {
     const y = rnd() * h;
     const x = rnd() * w;
-    const len = 12 + rnd() * 90;
+    const len = grainMin + rnd() * grainRun;
     ctx.strokeStyle = rnd() > 0.5 ? "#000000" : "#b9a6c4";
     ctx.lineWidth = 0.8 + rnd() * 1.1;
     ctx.beginPath();
@@ -361,12 +481,6 @@ function wallMaterial(colour, repeat) {
       map: wallNoise,
       roughness: 0.92,
       metalness: 0,
-      /* Always transparent, so the cutaway never has to toggle the
-         flag — which changes how three sorts the object. Opacity does
-         all the work, and a wall under FADE_CULL is made invisible
-         instead, so a fully-faded wall costs no draw at all. */
-      transparent: true,
-      opacity: 1,
     }),
   );
   /* Each part tiles the shared noise at its own rate, so the lattice
@@ -380,12 +494,37 @@ function wallMaterial(colour, repeat) {
   return m;
 }
 
+/* One piece of a wall's field, extruded from a shape traced in the
+   panel's own local coordinates: from local z 0 to +WALL_T, then
+   translated back so the **inner** face lands on z = 0 — the plane
+   every other part of the panel is positioned against, and the one the
+   caller's rotation makes the inner normal. `bevelEnabled: false`
+   because a fillet here would do what it does on the desk: collapse
+   the UVs to a sliver and alias into a bead of highlights down the
+   reveal. */
+function addField(group, shape, material, casts) {
+  const geo = track(
+    new THREE.ExtrudeGeometry(shape, {
+      depth: WALL_T,
+      bevelEnabled: false,
+      steps: 1,
+      curveSegments: 1,
+    }),
+  );
+  geo.translate(0, 0, -WALL_T);
+  const mesh = new THREE.Mesh(geo, material);
+  mesh.castShadow = casts;
+  mesh.receiveShadow = true;
+  group.add(mesh);
+  return mesh;
+}
+
 /* A wall panel in its own local space: `width` along local X, height up
    local Y, and the **inner face at local z = 0** with the thickness
    running back to -WALL_T. That last part is what lets both walls be
    the same builder — the caller puts the group on the inner face and
    turns it, and local +Z is then the inner normal. */
-function buildWallPanel(width, colour, opening = null) {
+function buildWallPanel(width, colour, opening = null, cast = null) {
   const g = new THREE.Group();
   const half = width / 2;
 
@@ -410,13 +549,24 @@ function buildWallPanel(width, colour, opening = null) {
      the light travels toward +z, so the -z wall is upstream of
      everything and would shadow the whole room. It is a receiver —
      the far wall the beam lands on — which is the half of the dollhouse
-     convention that survives. */
-  const casts = !!opening;
+     convention that survives.
+
+     And since the room grew, only *part* of the windowed panel casts:
+     `cast` below is the rectangle the shadow map was calibrated
+     against, and everything outside it is a non-caster. */
   const add = (w, h, t, x, y, z, mat) => {
     const geo = track(new THREE.BoxGeometry(w, h, t));
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.set(x, y, z);
-    mesh.castShadow = casts;
+    /* **No moulding casts, on either wall**, where the ones on the
+       windowed wall used to. It bought nothing even then: the light
+       comes in from behind this wall, so a band standing three tenths
+       of a unit proud of it throws its shadow into the strip of floor
+       the wall itself already has in shadow. What it would cost now is
+       an artefact — the field outside `cast` is deliberately not a
+       caster, so a casting skirting out there would lay a shadow on
+       floor that nothing above it is shadowing. */
+    mesh.castShadow = false;
     mesh.receiveShadow = true;
     g.add(mesh);
     return mesh;
@@ -432,6 +582,7 @@ function buildWallPanel(width, colour, opening = null) {
     : wallMaterial(colour, [width / 9, WALL_H / 9]);
   const wainscot = wallMaterial(WAINSCOT, [width / 7, WAINSCOT_H / 7]);
   const trim = wallMaterial(TRIM, [width / 4, 1]);
+  const bead = wallMaterial(TRIM_LIT, [width / 5, 1]);
 
   /* The field runs the whole height behind everything else, so the
      wainscot and the mouldings are applied *over* it rather than
@@ -447,12 +598,6 @@ function buildWallPanel(width, colour, opening = null) {
      every joint. Extruding puts the UVs in world units instead, so the
      grain runs continuously around the opening. */
   if (opening) {
-    const shape = new THREE.Shape();
-    shape.moveTo(-half, 0);
-    shape.lineTo(half, 0);
-    shape.lineTo(half, WALL_H);
-    shape.lineTo(-half, WALL_H);
-    shape.closePath();
     const hole = new THREE.Path();
     const { x, y, w, h } = opening;
     hole.moveTo(x - w / 2, y);
@@ -460,44 +605,98 @@ function buildWallPanel(width, colour, opening = null) {
     hole.lineTo(x + w / 2, y + h);
     hole.lineTo(x + w / 2, y);
     hole.closePath();
-    shape.holes.push(hole);
-    /* Extrudes from local z 0 to +WALL_T, so it is translated back to
-       put the **inner** face on z = 0 — the plane every other part of
-       the panel is positioned against, and the one the caller's
-       rotation makes the inner normal. `bevelEnabled: false` because a
-       fillet here would do what it does on the desk: collapse the UVs
-       to a sliver and alias into a bead of highlights down the reveal. */
-    const geo = track(
-      new THREE.ExtrudeGeometry(shape, {
-        depth: WALL_T,
-        bevelEnabled: false,
-        steps: 1,
-        curveSegments: 1,
-      }),
-    );
-    geo.translate(0, 0, -WALL_T);
-    const mesh = new THREE.Mesh(geo, field);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    g.add(mesh);
+
+    /* **The core, and it is the only caster in the room.** `cast` is
+       the panel at the size it stood when the moon's shadow map was
+       rendered — see CAST_H / CAST_Z1 — anchored into the corner, so
+       the light that clears the wall clears it at the same height and
+       the same end it always did. The opening is cut in this piece
+       because the opening is inside it; a hole in a non-caster would
+       throw no sash stripes and the window pool is made of them.
+
+       Both pieces are extruded in the panel's own local coordinates
+       and both carry the field material, whose `map.repeat` is 1/9 —
+       ExtrudeGeometry writes shape coordinates into `uv`, so the noise
+       lattice is pinned to local space rather than to each piece's
+       own 0..1 box. That is what makes the seam between them
+       invisible, and it is the same reason the field is an extrude
+       rather than four boxes around the opening. */
+    const core = cast ?? { x0: -half, x1: half, h: WALL_H };
+    const coreShape = new THREE.Shape();
+    coreShape.moveTo(core.x0, 0);
+    coreShape.lineTo(core.x1, 0);
+    coreShape.lineTo(core.x1, core.h);
+    coreShape.lineTo(core.x0, core.h);
+    coreShape.closePath();
+    coreShape.holes.push(hole);
+    addField(g, coreShape, field, true);
+
+    /* Everything the room grew by, as one L — the full panel minus
+       that corner rectangle, traced counter-clockwise from the near
+       end. It assumes the core is flush with the +x end and the floor,
+       which is how buildRoom places it; a core floating in the middle
+       of the panel would need two pieces instead of this one. */
+    if (core.x0 > -half || core.h < WALL_H) {
+      const rest = new THREE.Shape();
+      rest.moveTo(-half, 0);
+      rest.lineTo(core.x0, 0);
+      rest.lineTo(core.x0, core.h);
+      rest.lineTo(core.x1, core.h);
+      rest.lineTo(core.x1, WALL_H);
+      rest.lineTo(-half, WALL_H);
+      rest.closePath();
+      addField(g, rest, field, false);
+    }
   } else {
     add(width, WALL_H, WALL_T, 0, WALL_H / 2, -WALL_T / 2, field);
   }
   /* Wainscot, standing a little proud of the field. */
   add(width, WAINSCOT_H, WAINSCOT_OUT, 0, WAINSCOT_H / 2, WAINSCOT_OUT / 2, wainscot);
-  /* Skirting at the floor, proudest of the lower parts. */
+  /* Skirting at the floor, and the bead that caps it. Two bands rather
+     than the one 1.2-unit board this was: a skirting is the moulding
+     the eye checks a room's floor line against, and at the flat end of
+     the orbit — where the eye is level with the desk top and the floor
+     line runs most of the width of the frame — a single dark stripe
+     reads as the floor not quite meeting the wall. */
   add(width, BASE_H, BASE_OUT, 0, BASE_H / 2, BASE_OUT / 2, trim);
-  /* The cap rail on top of the wainscot. The wall's own top edge gets
-     no moulding: it is a cut, not a ceiling line. */
+  add(
+    width,
+    BASE_CAP_H,
+    BASE_CAP_OUT,
+    0,
+    BASE_H + BASE_CAP_H / 2,
+    BASE_CAP_OUT / 2,
+    bead,
+  );
+  /* The cap rail on top of the wainscot. */
   add(width, CAP_H, CAP_OUT, 0, WAINSCOT_H + CAP_H / 2, CAP_OUT / 2, trim);
+  /* **The crown, at the ceiling line — which is the wall's own top
+     edge, and that is the point.** There was no crown here while the
+     top edge was a cut, because a crown implies a ceiling to meet. It
+     implies one now. Note what it costs to be honest about where it
+     goes: the top of the wall is off the top of the frame at the home
+     framing on both viewports, which is the whole requirement the
+     height was set to, so the crown is a detail of the flat end of the
+     orbit and of the portrait viewport rather than of the hero shot.
+     Dropping it to somewhere it could be seen at home would mean bare
+     wall above a ceiling line. */
+  add(width, CROWN_H, CROWN_OUT, 0, WALL_H - CROWN_H / 2, CROWN_OUT / 2, trim);
+  add(
+    width,
+    CROWN_FILLET_H,
+    CROWN_FILLET_OUT,
+    0,
+    WALL_H - CROWN_H - CROWN_FILLET_H / 2,
+    CROWN_FILLET_OUT / 2,
+    bead,
+  );
 
-  const materials = [field, wainscot, trim];
-
-  /* The window hangs off the panel rather than off the room, and its
-     materials join the panel's list. That is what makes the cutaway
-     work on it for free: `updateWallFade` walks this list, and the
-     group's `visible` flag culls the whole wall — glass, rain and
-     joinery with it — when the camera comes round behind it. */
+  /* The window hangs off the panel rather than off the room, which is
+     what keeps room.js's placement of it a single line: the group is
+     positioned in the panel's own local space, so the two cannot
+     disagree about which way the wall faces. It used to matter for the
+     cutaway as well — the window's materials joined the panel's list
+     and faded with it — and that list went when the fade did. */
   if (opening) {
     const win = buildNightWindow({
       noise: wallNoise,
@@ -507,10 +706,9 @@ function buildWallPanel(width, colour, opening = null) {
     });
     win.group.position.set(opening.x, opening.y, 0);
     g.add(win.group);
-    materials.push(...win.materials);
   }
 
-  return { group: g, materials };
+  return { group: g };
 }
 
 /* A rounded rectangle, traced into whatever accepts the four calls
@@ -637,7 +835,7 @@ export function buildRoom(maxAnisotropy = 1, reduced = false) {
   );
   floor.name = "floor";
   floor.rotation.x = -Math.PI / 2;
-  floor.position.set((X0 + X1) / 2, 0, (Z0 + Z1) / 2);
+  floor.position.set((FLOOR_X0 + X1) / 2, 0, (FLOOR_Z0 + Z1) / 2);
   floor.receiveShadow = true;
   floor.castShadow = false;
   root.add(floor);
@@ -673,78 +871,46 @@ export function buildRoom(maxAnisotropy = 1, reduced = false) {
 
   /* --- the two walls ---
      Each is built facing local +Z and then placed on its own inner
-     face, so `normal` below is just the group's rotation applied to
-     +Z. The right wall spans the full floor width *plus* the left
-     wall's thickness, so the two meet in a closed corner with the
-     left wall butting into it rather than crossing it. */
-  const right = buildWallPanel(FLOOR_W + WALL_T, WALL_RIGHT);
-  right.group.position.set((X0 + X1) / 2 - WALL_T / 2, 0, Z0);
+     face and turned, so local +Z becomes the inner normal. The right
+     wall spans the whole floor width — which now
+     includes the left wall's thickness, since the floor is sized from
+     the outer faces — so the two meet in a closed corner with the left
+     wall butting into it rather than crossing it. */
+  const right = buildWallPanel(FLOOR_W, WALL_RIGHT);
+  right.group.position.set((FLOOR_X0 + X1) / 2, 0, Z0);
   right.group.name = "wall-right";
-  right.normal = new THREE.Vector3(0, 0, 1);
 
   /* The left wall carries the window. Its local x runs along world z
      *backwards* — the panel is turned a quarter turn below, so local
-     +X maps to world -Z — hence the subtraction rather than the
-     addition the group's own position would suggest. */
-  const left = buildWallPanel(FLOOR_D, WALL_LEFT, {
-    x: (Z0 + Z1) / 2 - WINDOW_Z,
-    y: WINDOW_SILL_Y,
-    w: WINDOW_OPENING.w,
-    h: WINDOW_OPENING.h,
-  });
-  left.group.position.set(X0, 0, (Z0 + Z1) / 2);
+     +X maps to world -Z — hence the subtractions rather than the
+     additions the group's own position would suggest. It stops at Z0
+     rather than running under the right wall, which is the other half
+     of that closed corner.
+
+     The opening and the casting core are both given in local x off the
+     same centre, so neither moves when Z1 does: the window stays at
+     world z = WINDOW_Z and the core stays in the corner, spanning the
+     wall as it stood at CAST_Z1 and CAST_H. */
+  const centreZ = (Z0 + Z1) / 2;
+  const left = buildWallPanel(
+    Z1 - Z0,
+    WALL_LEFT,
+    {
+      x: centreZ - WINDOW_Z,
+      y: WINDOW_SILL_Y,
+      w: WINDOW_OPENING.w,
+      h: WINDOW_OPENING.h,
+    },
+    { x0: centreZ - CAST_Z1, x1: centreZ - Z0, h: CAST_H },
+  );
+  left.group.position.set(X0, 0, centreZ);
   left.group.rotation.y = Math.PI / 2; // local +Z -> world +X
   left.group.name = "wall-left";
-  left.normal = new THREE.Vector3(1, 0, 0);
 
-  walls = [right, left];
-  for (const wall of walls) {
-    wall.opacity = -1; // force the first write
-    root.add(wall.group);
-  }
+  root.add(right.group);
+  root.add(left.group);
 
-  return { root, walls };
-}
-
-/* ==========================================
-   THE CUTAWAY
-
-   Called once per frame from scene.js with the live camera. Two dot
-   products and, on the frames where a value actually moves, a handful
-   of opacity writes — opacity is a plain uniform, so there is no
-   recompile and nothing to batch.
-   ========================================== */
-const viewDir = new THREE.Vector3();
-
-export function updateWallFade(camera) {
-  if (!walls.length) return;
-  camera.getWorldDirection(viewDir);
-  for (const wall of walls) {
-    const facing = -wall.normal.dot(viewDir);
-    const t = THREE.MathUtils.clamp(
-      (facing - FADE_OUT) / (FADE_IN - FADE_OUT),
-      0,
-      1,
-    );
-    /* Smoothstep rather than the raw ramp: a wall that starts and stops
-       fading abruptly draws the eye to the fade itself. */
-    const o = t * t * (3 - 2 * t);
-    if (Math.abs(o - wall.opacity) < 0.002) continue;
-    wall.opacity = o;
-    const on = o > FADE_CULL;
-    wall.group.visible = on;
-    if (on) for (const m of wall.materials) m.opacity = o;
-  }
-}
-
-/* Where each wall currently stands, for the review scripts. */
-export function wallFades() {
-  return walls.map((w) => ({
-    name: w.group.name,
-    facing: Number((-w.normal.dot(viewDir)).toFixed(4)),
-    opacity: Number(Math.max(0, w.opacity).toFixed(4)),
-    visible: w.group.visible,
-  }));
+  return { root };
 }
 
 /* ==========================================
@@ -764,7 +930,17 @@ export function wallFades() {
    reaching the desk.
    ========================================== */
 const FOG_FROM = 8;
-const FOG_SPAN = 85;
+/* **The span came in from 85 when the room grew**, and it is the one
+   lighting figure that had to move. 85 was set against a slab that
+   ended 28 units in front of the desk: nothing was far enough away for
+   the far end of the ramp to matter. The floor now runs 65 units deep
+   and the right wall 76 across, so at the flat end of the orbit the
+   frame looks lengthwise down both of them and whatever the geometry
+   does not cover has to be dark rather than merely dim. 55 puts the
+   far end of the right wall at about 90% of the way to the void at
+   both azimuth clamps, and costs the back corner at the home framing
+   nine points of fog against six — which is the whole trade. */
+const FOG_SPAN = 55;
 
 export function buildFog(dist) {
   const fog = new THREE.Fog(new THREE.Color(VOID), 0, 0);
@@ -811,7 +987,6 @@ export function disposeRoom() {
   disposeNightWindow();
   disposables.forEach((d) => d.dispose());
   disposables = [];
-  walls = [];
   wallNoise = null;
   reducedMotion = false;
 }

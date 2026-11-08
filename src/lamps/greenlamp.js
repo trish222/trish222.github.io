@@ -33,21 +33,25 @@ import * as THREE from "three";
    ========================================== */
 
 /* --- Palette ---------------------------------------------
-   Antique brass and cased green glass, after the reference. The three
-   greens are the point of the fixture: GLASS_OUT is the deep bottle
-   green the body reads as unlit, GLASS_RIM the pale line the glass's
-   own thickness shows along the rolled lip, and GLASS_IN the
+   Antique brass and cased green glass, after the reference. The greens
+   are the point of the fixture: GLASS_BASE is the deep emerald the
+   body reads as face-on and unlit, GLASS_EDGE the near-black it goes
+   to where the casing is seen end-on, GLASS_RIM the pale line the
+   glass's own thickness shows along the rolled lip, and GLASS_IN the
    milk-white casing a real banker's shade is lined with. What makes
    it *glow* is the emissive on the shell and the lining — see
    EMIT_GLASS.
 
-   **GLASS_OUT came down about a half in value**, from 0x1f6b31, when
-   the shell went to MeshPhysicalMaterial with a clearcoat. The two
-   changes are one decision: a clearcoat puts a sharp specular lobe on
-   top of the body colour, so the shade now reads as glass by its
-   *highlights* rather than by being a bright green, and at the old
-   value those highlights had nothing dark to sit against. Bottle
-   glass is dark; what is light on it is the reflection and the glow. */
+   **The body green is dark on purpose**, and it came down twice: once
+   from 0x1f6b31 when the shell went to MeshPhysicalMaterial with a
+   clearcoat, and again to the present emerald when the angle-based
+   darkening went in. Those are one decision taken twice. A clearcoat
+   puts a sharp specular lobe on top of the body colour, and the edge
+   term adds a second cue that is a *gradient* rather than a tint, so
+   the shade now reads as glass by its highlights and by its thickness
+   rather than by being a bright green — and both of those need
+   something dark to sit against. Bottle glass is dark; what is light
+   on it is the reflection and the glow. */
 /* **Warm gold, and a metal's colour is not its albedo.** These ran at
    0x9a7a44 / 0x6a5330, which are olive-browns — the right *apparent*
    colour for a half-rough `metalness: 0.8` surface, because at 0.8 a
@@ -63,7 +67,69 @@ const BRASS = 0xd9b359;
    under the bulb, where a mirror ring reads as a second filament. It
    is the same metal, aged and left rough; see BRASS_ROUGH_FITTING. */
 const BRASS_DARK = 0x9c7c38;
-const GLASS_OUT = 0x123a1e;
+const GLASS_BASE = 0x0f4a26;
+/* **The green at a grazing angle, and the reason the shade reads as a
+   solid casting of glass rather than a painted shell.** Cased glass is
+   only as light as the shortest path light takes through it: face-on
+   you are looking through the thin dimension and see GLASS_BASE, but
+   along the sides, across both closed ends, and wherever the arc rolls
+   away from the eye you are looking down the length of the casing and
+   the green stacks up into a near-black emerald.
+
+   It is applied as a *ratio* against GLASS_BASE in linear space — see
+   `casedGlassShader` — so the pale rim band in `glassSkinTexture`
+   darkens with the body instead of being flattened out by a mix, and
+   a fragment at full grazing on plain body glass lands exactly on this
+   hex. */
+const GLASS_EDGE = 0x062a16;
+/* **How fast the glass darkens toward its silhouette.** The exponent
+   on the fresnel-style term `(1 - |N·V|)`: 1 is a linear ramp that
+   greys the whole shade down, and much past 3 the dark collapses into
+   a thin line on the outline and the body goes back to flat. Around 2
+   keeps the darkening on the flanks and the ends, where the thickness
+   genuinely is, and leaves the crown and the front face rich. */
+const EDGE_POWER = 2.2;
+/* **How fast the inner glow falls off toward the two ends.** The
+   exponent on `(1 - d)` along the shade's length, `d` being the
+   distance from the middle — where the tubular bulb actually sits — out
+   to an end cap. 1 is a linear fade, which still leaves the ends lit
+   enough to read as evenly backlit; higher concentrates the glow into
+   a bloom over the bulb and lets both ends go to dark glass. See
+   `glassGlowTexture`. */
+const GLOW_FALLOFF = 2.1;
+/* The glow the two closed ends keep at their darkest — a lit shade's
+   end cap still picks up its own lining, and a hard zero there reads
+   as a seam rather than as glass going dark. */
+const GLOW_FLOOR = 0.05;
+/* **How much of the room the shade reflects**, as `envMapIntensity`
+   against the same drawn equirect the brass uses — see
+   `brassEnvironment`, which already has the window and its moon at
+   -x, the tube at +x and the lamp's own pool on the walnut below.
+   Reusing it rather than drawing a second one is the point: the glass
+   and the brass then reflect the *same* room, and a patch moved in one
+   place moves in both.
+
+   Kept faint, and low rather than the brass's 1.0, for two reasons.
+   Polished glass is not a mirror — at normal incidence it returns
+   about 4% where the brass returns most of what hits it — and an
+   `envMap` on a dielectric also feeds the diffuse term, which would
+   lift GLASS_BASE off the dark emerald it is set to. What this buys
+   is a faint, *moving* sheen across the crown and the flanks: the
+   clearcoat alone gives three hard highlights from three point
+   sources, and glass this size in a room reads as glass partly by
+   carrying a dim image of that room between them. */
+const SHADE_ENV = 0.4;
+/* **How much brighter the extreme lip edge is than the rim band
+   behind it.** GLASS_RIM is the pale wash across the whole curl of the
+   lip; this is the thin line right at its outer edge, where you are
+   looking straight down the longest path through the casing and the
+   glass's own thickness catches the light end-on. Applied in linear
+   space as a multiplier on GLASS_RIM, so it brightens rather than
+   washes out, and it is the one thing on the shell that deliberately
+   works against the edge darkening — the lip is at full grazing, so
+   without a figure well above 1 the band is scaled down with
+   everything else and the bottom edge loses its line. */
+const RIM_BRIGHTNESS = 1.7;
 /* **The pale line along the bottom edge, and it is albedo rather than
    a glow.** Where a cased shade's lip curls under you are looking
    through the thickness of the casing rather than at one face of it,
@@ -81,13 +147,33 @@ const BULB = 0xfff4de;
    four-source calibration. Used for both lights and for the bulb and
    lining emissives, so the glow and the pool cannot drift apart. */
 export const LAMP_COLOUR = 0xffb866;
+/* **The pool is a shade warmer-but-yellower than the fixture's own
+   glow**, and the two are separate numbers because they are doing
+   different jobs. LAMP_COLOUR is what the *bulb* looks like through
+   cased glass — an amber that leans orange. The pool on the walnut is
+   light that has bounced off a cream lining on its way out, which
+   lifts the green channel: the result reads gold rather than orange,
+   which is what a banker's lamp throws. Nudged in G only (0xb8 →
+   0xc4) and left alone in R and B, so it is still unmistakably the
+   same lamp and the shift cannot be mistaken for a second source. */
+const SPOT_COLOUR = 0xffc470;
+/* **The warm spill, and the green cast beside the shade.** The
+   colours of three faint lights that are not sources in their own
+   right — they stand in for bounces three has no path for. See
+   SPILL_DECAY for what they are and why there are three.
+
+   `SPILL_COLOUR` is light that has left the shade, hit the lit walnut
+   and come back up: warmer and redder than the pool itself, because
+   it has made a second pass through amber glass and off antique
+   brass, both of which eat blue. */
+const SPILL_COLOUR = 0xffa65c;
 const BULB_EMISSIVE = 0xffe3b4; // the filament reads paler than its spill
 /* **The glass glows green, not amber**, and that is the one emissive
    here that is *not* LAMP_COLOUR. A warm lamp behind green cased glass
    comes out a warm yellow-green — the light is tungsten, the filter is
    green, and the product is neither. Setting this to LAMP_COLOUR made
    the shade read as amber plastic with a green rim; setting it to
-   GLASS_OUT made it a flat green sticker with no lamp behind it.
+   GLASS_BASE made it a flat green sticker with no lamp behind it.
 
    **It is modulated by a map rather than applied flat** — see
    `glassGlowTexture`. A constant emissive over a whole shade is the
@@ -96,6 +182,11 @@ const BULB_EMISSIVE = 0xffe3b4; // the filament reads paler than its spill
    the rolled lips, and with no gradient at all there is nothing on
    the surface for the eye to read as thickness. */
 const GLASS_EMISSIVE = 0x58bf4e;
+/* The green a lit shade throws onto whatever is right beside it. It
+   is the colour the glass is *glowing* rather than the colour it is
+   painted: GLASS_BASE is a near-black bottle green and would not
+   register at any intensity this is allowed to run at. */
+const RIM_GREEN = GLASS_EMISSIVE;
 
 /* --- Proportions -----------------------------------------
    Art-directed at scale 1 and then scaled by LAMP_SCALE below, the
@@ -1113,7 +1204,16 @@ export const LAMP_Z = -4.35;
    below the shade's lower rim for the same reason the cone lamp's
    does: outside the shade the *whole fixture* is behind the light, so
    every part of it can keep `castShadow` on for the moon without the
-   lamp shadowing its own pool. */
+   lamp shadowing its own pool.
+
+   **Three faint lights sit beside those two**, and they are a
+   different kind of thing: not sources, but stand-ins for bounces
+   three has no path for — two warm ones that come back off the lit
+   walnut onto the base and the arm, and a green one for what a lit
+   cased shade lays on whatever is beside it. All three are
+   short-range and none casts; see SPILL_DECAY, which is also where
+   the reason there are three of them is written. The spot is the
+   only light in this fixture with a shadow map. */
 const POINT_RANGE = 6.2;
 const POINT_DECAY = 1.35;
 
@@ -1144,6 +1244,101 @@ const SPOT_ANGLE = Math.min(
    frame — and `shadow.radius`. */
 const SPOT_PENUMBRA = 1.0;
 
+/* **The three faint lights, and the one fact about the brass that
+   decides everything about them.**
+
+   The brief for them is soft: a warm spill on the underside of the
+   arm and the top of the base, and a very subtle green beside the
+   shade. The obvious reading — park a dim light near each surface and
+   let it wash — **cannot work here, and that is a property of the
+   material rather than a tuning problem.** This fixture's brass is
+   `metalness: 1` (see "The brass finish"), and a metal has no diffuse
+   term at all: there is nothing for a nearby light to wash. All it
+   can do is put a specular streak wherever the half-vector happens to
+   point at the camera. Measured on the fixture, a light parked on the
+   column lit 0.5% of it — one clipped white dot on the base dome —
+   and dropping its intensity eightfold moved the peak from 221 to
+   177, because a clipped specular only shrinks, it does not dim.
+
+   So these are placed the way a practical lighter places a bounce
+   card: **by where the reflection lands, not by where the light
+   would be.** `_spillsweep.mjs` is that search — it walks each light
+   over a grid at four intensities and reports the lift per band up
+   the fixture — and three things came out of it that no amount of
+   reasoning would have:
+
+   - **The base and the arm need separate seats.** They are curved
+     brass facing different ways, so the camera sees a highlight on
+     one or the other and never on both from one position. Low and in
+     front lights the base and nothing above it; level with the
+     column's top and in front lights the arm and the shaft and
+     nothing below. Hence two warm lights rather than one.
+   - **Both sit in *front* of the fixture**, which is also where the
+     bounce they stand in for comes from: the pool is in front and
+     below, and the module's env map already paints that same bounce
+     as a patch at u 0.78 for the same reason.
+   - **The green only registers in front of the shade too.** Behind it
+     there is nothing the camera can see — the yoke and the rod are
+     occluded by the shade itself — so a green light back there is a
+     light that costs a shader slot and renders nothing. At every
+     position behind the glass the sweep read exactly zero lifted
+     pixels.
+
+   None of the three casts, and that is a requirement rather than a
+   saving. The shadow map in this scene is rendered once and frozen —
+   `renderer.shadowMap.autoUpdate = false` in scene.js — and the only
+   thing that invalidates it is a light *moving*, which for this
+   fixture means re-aiming the shade. Switching the lamp does not:
+   `setLamp` writes intensities, and an intensity change needs no new
+   depth pass. A fourth and fifth casting light here would put a 2048²
+   VSM pass behind every re-aim for a few levels of tint on brass a
+   hand's width away. The spot stays the only light in this fixture
+   with a shadow map. */
+const SPILL_DECAY = 1.1;
+const RIM_DECAY = 1.2;
+/* **Both warm seats are in front of the fixture, inside its own
+   footprint in plan** — `BASE_R * 0.8`, so re-scaling the fixture
+   carries them and they can never drift out over bare desk where
+   they would read as a second lamp. The heights are the two the sweep
+   picked, and both are written against the parts they are lighting:
+   a quarter unit above where the column leaves the base, and level
+   with the column's top where the arm begins. */
+const SPILL_Z = BASE_R * 0.8;
+const SPILL_BASE_Y = COL_EMERGE + 0.25;
+const SPILL_ARM_Y = COL_TOP;
+/* Short, and short is what keeps them local: a bounce card lights the
+   thing it is held up to. The low one has to span the base's top face
+   and no more; the high one the arm's curve and the shaft under it. */
+const SPILL_BASE_RANGE = 1.5;
+const SPILL_ARM_RANGE = 2.0;
+/* **The green one stands off the shade's +x end, not its front**, and
+   that is the second thing the sweep settled. Parked in front of the
+   glass it did tint something — the shade's own crown, which is green
+   already and needed no help. The surfaces the brief is about are the
+   ones *beside* the fixture, and in this room there is exactly one
+   adjacent surface with a diffuse term for a green light to land on:
+   the CRT's bezel, a hand's width off the shade's right-hand end.
+   Everything else next to the shade is either its own glass or
+   `metalness: 1` brass.
+
+   **Which is also what the fixture really does.** Both ends of this
+   shade are closed and cased — green outside, cream in (see the
+   header) — so a lit one is a green panel facing sideways, and what
+   is beside it catches that. The light stands where that end cap is,
+   a little out from it so the falloff is not all spent on the glass
+   itself.
+
+   Still in the shell's frame, so it tilts with the shade and keeps
+   its clearance however the shade is re-aimed. */
+const RIM_X = SHADE_LEN / 2 + 1.85;
+const RIM_Y = 0;
+const RIM_Z = 0.5;
+/* Long enough to reach across the gap to the bezel — which the
+   shade's own depth does not set, so this one is written as what it
+   has to span. At RIM_DECAY and RIM_INTENSITY the far end of it is
+   already below a level. */
+const RIM_RANGE = 4.0;
+
 /* **The bulb sits lower than the cone lamp's, and the intensities are
    what pays for it.** This fixture's bulb is at y 2.64 local against
    the cone lamp's 3.14, so at the same LAMP_SCALE it is 0.84 of the
@@ -1171,7 +1366,29 @@ const SPOT_PENUMBRA = 1.0;
    keeps re-scaling the fixture from quietly re-grading the room.
    See `window.__pool()` in src/lamp-lab.js. */
 const POINT_INTENSITY = 15.0 * LAMP_SCALE ** POINT_DECAY;
-const SPOT_INTENSITY = 26.0 * LAMP_SCALE ** SPOT_DECAY;
+/* **Up from 26 to pay for the re-cut cookie, not to brighten the
+   lamp.** `beamCookie`'s falloff was re-shaped to put the peak right
+   under the shade and taper from there, which costs the mid-field
+   about a third of what the old plateau gave it. The peak is the
+   number the brief names, so the lift keeps it where it was measured
+   while the tail stays softer than before. */
+const SPOT_INTENSITY = 28.0 * LAMP_SCALE ** SPOT_DECAY;
+/* **Set by what the specular does, not by what the surface receives**
+   — the one reading that matters for these is how many pixels of the
+   streak have gone white, and the figures below are the largest ones
+   at which `_spillsweep.mjs` reports none. Above them the highlight
+   stops being a sheen on brass and becomes a blown dot, which happens
+   well before the lift is anything a person would call bright: the
+   arm seat clips at about four times the figure here.
+
+   Faintness is the whole specification. All three are read as a tint
+   on a surface the moon and the pool have already lit, so the moment
+   one is strong enough to be seen as a light in its own right it is
+   wrong. Scaled by the same `LAMP_SCALE ** decay` term as the two
+   real lights, for the reason noted above. */
+const SPILL_BASE_INTENSITY = 0.1 * LAMP_SCALE ** SPILL_DECAY;
+const SPILL_ARM_INTENSITY = 0.24 * LAMP_SCALE ** SPILL_DECAY;
+const RIM_INTENSITY = 0.55 * LAMP_SCALE ** RIM_DECAY;
 
 /* What "fully on" means for each emissive.
 
@@ -1215,7 +1432,7 @@ const EMIT_BULB = 5.0;
    FILAMENT_R. */
 const EMIT_FILAMENT = 11.0;
 const EMIT_LINING = 1.3;
-/* **Unchanged when GLASS_OUT was darkened, and that is deliberate.**
+/* **Unchanged when GLASS_BASE was darkened, and that is deliberate.**
    Emissive is additive and takes no notice of the body colour, so the
    shade now puts out exactly the light it did over a green that is
    about half as bright — which reads as *more* glow for the same
@@ -1660,10 +1877,33 @@ function beamCookie() {
      0.5 so the falloff has somewhere to finish inside the frame. */
   const r = n * 0.46;
   const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
-  g.addColorStop(0.0, "#ffffff");
-  g.addColorStop(0.45, "#e8e8e8");
-  g.addColorStop(0.75, "#8a8a8a");
-  g.addColorStop(1.0, "#000000");
+  /* **cos², sampled, rather than four hand-set stops.** The brief is
+     "brightest right under the shade, falling off smoothly", and those
+     are two separate properties of the curve: where the peak is, and
+     whether the falloff has a kink in it anywhere.
+
+     The old stops had a plateau — 0.45 of the way out it was still at
+     0.91 — so the pool was a flat disc with a soft edge rather than
+     something brightest at its centre. A raised cosine peaks at the
+     centre and, crucially, has **zero slope at both ends**: it leaves
+     the centre smoothly and arrives at nothing smoothly, so there is
+     no radius at which the rate of falloff changes and nothing for the
+     eye to read as a ring. Sixteen stops is past the point where
+     canvas's linear interpolation between them is distinguishable from
+     the curve.
+
+     The exponent is the one knob: 1 is the gentlest peak, higher
+     pulls the bright core in tighter. 1.6 lands the half-brightness
+     radius just outside the shade's own footprint, which is what makes
+     the pool read as belonging to the shade. */
+  const CORE = 1.6;
+  const STOPS = 16;
+  for (let i = 0; i <= STOPS; i++) {
+    const t = i / STOPS;
+    const v = Math.cos((t * Math.PI) / 2) ** CORE;
+    const b = Math.round(v * 255);
+    g.addColorStop(t, `rgb(${b},${b},${b})`);
+  }
   ctx.fillStyle = g;
   ctx.beginPath();
   ctx.arc(0, 0, r, 0, Math.PI * 2);
@@ -1678,14 +1918,17 @@ function beamCookie() {
 /* **The gradient the glass glows by.** The trough's UVs run `u` around
    the arc and `v` along the length, so this is drawn in those terms
    directly: brightest over the middle of the length where the tubular
-   bulb actually is, falling away at the two open ends; and brightest
-   across the crown and the upper flanks, falling to almost nothing at
-   the rolled lips, which curve away from the bulb and are the thickest
-   glass in a real shade.
+   bulb actually is, falling away toward the two closed ends on a
+   GLOW_FALLOFF curve; and brightest across the crown and the upper
+   flanks, falling to almost nothing at the rolled lips, which curve
+   away from the bulb and are the thickest glass in a real shade.
 
    It multiplies `emissive`, so EMIT_GLASS is a *ceiling* rather than
-   the value the shade runs at — the mean of this field is about 0.55,
-   which is the factor between the two. Drawn rather than imported for
+   the value the shade runs at: the mean of this field is around 0.3,
+   which is the factor between the two, and it came down from about
+   0.55 when the length axis went to a GLOW_FALLOFF curve. The
+   *brightest* point over the bulb is unchanged — what the steeper
+   curve took away is the lit area, which is the point. Drawn rather than imported for
    the same reason the CRT's recess shadow is: it is three gradients
    and a multiply, and a checked-in binary with no source is a dead
    end. */
@@ -1709,15 +1952,30 @@ function glassGlowTexture() {
   ctx.fillStyle = arc;
   ctx.fillRect(0, 0, w, h);
 
-  /* Along the length (v, the canvas y), multiplied over the top: the
-     bulb is a capsule over the middle 60%, so the ends fall off. */
+  /* Along the length (v, the canvas y), multiplied over the top: a
+     single smooth falloff from the middle of the length — where the
+     tubular bulb is — out to both ends, shaped by GLOW_FALLOFF and
+     sampled as stops rather than typed, so changing that exponent
+     moves the whole curve instead of four hand-picked greys. It is
+     this axis that stops the shade reading as evenly backlit: the
+     glow should be a bloom sitting over the bulb, with both ends
+     going down to the dark glass they would be in a real fixture.
+
+     GLOW_FLOOR rather than black at the caps — the end of a lit shade
+     still catches a little of its own lining, and a hard zero puts a
+     visible seam where the glow meets the closed end. */
   ctx.globalCompositeOperation = "multiply";
   const len = ctx.createLinearGradient(0, 0, 0, h);
-  len.addColorStop(0.0, "#4a4a4a");
-  len.addColorStop(0.2, "#dcdcdc");
-  len.addColorStop(0.5, "#ffffff");
-  len.addColorStop(0.8, "#dcdcdc");
-  len.addColorStop(1.0, "#4a4a4a");
+  const STOPS = 12;
+  for (let i = 0; i <= STOPS; i++) {
+    const t = i / STOPS;
+    const d = Math.abs(t - 0.5) * 2; // 0 over the bulb, 1 at either end
+    const v = GLOW_FLOOR + (1 - GLOW_FLOOR) * (1 - d) ** GLOW_FALLOFF;
+    const n = Math.round(v * 255)
+      .toString(16)
+      .padStart(2, "0");
+    len.addColorStop(t, `#${n}${n}${n}`);
+  }
   ctx.fillStyle = len;
   ctx.fillRect(0, 0, w, h);
   ctx.globalCompositeOperation = "source-over";
@@ -1759,6 +2017,66 @@ function bulbGlowTexture() {
   return t;
 }
 
+/* **The thickness cue: glass gets darker the more of it you look
+   through.** This is the one place on the fixture that needs a shader
+   patch, and the reason is that no material parameter expresses it.
+   A cased shade is a *solid* of coloured glass a few millimetres
+   thick: face-on, light crosses the short dimension and comes out
+   GLASS_BASE, but along the flanks, across the two closed ends, and
+   anywhere the arc rolls away from the eye the path through the
+   casing is several times longer and the green stacks up to
+   GLASS_EDGE. Without that gradient the shell is one even green over
+   a doubly-curved form, which is exactly how painted sheet metal
+   reads — the clearcoat highlight alone was carrying the whole
+   argument that this is glass.
+
+   `(1 - |N·V|)` raised to EDGE_POWER is the cheap fresnel-style stand
+   in for that path length: it is 0 where the surface faces the camera
+   and 1 at the silhouette, which is where the geometry is turning
+   away and the path is longest. `abs` so the lining-facing side of a
+   flipped normal behaves, though this material is FrontSide.
+
+   **It multiplies rather than mixes.** `diffuseColor` at this point
+   already carries the pale rim band from `glassSkinTexture`, and a
+   `mix` toward a flat GLASS_EDGE would erase it precisely where the
+   lip curls away and the term is strongest — the rim would vanish
+   into the dark instead of darkening with it. Scaling by the ratio
+   GLASS_EDGE / GLASS_BASE, taken in linear space because that is the
+   space the shader works in, keeps every band's relative value and
+   still lands plain body glass exactly on GLASS_EDGE at full grazing.
+
+   Patched in before `lights_physical_fragment`, which is where
+   `diffuseColor` is handed to the BRDF: `normal` and `vViewPosition`
+   both exist by then, and the clearcoat lobe is computed from
+   `material.specularColor` rather than the diffuse, so the white
+   highlight streak along the ridge stays as bright on the dark flanks
+   as on the crown. The constants are baked in as literals rather than
+   uniforms — they are module constants, so there is nothing to
+   animate and no uniform lifecycle to keep alive through a clone. */
+function casedGlassShader(mat) {
+  /* No `convertSRGBToLinear` on either: `ColorManagement` is on, so
+     `new Color(hex)` has already taken the hex out of sRGB and into
+     the linear working space the shader samples the map in. Converting
+     again would square the ratio and the flanks would go to black. */
+  const base = new THREE.Color(GLASS_BASE);
+  const edge = new THREE.Color(GLASS_EDGE);
+  const tint = ["r", "g", "b"]
+    .map((ch) => Math.min(1, edge[ch] / base[ch]).toFixed(4))
+    .join(", ");
+  mat.onBeforeCompile = (shader) => {
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <lights_physical_fragment>",
+      `{
+      float facing = abs( dot( normalize( normal ), normalize( vViewPosition ) ) );
+      float edgeMix = pow( 1.0 - facing, ${EDGE_POWER.toFixed(2)} );
+      diffuseColor.rgb *= mix( vec3( 1.0 ), vec3( ${tint} ), edgeMix );
+    }
+    #include <lights_physical_fragment>`,
+    );
+  };
+  return mat;
+}
+
 /* **The shell's body colour, with the pale rim banded into it.**
 
    The rim is a `map` rather than a second mesh, and the reason is the
@@ -1786,6 +2104,12 @@ function bulbGlowTexture() {
 const RIM_U = LIP_SEGS / (SHADE_PROFILE.length - 1);
 const RIM_SOLID = RIM_U * 0.5; // flat pale out to here
 const RIM_FADE = RIM_U; // back to bottle green where the curl ends
+/* The bright line itself, inside the pale band: a quarter of the
+   solid part, taken off the same derivation so it stays on the curl
+   whatever the lip is re-rounded to. Narrow on purpose — a thick
+   bright edge is a plastic moulding's parting line, where a thin one
+   is the thickness of glass catching light. */
+const RIM_EDGE = RIM_SOLID * 0.25;
 function glassSkinTexture() {
   const w = 512;
   const h = 2; // nothing varies along the length
@@ -1794,14 +2118,24 @@ function glassSkinTexture() {
   c.height = h;
   const ctx = c.getContext("2d");
   const hex = (n) => "#" + n.toString(16).padStart(6, "0");
+  /* RIM_BRIGHTNESS applied in the linear working space `Color` puts a
+     hex into, then written back out as sRGB for the canvas: scaling
+     the bytes instead would clamp the green channel long before the
+     line is bright enough and the band would drift toward cyan. */
+  const lit = (n, k) =>
+    "#" +
+    new THREE.Color(n)
+      .multiplyScalar(k)
+      .getHexString(THREE.SRGBColorSpace);
 
   const g = ctx.createLinearGradient(0, 0, w, 0);
-  g.addColorStop(0.0, hex(GLASS_RIM));
-  g.addColorStop(RIM_SOLID, hex(GLASS_RIM));
-  g.addColorStop(RIM_FADE, hex(GLASS_OUT));
-  g.addColorStop(1 - RIM_FADE, hex(GLASS_OUT));
-  g.addColorStop(1 - RIM_SOLID, hex(GLASS_RIM));
-  g.addColorStop(1.0, hex(GLASS_RIM));
+  for (const flip of [false, true]) {
+    const at = (u) => (flip ? 1 - u : u);
+    g.addColorStop(at(0.0), lit(GLASS_RIM, RIM_BRIGHTNESS));
+    g.addColorStop(at(RIM_EDGE), lit(GLASS_RIM, RIM_BRIGHTNESS));
+    g.addColorStop(at(RIM_SOLID), hex(GLASS_RIM));
+    g.addColorStop(at(RIM_FADE), hex(GLASS_BASE));
+  }
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, h);
 
@@ -1833,39 +2167,59 @@ export function buildLamp() {
      was between a dull green and a green that looks polished all
      over — neither of which is glass.
 
-     It still is not a mirror (no environment map in this scene — see
-     brassMaterial), so the highlights it returns are the moon's, the
-     lamp's own point light and the tube's spill. Those are enough,
-     because a clearcoat lobe this tight is read as a *shape* — a
-     bright line following the ridge — rather than as a reflection of
-     anything identifiable.
+     The highlights it returns are the moon's, the lamp's own point
+     light and the tube's spill — a clearcoat lobe this tight is read
+     as a *shape*, a bright line following the ridge, rather than as a
+     reflection of anything identifiable. Under them it now also
+     carries the drawn room at SHADE_ENV, which is the part that
+     changes as the camera orbits: three fixed speculars on an unlit
+     body is a varnished solid, and what separates glass from varnish
+     is that the dim image between the highlights slides across the
+     form.
 
      `color` is white deliberately: the body green and the pale rim
      both live in the map. See `glassSkinTexture`. */
   const glassMat = track(
-    new THREE.MeshPhysicalMaterial({
-      color: 0xffffff,
-      map: glassSkinTexture(),
-      /* The body under the coat. Lower than the 0.18 this ran at as
-         a MeshStandard material, since it is no longer the only thing
-         carrying the gloss. */
-      roughness: 0.12,
-      metalness: 0.0,
-      /* Full coat at a near-mirror roughness — glass has no orange
-         peel. This pair is what makes the highlight sharp; widening
-         clearcoatRoughness past about 0.1 reads as lacquer. */
-      clearcoat: 1.0,
-      clearcoatRoughness: 0.04,
-      emissive: new THREE.Color(GLASS_EMISSIVE),
-      emissiveMap: glassGlowTexture(),
-      emissiveIntensity: 0,
-      /* The mouth and both ends have to show the lining, and the
-         lining is a separate mesh a hair within this one — so this is
-         single-sided and that one is BackSide. Two meshes rather than
-         DoubleSide because the two faces of a cased shade are not the
-         same colour and they glow by different amounts. */
-      side: THREE.FrontSide,
-    }),
+    casedGlassShader(
+      new THREE.MeshPhysicalMaterial({
+        color: 0xffffff,
+        map: glassSkinTexture(),
+        /* The body under the coat. Lower than the 0.18 this ran at as
+           a MeshStandard material, since it is no longer the only thing
+           carrying the gloss. */
+        roughness: 0.12,
+        metalness: 0.0,
+        /* Full coat at a near-mirror roughness — glass has no orange
+           peel. This pair is what makes the highlight sharp; widening
+           clearcoatRoughness past about 0.1 reads as lacquer. */
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.03,
+        /* **The room, at a dielectric's strength** — the same drawn
+           equirect the brass reflects. See SHADE_ENV. */
+        envMap: finish.env,
+        envMapIntensity: SHADE_ENV,
+        /* **Both are MeshPhysical's own defaults, written down.** Glass
+           is an ior of about 1.5 and `specularIntensity` 1 is a surface
+           with nothing dulling it, which is what is wanted here and
+           what the material would do anyway — they are stated because
+           this is the one surface on the fixture whose Fresnel ramp is
+           doing real work (it is what strengthens the reflection toward
+           the flanks and the ends, where GLASS_EDGE is darkening the
+           body underneath), so the two numbers that set it should be
+           visible here rather than inherited silently. */
+        ior: 1.5,
+        specularIntensity: 1.0,
+        emissive: new THREE.Color(GLASS_EMISSIVE),
+        emissiveMap: glassGlowTexture(),
+        emissiveIntensity: 0,
+        /* The mouth and both ends have to show the lining, and the
+           lining is a separate mesh a hair within this one — so this is
+           single-sided and that one is BackSide. Two meshes rather than
+           DoubleSide because the two faces of a cased shade are not the
+           same colour and they glow by different amounts. */
+        side: THREE.FrontSide,
+      }),
+    ),
   );
   /* The casing. **Slightly rough rather than matt**: it ran at 0.82,
      which is paper, and opal glass is a sintered white *surface* with
@@ -2243,7 +2597,7 @@ export function buildLamp() {
   shell.add(point);
 
   const spot = new THREE.SpotLight(
-    LAMP_COLOUR,
+    SPOT_COLOUR,
     0,
     SPOT_RANGE * LAMP_SCALE, // likewise world units
     SPOT_ANGLE,
@@ -2321,6 +2675,48 @@ export function buildLamp() {
   spot.shadow.camera.far = SPOT_RANGE * LAMP_SCALE;
   shell.add(spot, spot.target);
 
+  /* **The warm spill on the brass**, and **the green cast beside the
+     glass**. Three faint lights that are not sources: see SPILL_DECAY
+     for what they stand in for, why there are two warm ones rather
+     than one, why all three sit in front of the fixture, and why none
+     of them casts.
+
+     The two warm ones are children of `root` — they stand on the
+     fixture's own footprint between the base and the arm, and
+     re-tilting the shade must not drag them off it. The green one is
+     a child of `shell` for exactly the opposite reason: it is pinned
+     a fixed clearance off the front of the glass, so it has to tilt
+     with it. */
+  const spillBase = new THREE.PointLight(
+    SPILL_COLOUR,
+    0, // the caller writes this every frame, like the other lights
+    SPILL_BASE_RANGE * LAMP_SCALE, // world units — see LAMP_SCALE
+    SPILL_DECAY,
+  );
+  spillBase.position.set(0, SPILL_BASE_Y, SPILL_Z);
+  spillBase.castShadow = false;
+  root.add(spillBase);
+
+  const spillArm = new THREE.PointLight(
+    SPILL_COLOUR,
+    0,
+    SPILL_ARM_RANGE * LAMP_SCALE,
+    SPILL_DECAY,
+  );
+  spillArm.position.set(0, SPILL_ARM_Y, SPILL_Z);
+  spillArm.castShadow = false;
+  root.add(spillArm);
+
+  const rim = new THREE.PointLight(
+    RIM_GREEN,
+    0,
+    RIM_RANGE * LAMP_SCALE,
+    RIM_DECAY,
+  );
+  rim.position.set(RIM_X, RIM_Y, RIM_Z);
+  rim.castShadow = false;
+  shell.add(rim);
+
   /* --- the pull chain ---
      Beads in one InstancedMesh plus a drop at the end, hung from the
      shade's **front lip near one end**, where the reference's is. A
@@ -2382,15 +2778,27 @@ export function buildLamp() {
   blob.raycast = () => {};
   root.add(blob);
 
-  parts = { point, spot, liningMat, glassMat, bulbMat, filamentMat, shade, root };
+  parts = {
+    point,
+    spot,
+    spillBase,
+    spillArm,
+    rim,
+    liningMat,
+    glassMat,
+    bulbMat,
+    filamentMat,
+    shade,
+    root,
+  };
   setLamp(0);
   return { root, shade, point, spot };
 }
 
 /* **What "on" means, in one place.** The caller owns the state and the
-   fade — this is the curve from a 0..1 level to the six things that
+   fade — this is the curve from a 0..1 level to the eight things that
    have to move together, so a lamp at 0.3 can never be a bright bulb
-   in a dark shade. Linear in the level on purpose, exactly as
+   in a dark shade, nor a dark shade laying a green cast on the brass. Linear in the level on purpose, exactly as
    src/lamp.js is: the shaping lives in the caller's loop, so the ease
    can be re-cut without touching what a lamp at 0.3 looks like. */
 export function setLamp(level) {
@@ -2398,6 +2806,9 @@ export function setLamp(level) {
   const v = level < 0 ? 0 : level > 1 ? 1 : level;
   parts.point.intensity = POINT_INTENSITY * v;
   parts.spot.intensity = SPOT_INTENSITY * v;
+  parts.spillBase.intensity = SPILL_BASE_INTENSITY * v;
+  parts.spillArm.intensity = SPILL_ARM_INTENSITY * v;
+  parts.rim.intensity = RIM_INTENSITY * v;
   parts.bulbMat.emissiveIntensity = EMIT_BULB * v;
   parts.filamentMat.emissiveIntensity = EMIT_FILAMENT * v;
   parts.liningMat.emissiveIntensity = EMIT_LINING * v;
@@ -2476,11 +2887,27 @@ export function lampLevels(next = {}) {
   if (parts) {
     if (next.point !== undefined) parts.point.intensity = next.point;
     if (next.spot !== undefined) parts.spot.intensity = next.spot;
+    /* The three faint ones are driven separately rather than as one
+       knob: the whole point of there being three is that they land on
+       different surfaces, so an A/B that moved them together could not
+       attribute what it saw. See `_spillsweep.mjs`. */
+    if (next.spillBase !== undefined) parts.spillBase.intensity = next.spillBase;
+    if (next.spillArm !== undefined) parts.spillArm.intensity = next.spillArm;
+    if (next.rim !== undefined) parts.rim.intensity = next.rim;
   }
   return {
     point: parts ? parts.point.intensity : 0,
     spot: parts ? parts.spot.intensity : 0,
-    full: { point: POINT_INTENSITY, spot: SPOT_INTENSITY },
+    spillBase: parts ? parts.spillBase.intensity : 0,
+    spillArm: parts ? parts.spillArm.intensity : 0,
+    rim: parts ? parts.rim.intensity : 0,
+    full: {
+      point: POINT_INTENSITY,
+      spot: SPOT_INTENSITY,
+      spillBase: SPILL_BASE_INTENSITY,
+      spillArm: SPILL_ARM_INTENSITY,
+      rim: RIM_INTENSITY,
+    },
     emissive: {
       bulb: parts ? parts.bulbMat.emissiveIntensity : 0,
       filament: parts ? parts.filamentMat.emissiveIntensity : 0,
@@ -2488,6 +2915,14 @@ export function lampLevels(next = {}) {
       outer: parts ? parts.glassMat.emissiveIntensity : 0,
     },
     colour: `#${LAMP_COLOUR.toString(16).padStart(6, "0")}`,
+    /* The three the lights actually run at — the pool is deliberately
+       not the fixture's own amber. See SPOT_COLOUR. */
+    colours: {
+      point: `#${LAMP_COLOUR.toString(16).padStart(6, "0")}`,
+      spot: `#${SPOT_COLOUR.toString(16).padStart(6, "0")}`,
+      spill: `#${SPILL_COLOUR.toString(16).padStart(6, "0")}`,
+      rim: `#${RIM_GREEN.toString(16).padStart(6, "0")}`,
+    },
   };
 }
 

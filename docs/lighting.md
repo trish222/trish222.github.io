@@ -72,18 +72,21 @@ lands on.
 Two consequences:
 
 - **The frozen shadow map is load-bearing in a new way.**
-  `shadowMap.autoUpdate` is off and the map is rendered once, at the
-  home framing, where the cutaway has the left wall visible. If it were
-  re-rendered while the camera had swung round far enough to cull that
-  wall, the room would flood with moonlight. `window.__lights({ at })`
-  sets `needsUpdate` deliberately — it is a dev handle, and the only
-  thing in the file that does.
+  `shadowMap.autoUpdate` is off and the map is rendered once, and what
+  it was rendered against is now *smaller than the wall*: the room grew
+  to a real room and only `CAST_H` x `CAST_Z1` of the left wall casts,
+  which is the panel at the size this rig was calibrated against. See
+  "The frozen casting silhouette" in [room.md](room.md).
+  `window.__lights({ at })` sets `needsUpdate` deliberately — it is a
+  dev handle, and the only thing in the file that does.
 - **The large pool on the floor at the flat end of the orbit is light
-  passing *over* the wall, not through the window.** The wall is 19 tall
-  and the beam descends at 28°, so everything past the point where the
-  beam clears the wall top is lit over it. That is the dollhouse cutaway
-  being what it says it is, and it is load-bearing for "not pitch
-  black".
+  passing *over* the wall, not through the window.** The casting
+  silhouette is 19 tall and the beam descends at 28°, so everything past
+  the point where the beam clears that top edge is lit over it — which
+  is load-bearing for "not pitch black", and the reason the silhouette
+  did not grow with the wall. The top edge throwing it is no longer in
+  shot, so the boundary now reads as moonlight falling where it falls
+  rather than as a cut-away wall.
 
 ## The shadow box, and the bias
 
