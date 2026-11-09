@@ -11,21 +11,83 @@ divides by PI.
 
 | | colour | intensity | what it does |
 |---|---|---|---|
-| moon | `#8FA3D8` | 5.5 | the only thing with a direction; casts |
-| hemisphere | `#3A3560` sky / `#1C1A2A` ground | 30 | the bounce, and the only light on most surfaces |
+| moon | `#8FA3D8` | 2.2 | the only thing with a direction; casts |
+| hemisphere | `#3E3B52` sky / `#3C3422` ground | 19 | the bounce, and the only light on most surfaces |
 | CRT spill | `#5FE3D4` | 8.5 × picture brightness | the keyboard and the walnut in front of it |
-| desk lamp | `#FFB866` | point + spot × lamp level | the pool on the walnut, the shade, the keyboard's left end |
+| desk lamp | `#FFB866` | point + spot × lamp level | the pool on the walnut, the shade, the keyboard, the machine's lamp-facing side |
 
-The lamp's two figures live in the lamp module rather than beside the
-other three, next to the geometry that sets them, and are written as
+## The hemisphere's two halves are different temperatures
+
+**This is the one thing in the rig that is not a brightness.** Read the
+geometry first: the desk's enamel, the drawer fronts and the CRT's
+shell all face +z, and every source in the room *except the tube* sits
+behind that plane — the moon comes in over the far wall, the lamp
+stands back and to the left. N·L is negative for all of them, so on
+those faces the hemisphere is doing **100%** of the lighting.
+
+Which makes its colour a whole look. Both halves used to be violet —
+`#3A3560` sky over `#1C1A2A` ground, the second being the void itself,
+on the argument that what bounces up off the floor should be the colour
+the diorama floats in. That is a good argument about the edges of the
+picture and a wrong one about its middle: the fill's blue channel came
+out 2.7x its red, and beige albedo times that is lilac. Measured at the
+home framing before the fix, against an albedo of (206,196,171):
+
+| | was | is |
+|---|---|---|
+| CRT bezel, lamp side | (130,133,170) | (189,167,146) |
+| CRT bezel, far side | (135,143,176) | (153,155,143) |
+| desk pedestal, lamp side | (117,99,151) | (132,111,107) |
+| desk pedestal, far side | (116,97,150) | (131,111,106) |
+| back wall | (5,5,57) | (11,8,32) |
+
+The two pedestals are the ones to look at. **They were the same panel
+twice** — a hemisphere is uniform, so on a vertical face it cannot
+produce a shadow side at all, and lowering it only makes a flat thing
+darker. What does produce one is the two halves *disagreeing*: the
+ground half is warm now (the bounce off a plank floor and a lamp-lit
+walnut, which is what it physically is), so up-facing surfaces read
+cool moonlight, the lower verticals read the warm bounce, and the
+gradient between them is the modelling. The walls stopped reading royal
+blue for the same reason.
+
+The violet ground half is the thing that was given up, and it was
+bought with the exposure instead: see below.
+
+## The lamp reaches the machine now
+
+The brief that the lamp is the dominant warm light on the desk was not
+true as a number. `POINT_RANGE` was 6.2 local — 9.2 world — so the
+fixture lit its own footprint and a patch of walnut and stopped:
+lamp-on and lamp-off read the *same figure* on the keyboard. It is 9.4
+now, and the pool was lifted to pay for the wider distance window
+rather than to brighten it (`POINT_INTENSITY` 15 → 17.5,
+`SPOT_INTENSITY` 28 → 30.5, the latter tracking the fill's own cut so
+that "dominant" stays a ratio).
+
+Range alone cannot reach the bezel, for the N·L reason above: the lamp
+is behind its plane. What does is **a fourth faint stand-in in the lamp
+module** — `WARM_AT`, a bounce card over the walnut *in front of* the
+machine, standing in for the pool throwing light back up at it. It is
+the only one of the four that is meant to be seen as light rather than
+as a tint on brass, and it is set by the gradient it leaves across the
+bezel rather than by how bright it is. Being part of the fixture, it
+switches with it — which is the point: the machine's warm side goes
+away when the lamp does.
+
+The lamp's figures live in the lamp module rather than beside the other
+three, next to the geometry that sets them, and are written as
 `base * LAMP_SCALE ** decay` so the pool stays the same brightness as
 the fixture is re-scaled — see [lamps.md](lamps.md). Every figure in the
 table is calibrated with the lamp **on**, because that is the state the
 page opens in.
 
-These were set against the picture, through `window.__lights`, which
-moves all four knobs on one page load: four numbers that only mean
-anything against each other cannot be bisected one build at a time.
+These were set against the picture, through `window.__lights` and
+`window.__lamp`, which move every knob on one page load: numbers that
+only mean anything against each other cannot be bisected one build at a
+time. `window.__lights` does not reach the hemisphere's two *colours*,
+and the lilac cast was a hue fault — those were moved through
+`window.__scene` for the length of the sweep.
 
 ## Aiming the moon through the window
 
@@ -136,7 +198,7 @@ numbers do not survive a re-aim.
 
 ## The exposure is a lighting control
 
-**`TONE_EXPOSURE` is 1.3**, and it is not interchangeable with raising
+**`TONE_EXPOSURE` is 1.45**, and it is not interchangeable with raising
 the lights. The lights lift the bright albedos as fast as the dark ones
 — and this room has exactly one bright albedo, the desk's enamel, which
 goes white long before the floor comes up. The exposure lifts the bottom
@@ -161,6 +223,13 @@ The lamp moves the exposure a little, **upward as it goes out** — see
 [lamps.md](lamps.md). `window.__lights({ exposure })` sets the *base*,
 not the live value, or the loop would revert it on the next toggle.
 
+The last 0.15 of it is what the fill gave up. Cutting the hemisphere
+30 → 19 is a cut to the one light most of the beige in this room is lit
+by, and the thing to avoid was paying for a shadow side with a black
+room; this is the knob that gives it back at the bottom of the curve
+rather than the top. The median room pixel came out *higher* after the
+cut — 19 against 14 — while the desk's enamel came down.
+
 ## The HDRI is off
 
 `ENV_INTENSITY` is 0, `loadEnvironment` returns before fetching, and the
@@ -178,6 +247,19 @@ highlights, just duller. The asset stays vendored in `public/env/` with
 its licence; restoring it is one constant.
 `window.__lights({ env })` only does anything if `ENV_INTENSITY` was
 non-zero at build, since otherwise there is no map to scale.
+
+**So "the bright white reflections on the desk corners" were never the
+HDRI.** They were the moon: at 5.5 the window's pool on the walnut was
+clipping, and `__pixel` on the near-left corner read (180,172,200) with
+the lamp off as well as on — a near-white sheet with a blue bias, which
+is what a brown albedo looks like after ACES has rolled it off the top.
+The walnut is `roughness` 1.9, so there is no specular in it to blame.
+The moon is 2.2 now and the same corner reads (166,131,150), with the
+sash's stripes back as stripes. The isolation pass that settled it
+(each light alone, through `window.__lights`) is the method worth
+keeping: the hemisphere alone put 39 on that corner and the moon alone
+put 163, which is not a thing either a screenshot or a prediction would
+have told you.
 
 ## The tube, and its spill
 
@@ -235,10 +317,9 @@ formality: it is the only path with no loop to paper over a late asset.
 buckets the luma of every pixel that is **not the void** — the only
 honest denominator, since most of a desktop frame is backdrop and
 counting it would let any scene pass by being mostly empty. At home on
-1440×900 the night rig lands around: median room pixel **10-11**, p95
-**~125-140**, share under luma 8 **~32%**, back wall **9**, desk enamel
-**168**, and the keyboard **~90-150 lit against ~57 unlit** depending on
-the fixture's throw.
+1440×900 the night rig lands around: median room pixel **19**, p95
+**~130**, share under luma 8 **~25%**, back wall **10**, and the
+keyboard **68 lit against 54 unlit**.
 
 The room's own statistics barely move when the lamp is switched, which
 is the point: the lamp is a *local* light and a whole-frame histogram

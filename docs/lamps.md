@@ -194,8 +194,23 @@ CRT's spill is: a lit shade is an area source and these are points, so
 inverse-square blows the shade's own plastic out before anything a
 hand's width away sees light.
 
+**The reach was too short to be a lamp.** `POINT_RANGE` was 6.2 local
+— 9.2 world — and the fixture lit its own footprint and a patch of
+walnut and then stopped: the keyboard read the *same figure* lamp-on
+and lamp-off, which left the hemisphere doing all the lighting on the
+near half of the desk and is most of where the flat lilac cast came
+from (see [lighting.md](lighting.md)). It is 9.4 now — far enough for
+the keyboard and the monitor's left flank, still dead before the
+treehouse at the far end. `POINT_INTENSITY` went 15 → 17.5 to pay for
+the wider distance window rather than to brighten the pool: three's
+cutoff term is `(1 - (d/range)^4)^2`, so widening it dims everything
+inside it too, by about 12% under the shade at this range.
+`SPOT_INTENSITY` went 28 → 30.5 when the room's fill was cut 30 → 19,
+because "the dominant warm light on the desk" is a ratio and not a
+number.
+
 **The intensities carry the falloff compensation explicitly** —
-`15.0 * LAMP_SCALE ** POINT_DECAY` and `28.0 * LAMP_SCALE ** SPOT_DECAY`
+`17.5 * LAMP_SCALE ** POINT_DECAY` and `30.5 * LAMP_SCALE ** SPOT_DECAY`
 — because a group scale moves the bulb further from the walnut and the
 pool arrives dimmer by exactly that factor. The base figures are what
 the pair was calibrated at; the exponent is what keeps the pool the same
@@ -203,15 +218,19 @@ brightness as the fixture is re-scaled. That compensation is also what
 keeps the night rig honest: every figure in
 [lighting.md](lighting.md)'s table is calibrated at `lampLevel === 1`.
 
-### The three faint lights, and the one fact that shapes them
+### The four faint lights, and the one fact that shapes three of them
 
-Beside the two sources are three very faint point lights that are not
+Beside the two sources are four very faint point lights that are not
 sources at all: two warm ones for the spill on the top of the base and
-the underside of the arm, and a green one for the tint a lit cased
-shade lays on what is beside it. They stand in for bounces three has no
-path for, and **none of them casts** — the shadow map is frozen, and an
-intensity change needs no depth pass, so switching the lamp still costs
-nothing in shadows.
+the underside of the arm, a green one for the tint a lit cased shade
+lays on what is beside it, and the long one that throws the pool back
+at the machine. They stand in for bounces three has no path for, and
+**none of them casts** — the shadow map is frozen, and an intensity
+change needs no depth pass, so switching the lamp still costs nothing
+in shadows.
+
+The fourth is the odd one out and has its own section below; the three
+close in are shaped by the brass.
 
 **The fact that shapes all three: this fixture's brass is
 `metalness: 1`, so it has no diffuse term.** A dim light parked next to
@@ -247,6 +266,46 @@ the surface receives: they are the largest figures at which
 about four times its figure. All three together lift 1% of the
 fixture's pixels by a mean of 0.13 luma; the pool, the walnut and the
 CRT's glass do not move at all.
+
+### The long warm bounce: the pool, thrown back at the machine
+
+`WARM_AT` is the fourth, and it is not about this fixture's brass at
+all — it is the reason the monitor has a lamp-facing side.
+
+**The geometry that makes it necessary.** The CRT's bezel and the
+desk's drawer fronts face +z, and every light in the room except the
+tube — the moon through the window, both of this lamp's own lights, all
+three close spills — sits *behind* that plane. N·L is negative for all
+of them, so those faces are lit by the hemisphere and by nothing else,
+and an evenly coloured hemisphere renders them flat by construction:
+before this light existed the two desk pedestals either side of the
+knee measured (118,100,152) and (120,102,155), the same panel twice.
+No amount of extra `POINT_RANGE` fixes that, because the lamp is on the
+wrong side of the plane.
+
+What a banker's lamp really does there is not shine on the bezel; the
+pool on the walnut in front of the machine throws light back up at it.
+So this is a bounce card: a warm point standing over the walnut **in
+front of** the bezel plane, which is the one thing about its position
+that matters — moved back behind z 1.5 world it does nothing at all,
+for exactly the reason everything else does. Seated in the root's frame
+like the two warm spills, so re-scaling the fixture carries it; about
+(-5.0, 10.6, 3.5) in world terms, over the keyboard's left end where
+the pool's own tail lies.
+
+It is set by **the gradient it leaves**, not by how bright it is — the
+only one of the four meant to read as light rather than as a tint.
+Across the bezel at the home framing the lamp-side edge goes
+(152,154,142) → (186,165,145) while the far edge moves four levels. At
+11 the near edge starts to look like a second lamp pointed at the
+monitor; at 4 the gradient is inside the dither. Its `decay` is 1.6,
+steeper than the close spills' 1.1, so a long range does not become a
+second lamp at the far end — it dies before the treehouse, 13.2 world
+away, which is the check that the far side of the desk stays cool.
+
+**The known soft spot**: it is not derived from `aimLamp()`, so a large
+re-tilt moves the pool and leaves the bounce where it was. The three
+close spills have the same property for the same reason.
 
 A group scale reaches geometry and transforms and nothing else, so three
 world-unit figures are multiplied explicitly: `distance` on both lights,

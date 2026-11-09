@@ -458,8 +458,19 @@ const LAMP_FADE_S = 0.4;
    void's pre-image has to be re-solved whenever it moves (see
    `applyVoidColor`) and a Newton solve per frame for 0.4s is a cost
    with nothing to show for it. Five distinct values across the fade;
-   the steps are invisible under a light that is itself changing. */
-const LAMP_EXPOSURE_LIFT = 0.1;
+   the steps are invisible under a light that is itself changing.
+
+   **It is 0 now, and OFF_DARKNESS is why.** The argument above is a
+   good one about legibility and the wrong one about this scene: dark
+   adaptation is the operator spending 8% of the picture on making the
+   two lamp states *more alike*, and the brief is that they read apart
+   at a glance from the home framing. The off state is now shaped by
+   the fill instead — darker and cooler rather than merely dimmer —
+   and the room stays legible because OFF_DARKNESS is a floor under
+   the hemisphere, not a cut to zero. The knob stays because it is the
+   right one if the off state ever goes too far: it lifts the bottom
+   of the curve, which is where everything dark in this room lives. */
+const LAMP_EXPOSURE_LIFT = 0;
 const EXPOSURE_STEP = 0.02;
 
 /* ==========================================
@@ -503,27 +514,105 @@ const EXPOSURE_STEP = 0.02;
    direction — see `moonDirection` for how it is aimed through the
    window rather than placed by hand. */
 const MOON_COLOUR = 0x8fa3d8;
-const MOON_INTENSITY = 5.5;
-/* The fill. Sky half is the wall plum lifted a little; ground half is
-   the void itself, so what bounces up off the floor is the same colour
-   the diorama floats in. Dim enough that it never flattens the moon's
-   own direction — at much past 1.4 the shadowed side of the machine
-   comes up to meet the lit side and the whole room goes matte. */
-const HEMI_SKY = 0x3a3560;
-const HEMI_GROUND = 0x1c1a2a;
-/* **14 is not a typo, and "dim" is still the right word for it.** In
-   three a light is colour times intensity, and both of these colours
-   are *dark* — #3A3560 is 0.042 linear at its brightest channel. A
-   hemisphere in those colours at an intensity of 1 puts out almost
-   nothing, and multiplied by the floor's own dark plum albedo it
-   rounds to black before ACES has even seen it. Measured: taking this
-   from 1.15 to 14 moves the back wall from 1/255 to 10 and the
-   median room pixel from 4 to 9, while the desk's enamel — the one
-   bright albedo in the room — goes from 75 to 110, which is where it
-   has to stop. Past about 20 the walls turn a vivid royal blue and the
-   enamel goes white: it stops being a night room and starts being a
-   blue-filtered day. */
-const HEMI_INTENSITY = 30.0;
+/* **Down from 5.5, and what it bought was the desk top.** The moon is
+   the only light that reaches the walnut from outside, and at 5.5 the
+   window's pool on it was *clipping*: `__pixel` on the near-left
+   corner read (180,172,200) with the lamp off as well as on — a
+   near-white sheet with a blue bias, which is what a brown albedo
+   looks like after ACES has rolled it off the top. It read as glare on
+   a polished surface and the walnut is `roughness` 1.9, so there is no
+   specular in it to blame; it was simply over-lit. At 2.2 the same
+   corner reads (166,131,150) and the sash's stripes come back as
+   stripes. The floor's own pool is not the loser here — it sits past
+   the home framing's crop (see docs/lighting.md) and the hemisphere
+   is most of what lights the rug. */
+const MOON_INTENSITY = 2.2;
+/* **The fill, and the one thing in the rig that had a hue fault.**
+   Sky half is the wall plum lifted; ground half is the bounce off the
+   plank floor and the lamp-lit walnut, so it is *warm*.
+
+   It used to be the void colour, on the argument that what bounces up
+   off the floor should be the colour the diorama floats in. That is a
+   good argument about the edges of the picture and a wrong one about
+   its middle: #1C1A2A is violet, #3A3560 was violet, and a hemisphere
+   is the only light that reaches most of the beige in this room — the
+   desk's enamel and the monitor's shell both face +z, and every source
+   in the room except the tube is *behind* that plane, so N·L is
+   negative for all of them and the fill is doing 100% of the work.
+   Beige albedo times a fill whose blue channel is 2.7x its red came
+   out lilac: the monitor measured (124,107,161) and the desk's
+   pedestals (118,100,152), against an albedo of (206,196,171).
+
+   So the ground half is warm now and the sky half is the same plum
+   with the violet taken out of it. The two halves disagreeing is also
+   what puts *modelling* back on a vertical face, which an evenly
+   coloured hemisphere cannot: up-facing surfaces read cool moonlight,
+   the lower verticals read the warm bounce, and the gradient between
+   them is the shadow side. The walls stop reading royal blue for the
+   same reason — the far wall was (5,5,57), eleven times as much blue
+   as red off an albedo that is only 1.5x. */
+const HEMI_SKY = 0x3e3b52;
+const HEMI_GROUND = 0x3c3422;
+/* **19, down from 30, and the colours above are half of why it could
+   come down.** In three a light is colour times intensity, and both of
+   these are *dark* — #3E3B52 is 0.08 linear at its brightest channel.
+   A hemisphere in them at an intensity of 1 puts out almost nothing,
+   and multiplied by the floor's own dark plum albedo it rounds to
+   black before ACES has even seen it. 30 was past the figure the
+   comment here already warned about ("past about 20 the walls turn a
+   vivid royal blue and the enamel goes white") and both of those had
+   happened.
+
+   What sets it now is the ratio to the lamp rather than an absolute:
+   the fill has to leave the fixture room to be the brightest thing on
+   the desk. Measured at 19 with the warmer ground, the median room
+   pixel is 19 and the share under luma 8 is 0.25 — both better than
+   the 14/0.27 at 30, because the exposure pays for the drop and the
+   warm half lifts the mid-tones the violet half was only tinting. */
+const HEMI_INTENSITY = 19.0;
+
+/* ===== What the room looks like with the lamp off =========
+
+   **OFF_DARKNESS is the share of the fill the room keeps when the
+   lamp is out, and it is the one knob that makes the switch an event
+   in the room rather than on the desk.**
+
+   The problem it answers is a property of the rig rather than of the
+   lamp. Every figure in the night rig above was calibrated with the
+   lamp *on*, because that is the state the page opens in — so the
+   hemisphere is carrying a room that has a lit lamp in it, and it
+   goes on carrying it at full strength after the lamp is switched
+   off. A fill that does not know about the lamp is a fill that
+   quietly stands in for it: with the lamp out, the far side of the
+   desk, the wall and the floor barely moved, and the only thing that
+   changed was the fixture and the patch of walnut under it.
+
+   What a lamp going out in a real room does is take the warm bounce
+   with it. So the hemisphere is scaled by this as the lamp fades,
+   and — the half that does the most work — **its ground half goes
+   cool**: HEMI_GROUND is the warm bounce off the plank floor and the
+   lamp-lit walnut, and with the lamp off there is nothing warm left
+   for the floor to bounce. HEMI_GROUND_OFF is what is left, which is
+   moonlight that has been round the room once. The two together mean
+   the off state is darker *and* a different temperature, and a
+   temperature change is far easier to see at a glance than a
+   brightness one.
+
+   **0.52 and not lower.** The brief is cosy-dark, not a black frame:
+   what is left has to keep the walls, the floor and the furniture's
+   silhouettes readable on the moon and the CRT alone, and under about
+   0.4 the room stops being a room — ACES's toe crushes the plum
+   surfaces into the void and the diorama loses its edges, which is
+   the exact failure TONE_EXPOSURE exists to prevent. Above about 0.7
+   the difference is there in a measurement and not at a glance.
+
+   The CRT is untouched by this and so is the moon: they are the two
+   sources that *should* carry the off state, and leaving the moon at
+   full strength against a dimmed fill is most of why the off state
+   reads cool — the one light in the room with a direction in it
+   becomes the dominant one. */
+const OFF_DARKNESS = 0.52;
+const HEMI_GROUND_OFF = 0x2a2a3e;
 
 /* **The HDRI is not one of the three lights, so it is off.**
    "Studio Small 09" is a daylit studio, and under the old rig it ran
@@ -568,8 +657,16 @@ const ENV_INTENSITY = 0;
    lands within a couple of levels of ACES at 1.9 everywhere, because
    its toe is gentler by about that much. ACES is what the restyle
    asked for, so ACES is what is set, and the exposure is what pays for
-   its toe. `window.__tonemap('agx')` still switches on a live page. */
-const TONE_EXPOSURE = 1.3;
+   its toe. `window.__tonemap('agx')` still switches on a live page.
+
+   **1.45 now, and the extra 0.15 is what the fill gave up.** Taking
+   the hemisphere from 30 to 19 is a cut to the one light most of the
+   beige in this room is lit by, and the thing to avoid was paying for
+   a shadow side with a black room. This is the knob that gives it back
+   at the bottom of the curve rather than the top, which is the whole
+   argument above — so the median room pixel came out *higher* after
+   the cut (19 against 14) while the desk's enamel came down. */
+const TONE_EXPOSURE = 1.45;
 
 const GTAO_BLEND = 1.0; // deep enough that the creases actually darken
 /* How far past the furniture the AO is allowed to reach. See
@@ -893,14 +990,31 @@ let lampP = LAMP_START_ON ? 1 : 0;
 let lampLevel = LAMP_START_ON ? 1 : 0;
 let lampBtn = null;
 let onLampBtn = null;
-/* The exposure the operator runs at with the lamp **on**. The lamp
-   lifts it as it goes out (LAMP_EXPOSURE_LIFT) and `window.__lights`
-   moves this, so the two cannot stomp each other: the loop writes
-   `toneBase + lift`, never a bare number. */
+/* The exposure the operator runs at with the lamp **on**. The lamp's
+   own lift is 0 now (see LAMP_EXPOSURE_LIFT) but the arrangement
+   stands, because `window.__lights` moves this and the loop writes
+   `toneBase + lift` rather than a bare number — which is what keeps
+   the handle and the switch from stomping each other. */
 let toneBase = TONE_EXPOSURE;
 /* Last exposure actually written, so the void's pre-image is re-solved
    only when it moves. */
 let toneWritten = -1;
+/* The fill the room runs at with the lamp **on**, for the same reason
+   `toneBase` exists: the lamp scales the hemisphere down as it goes
+   out (OFF_DARKNESS) and `window.__lights({ hemi })` moves the base,
+   so the loop writes `hemiBase * dim` and never a bare number.
+   Without this the next toggle would silently revert the handle. */
+let hemiBase = HEMI_INTENSITY;
+/* OFF_DARKNESS, as a `let` only so `window.__lights({ off })` can
+   sweep it on a live page — the off state is a look, and a look is
+   judged against one picture rather than one build per candidate. */
+let offDarkness = OFF_DARKNESS;
+/* The two ends of the ground half's swing, pre-built because
+   `applyLampLevel` lerps between them every frame of the fade and a
+   Color per frame is garbage for nothing. Both are converted to the
+   working space on construction, so the lerp is linear-light. */
+const HEMI_GROUND_WARM = new THREE.Color(HEMI_GROUND);
+const HEMI_GROUND_COOL = new THREE.Color(HEMI_GROUND_OFF);
 /* { root } from buildRoom. */
 let room = null;
 let envMap = null;
@@ -1222,12 +1336,19 @@ function buildScene() {
 
   /* --- the fill ---
      One hemisphere and nothing else. Its two colours are the room's
-     own: the sky half is the wall plum lifted, the ground half is the
-     void. That is what a night interior's bounce actually is — light
-     that has already hit these surfaces once — and it is also what
-     keeps the shadowed side of everything *coloured* rather than
-     merely dark, which is the whole difference between moody and
-     black. */
+     own: the sky half is the wall plum, the ground half is the warm
+     bounce off the plank floor and the lamp-lit walnut. That is what
+     a night interior's bounce actually is — light that has already
+     hit these surfaces once — and it is also what keeps the shadowed
+     side of everything *coloured* rather than merely dark, which is
+     the whole difference between moody and black.
+
+     **The two halves are deliberately different temperatures**, and
+     that is load-bearing rather than decorative: see HEMI_SKY. Every
+     source in this room but the tube sits behind the plane the desk's
+     enamel and the monitor's shell face, so the fill is the only
+     thing lighting them and a single-coloured hemisphere renders them
+     flat by construction. */
   const hemi = new THREE.HemisphereLight(HEMI_SKY, HEMI_GROUND, HEMI_INTENSITY);
   s.add(hemi);
   /* Written even though nothing is loaded into `scene.environment`,
@@ -1235,6 +1356,14 @@ function buildScene() {
      three's default of 1 over a map that is not there. */
   s.environmentIntensity = ENV_INTENSITY;
   lights = { moon, hemi };
+  /* The fill is created at its **lamp-on** figures, because that is
+     what HEMI_INTENSITY and HEMI_GROUND are calibrated as — so if the
+     lamp is not on, the room has to be taken down to the off state
+     before the first frame. `applyLampLevel` ran once already, from
+     the lamp's own build, when `lights` was still null and there was
+     nothing to write to; this is the catch-up, and it is a no-op at
+     LAMP_START_ON. */
+  applyLampLevel(lampLevel);
 
   return s;
 }
@@ -1333,12 +1462,34 @@ function setMoonAt(x, y, z) {
    come back out without touching lamp.js at all.
    ========================================== */
 
-/* Writes a level to the fixture **and to the exposure**, which is the
-   half that cannot live in lamp.js: the operator belongs to the
-   renderer, and the void's pre-image moves with it. */
+/* Writes a level to the fixture, **to the room's fill, and to the
+   exposure** — the two halves that cannot live in lamp.js: the fill
+   belongs to the room and the operator belongs to the renderer, and
+   the void's pre-image moves with the latter.
+
+   **The fill is the off state.** See OFF_DARKNESS for the argument;
+   what is here is the curve, and it is linear in the level on purpose
+   so it tracks `setLamp` exactly rather than crossing it somewhere in
+   the middle of the fade. The ground half's colour moves with it,
+   which is the half of the effect the eye reads as temperature.
+
+   **Nothing here moves a light**, so the frozen shadow map stays
+   valid: an intensity and a colour are both shader uniforms, and the
+   only thing in this scene that invalidates the map is a light
+   changing position — see `window.__lamp`'s `tilt`. */
 function applyLampLevel(level) {
   lampLevel = level;
   lampMod.setLamp(level);
+  /* `lights` is still null when `buildScene` calls this to seed the
+     fixture — the lamp is built before the fill is — and the rig is
+     created at its lamp-on figures, so there is nothing to catch up. */
+  if (lights) {
+    const dim = offDarkness + (1 - offDarkness) * level;
+    lights.hemi.intensity = hemiBase * dim;
+    lights.hemi.groundColor
+      .copy(HEMI_GROUND_COOL)
+      .lerp(HEMI_GROUND_WARM, level);
+  }
   if (!renderer) return;
   /* Snapped, because every distinct value costs a Newton solve for the
      void's pre-image. See EXPOSURE_STEP. */
@@ -3281,7 +3432,23 @@ export async function initScene(canvas) {
      SCREEN_GLOW means, not what the light is running at this frame. */
   window.__lights = (next = {}) => {
     if (next.moon !== undefined) lights.moon.intensity = next.moon;
-    if (next.hemi !== undefined) lights.hemi.intensity = next.hemi;
+    /* The **base**, for the reason the exposure's is: the lamp scales
+       the fill as it goes out (OFF_DARKNESS), so writing
+       `hemi.intensity` here would be reverted by the next toggle.
+       `applyLampLevel` is what puts the figure on the light, at this
+       instant's lamp level. */
+    if (next.hemi !== undefined) {
+      hemiBase = next.hemi;
+      applyLampLevel(lampLevel);
+    }
+    /* The off state's two knobs, so the pair can be judged against one
+       picture the way the rig's four were. `off` is OFF_DARKNESS; it
+       takes effect on the next frame of a fade, or now if the lamp is
+       already out. */
+    if (next.off !== undefined) {
+      offDarkness = next.off;
+      applyLampLevel(lampLevel);
+    }
     if (next.env !== undefined) scene.environmentIntensity = next.env;
     if (next.at !== undefined) setMoonAt(...next.at);
     /* The operator's exposure, which in a night scene is a lighting
@@ -3307,7 +3474,13 @@ export async function initScene(canvas) {
     if (Object.keys(next).length) render();
     return {
       moon: lights.moon.intensity,
+      /* What the fill is running at this instant, and the figure it
+         would be at with the lamp on — which is the one HEMI_INTENSITY
+         names. They differ only while the lamp is off or fading. */
       hemi: lights.hemi.intensity,
+      hemiBase,
+      off: offDarkness,
+      hemiGround: `#${lights.hemi.groundColor.getHexString()}`,
       env: scene.environmentIntensity,
       /* Without this the `env` figure above is a number about nothing:
          ENV_INTENSITY is 0, so no HDRI is fetched at all. */
@@ -3415,6 +3588,7 @@ export async function initScene(canvas) {
       next.spillBase !== undefined ||
       next.spillArm !== undefined ||
       next.rim !== undefined ||
+      next.warm !== undefined ||
       next.tilt !== undefined
     )
       render();
@@ -3912,6 +4086,10 @@ export function disposeScene() {
   lampP = lampLevel = LAMP_START_ON ? 1 : 0;
   toneBase = TONE_EXPOSURE;
   toneWritten = -1;
+  /* The two the off state is shaped by, reset with the rest so a
+     re-init is not inheriting a sweep from the last one. */
+  hemiBase = HEMI_INTENSITY;
+  offDarkness = OFF_DARKNESS;
   document.getElementById("orbit-hint")?.setAttribute("hidden", "");
   perf?.dispose();
   perf = null;

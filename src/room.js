@@ -482,12 +482,43 @@ function drawWallNoise() {
      it — the same two-scale approach computer.js uses on the shells,
      and for the same reason: one scale alone averages to flat at the
      size this actually renders. */
+  /* **The lattice wraps, and without that this map does not tile.**
+     Every material here sets `map.repeat` — the back wall at
+     `FLOOR_W / 9`, the left wall at 1/9 over world-unit UVs, the
+     mouldings at their own rates — so the 512 canvas is laid down
+     once per 9 world units, and whatever sits at u = 1 of one tile
+     is what sits beside u = 0 of the next. With `cells + 1`
+     independent rows the two edges were different random values, so
+     *every* tile boundary carried a step of up to the low octave's
+     full 8.5% — a hard vertical line every 9 units across both walls
+     and a horizontal one every 9 up them.
+
+     On the back wall u = 0 is the panel's -x end at x = -13.6 (the
+     floor is sized from the walls' outer faces), so the first
+     boundary past the corner landed at **x = -4.6** — between the
+     lamp and the monitor at the home framing, which is exactly where
+     it was reported, running the full height of the wall because a
+     seam in u has no end in v. Measured across it, the right side sat
+     about 5% below the left at every height, lamp-lit or not, and the
+     step scaled with the wall's brightness rather than with any one
+     light — which is the signature of the map rather than of the
+     lighting, and what ruled the moonlight and the lamp's cone out.
+
+     Aliasing the far row and column onto the near ones makes the
+     bilinear field C0-continuous across the repeat: `lattice[cells]`
+     is a copy of row 0 rather than the same array, so writing the
+     corner cannot write it twice. The per-pixel grain below stays
+     uncorrelated across the boundary, which is right — it is
+     uncorrelated everywhere else too, and ±1.5% of per-pixel noise
+     carries no edge for the eye to find. */
   const cells = 8;
   const lattice = [];
-  for (let i = 0; i <= cells; i++) {
+  for (let i = 0; i < cells; i++) {
     lattice[i] = [];
-    for (let j = 0; j <= cells; j++) lattice[i][j] = rnd();
+    for (let j = 0; j < cells; j++) lattice[i][j] = rnd();
+    lattice[i][cells] = lattice[i][0];
   }
+  lattice[cells] = lattice[0].slice();
   const img = ctx.createImageData(n, n);
   for (let y = 0; y < n; y++) {
     for (let x = 0; x < n; x++) {

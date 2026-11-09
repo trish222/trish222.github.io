@@ -173,6 +173,56 @@ and `window.__shadowfit` exist for.
   by — the six moon aims and the hemisphere/exposure/env grid — off one
   page load through `window.__lights`. It is the method, kept runnable,
   not a test.
+- **`_castsweep.mjs`** + **`_castread.py`** — the grid the *lavender
+  cast* was fixed by, and the one script here that **shoots rather than
+  probes**. `window.__pixel` renders once per point, and on SwiftShader
+  through the composer that is seconds each; one screenshot per lamp
+  state carries every point and the python half samples them
+  afterwards. Two things it is worth copying:
+
+  **The points are screen-space, and they had to be.** The home camera
+  sees the monitor's front bezel and its *right* flank; the left flank
+  — the one facing the lamp — is behind the case, so a world probe at
+  x -3.05 projects onto the bezel and reports something true about
+  somewhere else. The first pass did exactly that and concluded the two
+  flanks were equally lit, because both samples were on the same face.
+  `_castread.py` takes a 3x3 median at each, because several sit near a
+  hard edge (the brass base's rim, the bezel's round) where one pixel
+  moved 150 levels between two renders that differed by nothing.
+
+  **It reaches past `window.__lights`.** The hemisphere's two colours
+  and the moon's are not on that handle and the fault was a *hue*, so
+  the rows set them through `window.__scene` — along with the lamp's
+  `distance` and a prototype bounce light — for the length of the
+  sweep. An isolation row per light (`hemi only`, `moon only`,
+  `glow only`, `lamp only`) is what attributed the blown desk corners
+  to the moon rather than to the HDRI they looked like.
+- **`_wallseams.mjs`** — **the wall's texture seams, at the places the
+  tiling predicts them.** The wall field is one 512 noise canvas laid
+  down once per 9 world units, so its boundaries are arithmetic rather
+  than a matter of looking: on the back wall u = 0 is the panel's -x
+  end at x = -13.6, which puts the vertical seams at x = -4.6 and
+  x = +4.4 and the horizontal ones at y = 9 and y = 18. The script
+  reports the mean left-to-right step down each of those, **and the
+  same statistic at a control column either side** — which is the only
+  way the figure means anything, because the wall's own low-frequency
+  noise has a gradient of its own. A seam reads as a step several times
+  its controls'; a wall whose lattice wraps reads as one of them.
+  Furniture is hidden (`visible`, so the frozen shadow map is
+  untouched) because the span between the lamp and the monitor is not
+  bare wall at the home framing.
+- **`_wallline6.mjs`** — the attribution pass behind it: the mean step
+  per column over five **bands** of the wall's height, with one source
+  removed at a time (`__lamp({ spot: 0 })`, `{ fill: 0 }`, `__gtao(0)`,
+  `__lights({ moon: 0 })`, …). Two things about it are the method
+  rather than the detail. **Band it**: a feature confined to part of
+  the wall's height is diluted by exactly the share of rows that miss
+  it, and averaging the whole frame turned a two-level line into half a
+  level. **Read the ratio, not the step**: a step that holds its share
+  of the wall's luma as each light is removed is the *map*, and one
+  that goes with a light is that light's coverage edge. That is what
+  told a texture seam from the moonlight's edge and from the lamp's
+  cone without either having to be guessed at.
 
 ## The lamp
 
