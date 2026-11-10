@@ -31,7 +31,7 @@ the desk, and the open sides are what the fog is for.
 
 **Local space is the desk's and the computer's**: origin on the floor at
 the desk's centre in plan, +Z toward the viewer, +X screen right at the
-home camera. So the plan figures read directly against desk.js's
+home camera. So the plan figures read directly against src/desks/classic.js's
 `DESK_W` (22.8) and `DESK_D` (12.6).
 
 ## The plan
@@ -314,6 +314,35 @@ sill and apron likewise. The *depths* (`CASE_OUT`, `SASH_D`,
 `APRON_OUT`) did not: those are how far a board stands off a wall,
 which is a property of the board and not of the hole. The apron hangs
 to 9.02, still 1.14 clear of the wainscot's cap rail at 7.88.
+
+**The sill's top stands `SILL_RISE` (0.02) above the opening's bottom
+edge, and it has to.** The opening is an `ExtrudeGeometry` hole, which
+means it is a real hole with its own side walls through the wall's
+thickness — including a horizontal one across the bottom at exactly
+local y = 0. The sill's top face was at y = 0 too, and the sill runs
+the full thickness, so over the whole footprint of the opening two
+upward-facing surfaces sat in the same plane carrying different
+colours: the wall field and the casing paint. The depth test picked
+between them per pixel and the sill broke up into a shimmering band as
+the camera orbited.
+
+**It read as a lighting bug because it only showed with the lamp on.**
+The fight needs the two colours to separate, and with no warm source on
+that side of the room both crush to within a level or two of the void.
+The desk lamp stands in front of this window and below the sill, and
+its pool is the only thing here that really lights a face pointing up.
+It is neither shadow acne nor VSM bleed — the shadow map is rendered
+once and frozen, so nothing it carries can change between frames — and
+nothing re-renders it per frame; nor is it the glass or the rain, which
+are vertical planes that only ever met the sill's plane along an edge.
+
+Lifting the board buries the reveal inside it and leaves no shared
+plane. The figure is about a hundred times the depth buffer's
+resolution at this range (`z²/(near·2^24)` is ~2e-4 at a 40-unit
+subject and `CAM_NEAR` 0.5) and about a sixteenth of an inch at this
+scale. The board grows *upward* by the rise rather than moving, so its
+underside stays where the apron meets it. It is also what a real sill
+does: bedded over the opening's bottom, with the sash sitting on it.
 
 **The placement wants to be as far back along -z as it can get, and
 that is a portrait-viewport decision.** Screen-x runs roughly

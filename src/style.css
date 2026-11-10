@@ -125,27 +125,49 @@ body {
 /* ================================
    DESKTOP
    ================================ */
+/* The desktop work area — everything above the taskbar. It is inside
+   the glass now (see #screen-shell), so these are percentages of the
+   overlay box rather than of the viewport: SCREEN_BASE_W wide and 40px
+   of taskbar short of SCREEN_BASE_H tall. Every figure the window
+   manager works in is measured off this element, which is why the id
+   stayed put when the box underneath it changed. */
 #desktop {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  height: calc(100vh - 40px);
-  position: relative;
+  height: calc(100% - 40px);
   overflow: hidden;
 }
 
 /* ================================
    3D BACKDROP
-   Sits behind the icons and windows (which come later in the
-   DOM, so they paint on top). Teal body background shows
-   through when WebGL is unavailable.
+   The whole viewport, behind everything: #screen comes later in the
+   DOM and the desktop is inside it, so both paint on top. Teal body
+   background shows through when WebGL is unavailable.
+
+   It stays up for the whole of the signed-in session — the monitor it
+   draws is the frame the desktop sits in — so nothing fades it any
+   more except the narrow-viewport break-out below.
    ================================ */
 #scene {
-  position: absolute;
+  position: fixed;
   inset: 0;
   width: 100%;
   height: 100%;
   display: block;
   z-index: 0;
   pointer-events: none;
+  /* Opaque for the whole of the 3D half of the site, the signed-in
+     desktop included: the flight stops with the bezel and a little of
+     the case around the screen, and this is the only thing drawing
+     them. It used to be dissolved by the crossfade — see "THE
+     CROSSFADE" in scene.js — and then by the sign-in; now the desktop
+     lives on the glass and the room stays lit behind it. The one place
+     it still goes is the narrow-viewport break-out. Set here and not
+     inline so that rule can win. */
+  opacity: 1;
+  transition: opacity 0.45s ease;
 }
 
 /* ================================
@@ -400,8 +422,11 @@ body {
 /* ================================
    TASKBAR
    ================================ */
+/* Absolute, not fixed: the bottom of the *glass*, which is where the
+   taskbar of a machine in a photograph is. #screen-shell is the
+   containing block. */
 #taskbar {
-  position: fixed;
+  position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
@@ -512,7 +537,7 @@ body {
    START MENU
    ================================ */
 #start-menu {
-  position: fixed;
+  position: absolute;
   bottom: 40px;
   left: 4px;
   background: var(--bg);
@@ -936,7 +961,10 @@ body {
    does.
    ================================ */
 #screen {
-  position: absolute;
+  /* Fixed, and so pinned to the same origin the canvas is: the quad
+     scene.js projects is in canvas client pixels, and the matrix is
+     written against this box's own top-left corner. */
+  position: fixed;
   top: 0;
   left: 0;
   transform-origin: 0 0;
@@ -1042,51 +1070,124 @@ body.screen-focused #screen-page {
 }
 
 /* ================================
-   THE SIGN-IN GATE
+   THE DESKTOP ON THE GLASS, AND THE SIGN-IN GATE
 
-   The Win98 desktop is behind the login, not beside it: none of its
-   chrome exists until `signed-in` lands on the body. That covers both
-   states it used to be wrong in — overlaid on the establishing shot,
-   and showing through the login once the camera had arrived — so the
-   old `screen-active` rule this replaces is subsumed.
+   The Win98 desktop is behind the login and on the *same glass*: one
+   more layer inside the transformed box, at the overlay's own size, so
+   it comes up in the screen rectangle at the framing the flight parked
+   at. There is no second camera move any more, and nothing here is
+   ever a bitmap — the browser lays this subtree out at the box's
+   `SCREEN_BASE_W` x `SCREEN_BASE_H` (900 x 688) and the overlay matrix
+   maps that live rendering onto the plane, exactly as it does the
+   login. That box is the machine's resolution and the one knob for how
+   big any of this reads — see the constant in scene.js.
 
-   Hidden rather than `display: none` so the reveal can cross-fade, and
-   so a window's inline top/left stays meaningful while it is away.
+   The chrome is inert and at opacity 0 until `signed-in` lands on the
+   body, which covers the two states it used to be visibly wrong in:
+   overlaid on the establishing shot of the room, and showing through
+   the login once the camera had arrived.
    ================================ */
-.desktop-icons,
-.window,
-#taskbar,
-#start-menu {
+#screen-shell {
+  position: absolute;
+  inset: 0;
+  /* Opaque, so the fade below crosses over the login still painted
+     underneath rather than over the tube's own texture. */
+  background: var(--desktop);
+  opacity: 0;
+  pointer-events: none;
   transition: opacity 0.45s ease;
 }
 
-/* There is no taskbar before the sign-in, so the room gets the whole
-   window — otherwise the 40px the taskbar reserves shows bare body
-   under the floor. (The --scene-fade hand-over for that strip is still
-   what covers the edges of the crossfade, where the canvas has faded
-   but the login box has not quite reached the frame.) */
-body:not(.signed-in) #desktop {
-  height: 100vh;
+body.signed-in #screen-shell {
+  opacity: 1;
 }
 
-body:not(.signed-in) .desktop-icons,
-body:not(.signed-in) .window,
-body:not(.signed-in) #taskbar,
-body:not(.signed-in) #start-menu {
-  opacity: 0;
-  /* The canvas is pointer-events:none so the chrome stays clickable;
-     inert chrome is what lets a click reach the glass behind it. */
+/* Interactive only while the camera is *at* the screen. Back out at
+   the establishing shot the desktop is a picture on a 130px monitor
+   across the room, and a press there belongs to the raycast that flies
+   back in — `pointer-events: none` on #screen does not cover this on
+   its own, because a child may set `auto` and win. */
+body.signed-in.screen-focused #screen-shell {
+  pointer-events: auto;
+}
+
+/* The login steps aside once the desktop is up — *after* the fade, not
+   during it, hence the delay. `visibility` rather than opacity because
+   what matters by then is the tab order: a form nobody can see is
+   still a form the keyboard can reach. */
+body.signed-in #screen-page {
+  visibility: hidden;
   pointer-events: none;
+  transition: visibility 0s 0.45s;
 }
 
-/* Signed in, the camera is parked at the screen and the canvas is
-   already faded out, so this is a pure DOM hand-over: the overlay and
-   its way back out step aside and the teal desktop behind them is what
-   is left. `display: none` here, not opacity — #screen is a 1200px box
-   under a matrix() and would otherwise still take the clicks. */
-body.signed-in #screen,
-body.signed-in #screen-back-bar {
-  display: none;
+/* Sharper at rest, and it is the login's business as much as the
+   desktop's — hence `screen-focused`, which lands with `arrive`: after
+   the crossfade has finished rescaling the box, and before anything
+   moves again.
+
+   `will-change: transform` keeps the box on its own compositor layer
+   for the flight, which means the subtree is rastered at its own scale
+   and resampled by the matrix. Parked, no transform is changing and
+   the browser can raster it *through* the matrix instead. That matters
+   more since SCREEN_BASE_W came down: the box used to be minified onto
+   the glass, which hides a resample, and is now magnified slightly,
+   which does not. */
+body.screen-focused #screen {
+  will-change: auto;
+}
+
+/* ================================
+   NARROW VIEWPORTS: THE DESKTOP BREAKS OUT
+
+   Under MOBILE_BP the arrival fits the glass's *height* alone
+   (ARRIVE_PAD_MOBILE — see screenFrustum) and the 4:3 panel runs off
+   frame sideways: about a third of the glass is in shot. A login is
+   legible in that sliver because it is one small dialog in the middle
+   of it; a desktop is not, and no layout makes a rectangle usable when
+   two thirds of it is past the edge of the frame. So there the sign-in
+   hands the desktop the whole page instead, and the room fades out
+   behind it.
+
+   Still no camera move — the camera is parked exactly where the
+   flight left it. `glass-fullscreen` is scene.js's `screenBrokenOut`,
+   re-asked on every overlay update, so this state ends the moment any
+   one of its conditions does: Log Off, a resize past the breakpoint,
+   or the flight back out to the room, which puts the desktop back on
+   the glass for the trip.
+   ================================ */
+body.glass-fullscreen #screen {
+  position: fixed;
+  inset: 0;
+  /* The box's size is inline, written by scene.js, so it has to be
+     beaten here — the same bargain as the no-WebGL rule below. The
+     transform is scene.js's own doing: it stands the matrix down for
+     this state rather than having a stylesheet fight it every frame
+     (see `screenBrokenOut`). */
+  width: auto !important;
+  height: auto !important;
+  cursor: default;
+}
+
+body.glass-fullscreen #scene {
+  opacity: 0;
+}
+
+/* Reduced motion gets a quicker hand-over, not none at all: the fade
+   is what covers the cut from the login to the desktop, and both
+   halves of it have to land together. 0.18s is under the threshold
+   either reads as motion at, and an opacity fade needs no frame from
+   the render loop reduced motion does not run — the compositor has the
+   canvas's last frame. */
+@media (prefers-reduced-motion: reduce) {
+  #screen-shell,
+  #scene {
+    transition: opacity 0.18s linear;
+  }
+
+  body.signed-in #screen-page {
+    transition: visibility 0s 0.18s;
+  }
 }
 
 /* ================================
@@ -1133,6 +1234,17 @@ body.screen-active #screen {
    and nobody has signed in, which is exactly the window in which
    there is no chrome to click.
    ================================ */
+/* Parked at the screen, the canvas is everything *outside* the glass —
+   bezel, case, desk, room — and a click on any of it is "take me back
+   to the room" (`canLeaveScreen` in scene.js). #screen is painted over
+   it and takes its own clicks first, so "outside" needs no geometry
+   here; it is just what is left. Not on a phone's full-page desktop,
+   where there is nothing left. */
+body.screen-focused:not(.glass-fullscreen) #scene {
+  pointer-events: auto;
+  cursor: zoom-out;
+}
+
 body.orbit-live #scene {
   pointer-events: auto;
   /* Overwritten per-move by scene.js — `pointer` over the machine,
@@ -1142,7 +1254,8 @@ body.orbit-live #scene {
   cursor: grab;
 }
 
-/* The live login is a 1200px box folded onto the glass by a matrix.
+/* The live login is a SCREEN_BASE_W box folded onto the glass by a
+   matrix.
    While the camera is the visitor's to swing it stands aside, so a
    drag that starts over the picture rotates like any other and the
    press that matters is the one the canvas raycasts. (It keeps its
@@ -1237,10 +1350,12 @@ body.orbit-used #orbit-hint {
   border: 0;
 }
 
-/* No transition on the canvas: its opacity is a tween on the fly-in
-   timeline, overlapping the last 0.3s of the camera move. A CSS
-   transition could only start once a class landed — which is after the
-   camera has stopped, and that gap is exactly the pop this replaces. */
+/* The canvas's one transition is the sign-in (see "THE SIGN-IN GATE"),
+   and that is the only fade of it a class can carry: a class lands
+   after the camera has stopped, and for the fly-in's own crossfade
+   that gap is exactly the pop a tween on the timeline exists to avoid.
+   The fly-in no longer fades the canvas at all — the arrival keeps the
+   monitor in shot — so there is nothing here to fight. */
 
 /* The canvas only reaches down to the taskbar, so for the length of the
    fly-in the 40px the taskbar vacates would show the bare teal

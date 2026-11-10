@@ -20,11 +20,17 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
    ========================================== */
 
 /* --- Palette --------------------------------------------- */
-const PLASTIC      = 0xcec4ab;   // front shell, warm off-white — kept clear of the cream floor
-const PLASTIC_BACK = 0xc0b69c;   // rear shell: moulded separately, so it reads cooler
-const PLASTIC_DARK = 0x938b78;   // recesses, vent cavities, seams
-const KEY_CAP      = 0xd8d0bb;
-const KEY_MOD      = 0xc2b9a1;   // the wide keys are a shade darker, as they usually are
+/* Yellowed beige, not grey beige. Every tone below was pushed toward
+   yellow at roughly constant luminance (the blue channel carries the
+   move, ~10 points down; red comes up ~6), so the shells read as
+   plastic that has aged in a sunny room without moving the value the
+   room's lighting was calibrated against. */
+const PLASTIC      = 0xd4c6a2;   // front shell, warm yellowed beige — kept clear of the cream floor
+const PLASTIC_BACK = 0xc7b893;   // rear shell: moulded separately, so it reads cooler
+const PLASTIC_DARK = 0x8b8166;   // recesses, vent cavities, seams
+const KEY_WELL     = 0x6c6450;   // the well under the caps: darker again, so the gaps read as gaps
+const KEY_CAP      = 0xdcd2b2;
+const KEY_MOD      = 0xc8bd98;   // the wide keys are a shade darker, as they usually are
 const CABLE        = 0x978d78;   // darker than the shells, or it reads as a scratch on the floor
 const SCREEN_TEAL  = 0x0b7a76;
 const SCREEN_INK   = '#1b47a3';  // the floor blue, reused on the screen
@@ -72,6 +78,36 @@ export const FACING = THREE.MathUtils.degToRad(0);
 const disposables = [];
 function track(...xs) { disposables.push(...xs); return xs[0]; }
 
+/* The renderer's max anisotropy, handed in by `buildComputer` the way
+   `buildRoom` takes it. Defaulting to 1 keeps the module usable from
+   the lamp lab, which has no renderer to ask. */
+let maxAniso = 1;
+
+/* **Every canvas texture in this module is built here**, so maximum
+   anisotropic filtering is a property of the module rather than
+   something each call site has to remember — `screenDisplay` was the
+   only one that set it at all, at 8.
+
+   It is the single biggest sharpness win on this machine, and it is
+   not about resolution. The computer is seen at a three-quarter view,
+   so the bezel face, the badge and the picture are all foreshortened
+   hard along one axis; isotropic filtering picks the mip level off the
+   *compressed* axis and hands back a texture one or two levels blurrier
+   than it was drawn, along both axes. Anisotropic sampling takes the
+   level from the long axis and makes up the difference with extra taps
+   across the short one, which is what keeps the drawn detail — and the
+   mip chain stays on, so the scanlines and the plastic grain still
+   average cleanly instead of shimmering. */
+function canvasTexture(c, srgb = false) {
+  const t = new THREE.CanvasTexture(c);
+  if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = maxAniso;
+  t.minFilter = THREE.LinearMipmapLinearFilter;
+  t.magFilter = THREE.LinearFilter;
+  t.generateMipmaps = true;
+  return track(t);
+}
+
 /* ==========================================
    MATERIALS
    ========================================== */
@@ -86,6 +122,18 @@ function track(...xs) { disposables.push(...xs); return xs[0]; }
    grain survives; a 10-cell lattice puts the blotches at about a tenth
    of a tile, which is large enough to read as uneven plastic rather
    than as more noise.
+
+   **It stays at 512, and that was measured rather than assumed.** 1024
+   tiled *once* was tried, for the sake of killing the 2x2 repeat — and
+   it is not a sharpness change at all: what lands on a surface is
+   `size * repeat`, for `RoundedBoxGeometry`'s per-face 0..1 UVs and for
+   `ExtrudeGeometry`'s object-unit UVs alike, so the texel density is
+   identical either way. What it does change is this per-texel loop,
+   from 9.4ms to 45ms of main-thread work while the scene chunk builds,
+   plus 8MB of texture memory. Paying 36ms and 8MB for a slightly less
+   regular blotch field is the wrong trade; the crispness the shells
+   actually gained came from `canvasTexture`'s anisotropy and from the
+   bevels, neither of which costs anything here.
 
    Roughness alone was not enough: on a surface this matt the sheen
    barely moves, so the shell still read as one flat colour. The same
@@ -122,9 +170,14 @@ function plasticTextures(size = 512) {
       const fine = Math.random();
       const k = (y * size + x) * 4;
 
-      /* Wide spread: roughnessMap multiplies the material roughness, so
-         the contrast here is what breaks the sheen up across a panel. */
-      const r = 138 + low * 66 + fine * 54;
+      /* roughnessMap *multiplies* the material roughness, so this band
+         is where the final number actually comes from: 196..256 is
+         0.77..1.0, which against a 0.56 base puts the shells at about
+         0.5 with a few hundredths of swing either side — matt plastic
+         with a sheen that still moves across a panel. The old band
+         started at 138 (0.54), which spread the same mean over
+         0.37..0.69 and let the duller patches go visibly chalky. */
+      const r = 196 + low * 36 + fine * 24;
       rough.data[k] = rough.data[k + 1] = rough.data[k + 2] = r;
       rough.data[k + 3] = 255;
 
@@ -139,16 +192,19 @@ function plasticTextures(size = 512) {
   actx.putImageData(albedo, 0, 0);
 
   const wrap = (c, srgb) => {
-    const t = new THREE.CanvasTexture(c);
+    const t = canvasTexture(c, srgb);
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
     t.repeat.set(2, 2);
-    if (srgb) t.colorSpace = THREE.SRGBColorSpace;
-    return track(t);
+    return t;
   };
   return { rough: wrap(rc, false), albedo: wrap(ac, true) };
 }
 
-function plasticMaterial(grain, color = PLASTIC, roughness = 0.68) {
+/* `roughness` here is the figure *before* the map multiplies it; the
+   band in `plasticTextures` means the surface lands at roughly 0.9 of
+   whatever is passed. 0.56 is therefore a shell at about 0.5 — glossy
+   enough that the new bevels have something to catch. */
+function plasticMaterial(grain, color = PLASTIC, roughness = 0.56) {
   return track(new THREE.MeshStandardMaterial({
     color,
     roughness,
@@ -156,7 +212,7 @@ function plasticMaterial(grain, color = PLASTIC, roughness = 0.68) {
     map: grain.albedo,
     roughnessMap: grain.rough,
     bumpMap: grain.rough,
-    bumpScale: 0.022,
+    bumpScale: 0.02,
     /* The HDRI is a big part of what was lifting the shell to within a
        shade of the cream floor; the machine takes less of it than the
        floor does. Lower again at 0.34: the HDRI is ambient from every
@@ -186,6 +242,15 @@ function plasticMaterial(grain, color = PLASTIC, roughness = 0.68) {
    ========================================== */
 const SCREEN_GREETING = 'hello';
 
+/* The picture is *authored* at 768x576 and *rasterised* at whatever
+   `screenDisplay` asks for. Every figure in `drawPicture` and
+   `compositePicture` below is in these design units; the context is
+   scaled on the way in, so raising the texture resolution does not mean
+   re-deriving a window border or a title bar — and the rules, borders
+   and glyphs come out of the raster at the full new resolution rather
+   than being drawn small and blown up. */
+const PIC_W = 768, PIC_H = 576;
+
 function drawPicture(w, h, greeting) {
   /* The picture is drawn sharp into an offscreen canvas, then composited
      through a blur. A CRT has no pixel grid to be sharp against, and a
@@ -194,13 +259,16 @@ function drawPicture(w, h, greeting) {
   const ui = document.createElement('canvas');
   ui.width = w; ui.height = h;
   const u = ui.getContext('2d');
+  u.scale(w / PIC_W, h / PIC_H);
 
-  /* Overscan: the tube is bigger than the picture, so the edge is black. */
+  /* Overscan: the tube is bigger than the picture, so the edge is black.
+     The margin is `OVERSCAN` rather than a repeated 0.035, because the
+     live HTML overlay is mapped onto the rectangle inside it. */
   u.fillStyle = '#05100f';
-  u.fillRect(0, 0, w, h);
+  u.fillRect(0, 0, PIC_W, PIC_H);
 
-  const m = Math.round(w * 0.035);
-  const iw = w - m * 2, ih = h - m * 2;
+  const m = Math.round(PIC_W * OVERSCAN);
+  const iw = PIC_W - m * 2, ih = PIC_H - m * 2;
   u.save();
   u.beginPath();
   u.roundRect(m, m, iw, ih, 26);
@@ -279,30 +347,45 @@ function drawPicture(w, h, greeting) {
   return ui;
 }
 
-/* Everything that makes the sharp picture look like a tube. */
+/* Everything that makes the sharp picture look like a tube.
+
+   Unlike `drawPicture` this one cannot simply be scaled by the context:
+   `ctx.filter` blur radii are not reliably transformed, so every figure
+   here is multiplied by `S` explicitly instead. */
 function compositePicture(ui, w, h) {
   const c = document.createElement('canvas');
   c.width = w; c.height = h;
   const ctx = c.getContext('2d');
+  const S = w / PIC_W;
 
   /* Soft focus, then a wide low-alpha pass on top: phosphor bleeds into
-     its neighbours, so bright areas halo rather than stopping dead. */
-  ctx.filter = 'blur(1.5px)';
-  ctx.drawImage(ui, 0, 0);
-  ctx.filter = 'blur(9px)';
+     its neighbours, so bright areas halo rather than stopping dead.
+     1.2 design px rather than 1.5: the picture is rasterised at twice
+     the resolution it used to be, so a hair less bleed still leaves the
+     glass with no pixel grid to be sharp against — which is the thing
+     the blur is for — while letting the extra detail through. */
+  ctx.filter = `blur(${1.2 * S}px)`;
+  ctx.drawImage(ui, 0, 0, w, h);
+  ctx.filter = `blur(${8 * S}px)`;
   ctx.globalCompositeOperation = 'lighter';
   ctx.globalAlpha = 0.34;
-  ctx.drawImage(ui, 0, 0);
+  ctx.drawImage(ui, 0, 0, w, h);
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
   ctx.filter = 'none';
 
-  /* Scanlines coarse enough to survive being drawn at ~200px across, and
-     a fainter vertical grille under them. */
+  /* Scanlines, and a fainter vertical grille under them. **Finer than
+     they were — a 3.5 design-px pitch where it used to be 5** — which
+     is only affordable because the raster is 2x and the filtering is
+     anisotropic: at 576px with isotropic mips a finer pitch averaged
+     away to a flat grey wash, which is what the old 5px was guarding
+     against. The duty cycle is held at 40% dark, so the picture does
+     not get darker as the lines get finer. */
+  const pitch = 3.5 * S, line = 1.4 * S;
   ctx.fillStyle = 'rgba(0,0,0,0.26)';
-  for (let y = 0; y < h; y += 5) ctx.fillRect(0, y, w, 2);
+  for (let y = 0; y < h; y += pitch) ctx.fillRect(0, y, w, line);
   ctx.fillStyle = 'rgba(0,0,0,0.08)';
-  for (let x = 0; x < w; x += 4) ctx.fillRect(x, 0, 1.4, h);
+  for (let x = 0; x < w; x += 3 * S) ctx.fillRect(x, 0, 1.05 * S, h);
 
   /* Phosphor bloom in the middle, falling off to a dark rim. */
   const vig = ctx.createRadialGradient(w / 2, h / 2, h * 0.18, w / 2, h / 2, h * 0.8);
@@ -337,7 +420,14 @@ export async function loadScreenFont() {
 }
 
 function screenDisplay() {
-  const w = 768, h = 576;
+  /* Twice the design resolution. The picture is ~250px across at the
+     home framing, so this is not about the idle desktop — it is about
+     the flight, where the same map carries a bitmap of the real page
+     (`setStill`, drawn at `SCREEN_BASE_W`) and the glass fills a good
+     share of the frame by the end of it. At 768 that bitmap was
+     downsampled before it was ever drawn; at 1536 it arrives intact,
+     and comfortably so since the box came down to 900. */
+  const w = PIC_W * 2, h = PIC_H * 2;
   const idle = compositePicture(drawPicture(w, h, null), w, h);
   const greet = compositePicture(drawPicture(w, h, SCREEN_GREETING), w, h);
 
@@ -345,9 +435,7 @@ function screenDisplay() {
   c.width = w; c.height = h;
   const ctx = c.getContext('2d');
 
-  const t = track(new THREE.CanvasTexture(c));
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = 8;
+  const t = canvasTexture(c, true);
 
   /* While the camera is flying in, the picture is a bitmap of the real
      login screen rather than this abstract desktop — see `setStill`
@@ -413,6 +501,9 @@ function screenDisplay() {
    two soft panes with a mullion between them, plus a broad low sheen.
    Kept faint so the picture stays readable through it. */
 function glareTexture() {
+  /* Stays at 512: every mark on it is laid down through a 13px blur, so
+     there is no detail here for a bigger raster to carry — only the
+     oblique-angle softness, and `canvasTexture` fixes that for free. */
   const s = 512;
   const c = document.createElement('canvas');
   c.width = c.height = s;
@@ -429,34 +520,33 @@ function glareTexture() {
   ctx.save();
   ctx.translate(s * 0.34, s * 0.3);
   ctx.rotate(-0.22);
-  ctx.filter = 'blur(13px)';
+  ctx.filter = `blur(${s * 0.0254}px)`;
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
   for (const dx of [0, s * 0.19]) ctx.fillRect(dx, 0, s * 0.15, s * 0.3);
   ctx.restore();
 
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return track(t);
+  return canvasTexture(c, true);
 }
 
 /* Moulded-in badge on the bottom bezel. Our own model number, since no
    real brand may appear here. */
 function badgeTexture() {
-  const w = 512, h = 96;
+  /* 2x the raster, same design figures — the lettering is the smallest
+     type in the 3D scene and the first thing a mip level eats. */
+  const S = 2, w = 512, h = 96;
   const c = document.createElement('canvas');
-  c.width = w; c.height = h;
+  c.width = w * S; c.height = h * S;
   const ctx = c.getContext('2d');
+  ctx.scale(S, S);
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = 'rgba(96,88,72,0.72)';
+  ctx.fillStyle = 'rgba(92,83,64,0.74)';
   ctx.font = '600 44px Georgia, serif';
   ctx.textBaseline = 'middle';
   ctx.fillText('TRISH', 8, h / 2 + 2);
   ctx.font = '400 32px Georgia, serif';
-  ctx.fillStyle = 'rgba(96,88,72,0.5)';
+  ctx.fillStyle = 'rgba(92,83,64,0.52)';
   ctx.fillText('T-1500', 168, h / 2 + 3);
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return track(t);
+  return canvasTexture(c, true);
 }
 
 /* ==========================================
@@ -521,9 +611,17 @@ function domedPanel(w, h, bulge, seg = 40) {
 }
 
 /* Keycap: rounded box drawn in slightly toward the top, so the caps
-   have the moulded taper real ones do instead of reading as tiles. */
-function keycapGeo(w, d, h = 0.15, r = 0.035) {
-  const geo = new RoundedBoxGeometry(w, h, d, 2, r);
+   have the moulded taper real ones do instead of reading as tiles.
+
+   **The corner radius is 0.014, down from 0.035.** On a 0.206 cap the
+   old figure rounded away a sixth of the face from each side, which
+   left the whole top as curvature and nothing for the moon to catch;
+   at 0.014 the cap has a flat plateau with a small crisp chamfer round
+   it, and the chamfer takes a thin highlight along the back edge of
+   every row. Three segments rather than two, so the chamfer does not
+   facet now that it is small enough to see. */
+function keycapGeo(w, d, h = 0.15, r = 0.014) {
+  const geo = new RoundedBoxGeometry(w, h, d, 3, r);
   const pos = geo.attributes.position;
   const v = new THREE.Vector3();
   for (let i = 0; i < pos.count; i++) {
@@ -547,20 +645,31 @@ function cable(points, radius, mat) {
   return m;
 }
 
-/* Radial falloff used for the contact shadows. */
-function contactShadowTexture() {
+/* Radial falloff used for the contact shadows. `stops` is what makes
+   the pair: the broad blob is the ambient shade a body throws on the
+   surface under it, and a second, much tighter one goes inside it for
+   the contact itself — the near-black line right where the foot and the
+   keyboard's bottom edge actually touch the walnut. One gradient cannot
+   be both, and the contact is the half that says the thing is resting
+   on the desk rather than hovering a few millimetres over it. */
+function contactShadowTexture(stops) {
   const s = 256;
   const c = document.createElement('canvas');
   c.width = c.height = s;
   const ctx = c.getContext('2d');
   const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
-  g.addColorStop(0.00, 'rgba(0,0,0,0.55)');
-  g.addColorStop(0.45, 'rgba(0,0,0,0.28)');
-  g.addColorStop(1.00, 'rgba(0,0,0,0)');
+  for (const [at, a] of stops) g.addColorStop(at, `rgba(0,0,0,${a})`);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, s, s);
-  return track(new THREE.CanvasTexture(c));
+  return canvasTexture(c);
 }
+const CONTACT_SOFT = [[0.00, 0.5], [0.45, 0.26], [1.00, 0]];
+/* Flat to 0.78 and then gone. A radial gradient has its darkest part
+   in the middle, which is under the body and invisible; what has to be
+   dark is the *rim*, so the core blob is scaled a little wider than the
+   thing it sits under and holds full strength right out to the edge of
+   it. The same reasoning as `baseShadeTexture`. */
+const CONTACT_CORE = [[0.00, 0.56], [0.78, 0.5], [1.00, 0]];
 
 /* Occlusion inside the screen recess. The bezel lip overhangs the glass
    by a hair, and the key light's shadow map is stretched across the
@@ -580,16 +689,19 @@ function recessShadowTexture() {
       const u = x / (s - 1), v = y / (s - 1); // v = 0 is the top edge
       const all = Math.max(ramp(u, 0.2), ramp(1 - u, 0.2),
                            ramp(v, 0.2), ramp(1 - v, 0.2));
-      const a = Math.max(0.24 * all,           // the recess, all four sides
-                         0.52 * ramp(u, 0.13), // left wall: away from the key
-                         0.44 * ramp(v, 0.11)); // under the top lip
+      /* Deeper than it was (0.24/0.52/0.44). The plastic is a warmer,
+         lighter beige now, so the recess needed more to stay a shade
+         darker than the bezel around it rather than level with it. */
+      const a = Math.max(0.30 * all,           // the recess, all four sides
+                         0.57 * ramp(u, 0.13), // left wall: away from the key
+                         0.49 * ramp(v, 0.11)); // under the top lip
       const k = (y * s + x) * 4;
       img.data[k] = img.data[k + 1] = img.data[k + 2] = 0;
       img.data[k + 3] = Math.round(a * 255);
     }
   }
   ctx.putImageData(img, 0, 0);
-  return track(new THREE.CanvasTexture(c));
+  return canvasTexture(c);
 }
 
 /* Falloff for the shade the monitor drops on the flat top faces of its
@@ -602,12 +714,12 @@ function baseShadeTexture() {
   c.width = c.height = s;
   const ctx = c.getContext('2d');
   const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
-  g.addColorStop(0.00, 'rgba(0,0,0,0.42)');
-  g.addColorStop(0.72, 'rgba(0,0,0,0.33)');
+  g.addColorStop(0.00, 'rgba(0,0,0,0.45)');
+  g.addColorStop(0.72, 'rgba(0,0,0,0.35)');
   g.addColorStop(1.00, 'rgba(0,0,0,0)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, s, s);
-  return track(new THREE.CanvasTexture(c));
+  return canvasTexture(c);
 }
 
 /* Vertical falloff for the sleeve of shade under the monitor: dark at
@@ -623,7 +735,7 @@ function sleeveShadowTexture() {
   g.addColorStop(1.00, 'rgba(0,0,0,0)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 4, h);
-  return track(new THREE.CanvasTexture(c));
+  return canvasTexture(c);
 }
 
 /* ==========================================
@@ -723,13 +835,24 @@ function buildMonitor(body, backBody, dark) {
   const openW = SCREEN_W + 0.3, openH = SCREEN_H + 0.3;
   const face = roundedRect(MON_W, MON_H, 0.34);
   face.holes.push(roundedRect(openW, openH, 0.26, 0, OPEN_CY));
+  /* **`bevelSegments` is 1, not 2: one flat chamfer instead of a
+     two-step curve.** That is the whole of "crisper" on the bezel — a
+     chamfer has an arris at each end for a highlight to stop against,
+     where a rounded edge spreads the same highlight over the curve and
+     reads soft. `bevelThickness` and `bevelSize` are deliberately
+     untouched at 0.05: the extrude's total depth is
+     `depth + 2 * bevelThickness`, so moving either would move the
+     bezel's front face relative to the glass behind it — which is the
+     housing, and the housing does not move. `curveSegments` goes to 14
+     so the rounded outline and the screen opening stop faceting now
+     that there is a crisp edge running round them. */
   const bezelGeo = track(new THREE.ExtrudeGeometry(face, {
     depth: BEZEL_D - 0.1,
     bevelEnabled: true,
     bevelThickness: 0.05,
     bevelSize: 0.05,
-    bevelSegments: 2,
-    curveSegments: 8,
+    bevelSegments: 1,
+    curveSegments: 14,
   }));
   bezelGeo.translate(0, 0, -(BEZEL_D - 0.1) / 2);
   const bezel = new THREE.Mesh(bezelGeo, body);
@@ -744,7 +867,7 @@ function buildMonitor(body, backBody, dark) {
   const seamShape = roundedRect(MON_W + 0.014, MON_H + 0.014, 0.346);
   seamShape.holes.push(roundedRect(MON_W - 0.1, MON_H - 0.1, 0.3));
   const seamGeo = track(new THREE.ExtrudeGeometry(seamShape, {
-    depth: 0.06, bevelEnabled: false, curveSegments: 8,
+    depth: 0.06, bevelEnabled: false, curveSegments: 14,
   }));
   seamGeo.translate(0, 0, -0.03);
   const seam = new THREE.Mesh(seamGeo, dark);
@@ -863,12 +986,17 @@ function buildMonitor(body, backBody, dark) {
   const panelW = 1.5, panelH = 0.46;
   const panelX = MON_W / 2 - panelW / 2 - 0.42;
   const panelY = -MON_H / 2 + 0.52;
+  /* The panel and the three control bodies below all keep their size
+     and their position; only the corner radii come down — 0.05 to 0.02,
+     0.04 to 0.016, 0.06 to 0.022 — because at the old figures a 0.2
+     button was two-fifths curvature and shaded as a bead rather than a
+     moulded cap. */
   const panel = new THREE.Mesh(
-    track(new RoundedBoxGeometry(panelW, panelH, 0.12, 3, 0.05)), dark);
+    track(new RoundedBoxGeometry(panelW, panelH, 0.12, 3, 0.02)), dark);
   panel.position.set(panelX, panelY, BEZEL_D / 2 - 0.05);
   g.add(panel);
 
-  const btnGeo = track(new RoundedBoxGeometry(0.2, 0.2, 0.1, 2, 0.04));
+  const btnGeo = track(new RoundedBoxGeometry(0.2, 0.2, 0.1, 3, 0.016));
   for (let i = 0; i < 4; i++) {
     const b = new THREE.Mesh(btnGeo, body);
     b.position.set(panelX - panelW / 2 + 0.28 + i * 0.32, panelY, BEZEL_D / 2 + 0.02);
@@ -878,7 +1006,7 @@ function buildMonitor(body, backBody, dark) {
 
   /* Chunkier power button to the left of the panel. */
   const power = new THREE.Mesh(
-    track(new RoundedBoxGeometry(0.42, 0.3, 0.14, 3, 0.06)), body);
+    track(new RoundedBoxGeometry(0.42, 0.3, 0.14, 3, 0.022)), body);
   power.position.set(-MON_W / 2 + 0.75, panelY, BEZEL_D / 2 + 0.02);
   power.castShadow = true;
   g.add(power);
@@ -1009,7 +1137,7 @@ function keyLayout() {
   return keys;
 }
 
-function buildKeyboard(body, dark, keyMat, modMat) {
+function buildKeyboard(body, wellMat, keyMat, modMat) {
   const g = new THREE.Group();
   g.position.set(0.1, 0.22, 4.9);
   g.rotation.x = -0.05;
@@ -1017,8 +1145,12 @@ function buildKeyboard(body, dark, keyMat, modMat) {
      read as set down rather than placed. */
   g.rotation.y = 0.032;
 
+  /* Corner radius 0.06 rather than 0.1: on a 0.44-deep case the old
+     figure rounded away most of the side wall, so the long top edge —
+     the one edge of this keyboard the moon actually rakes — had no
+     arris to catch. */
   const W = 6.9, D = 2.6, H = 0.44;
-  const shell = new THREE.Mesh(taperedBox(W, H, D, 0.1, 0.82), body);
+  const shell = new THREE.Mesh(taperedBox(W, H, D, 0.06, 0.82), body);
   shell.castShadow = true;
   shell.receiveShadow = true;
   g.add(shell);
@@ -1030,9 +1162,13 @@ function buildKeyboard(body, dark, keyMat, modMat) {
   const topY = H / 2;
 
   /* Recessed well under the caps, so the gaps between keys read dark
-     instead of showing the same plastic as the shell. */
+     instead of showing the same plastic as the shell. It is `KEY_WELL`
+     rather than `PLASTIC_DARK` now — the gaps are the one place on the
+     machine with plastic on all four sides of them and nothing but the
+     tube's own spill reaching in, so they should be the darkest beige
+     here, not the same shade as the vent cavities. */
   const well = new THREE.Mesh(
-    track(new THREE.BoxGeometry(fieldW + 0.14, 0.08, fieldD + 0.14)), dark);
+    track(new THREE.BoxGeometry(fieldW + 0.14, 0.08, fieldD + 0.14)), wellMat);
   well.position.set(0, topY - 0.01, z0 + fieldD / 2);
   well.receiveShadow = true;
   g.add(well);
@@ -1092,7 +1228,9 @@ function buildMouse(body, dark) {
 
   /* Narrows and drops toward the front (-Z, the cable end) while the
      base stays flat on the floor. */
-  const geo = new RoundedBoxGeometry(W, H, D, 4, 0.2);
+  /* 5 segments on the same 0.2 radius: the shell of a mouse *is* a
+     curve, so this one gets resolution rather than a chamfer. */
+  const geo = new RoundedBoxGeometry(W, H, D, 5, 0.2);
   const pos = geo.attributes.position;
   const v = new THREE.Vector3();
   for (let i = 0; i < pos.count; i++) {
@@ -1115,7 +1253,7 @@ function buildMouse(body, dark) {
   /* The split between the two buttons. A thin dark slot is all it takes
      at this size — modelled buttons would not read any differently. */
   const slot = new THREE.Mesh(
-    track(new THREE.BoxGeometry(0.035, 0.06, 0.62)), dark);
+    track(new THREE.BoxGeometry(0.026, 0.07, 0.62)), dark);
   slot.position.set(0, H * 0.75, -D / 2 + 0.33);
   g.add(slot);
 
@@ -1126,14 +1264,23 @@ function buildMouse(body, dark) {
    ASSEMBLY
    ========================================== */
 
-export function buildComputer() {
+/* `anisotropy` is the renderer's maximum, handed in by scene.js the
+   same way `buildRoom` takes it — see `canvasTexture`. */
+export function buildComputer(anisotropy = 1) {
+  maxAniso = anisotropy;
   const grain = plasticTextures();
+  /* The roughnesses below are all pre-map figures; the band in
+     `plasticTextures` takes about a tenth off each. The recessed tones
+     are the rough end on purpose — a cavity scatters, and a matt
+     surface in shadow stays dark instead of picking up a sheen that
+     would undo the point of its being a recess. */
   const body = plasticMaterial(grain);
-  const backBody = plasticMaterial(grain, PLASTIC_BACK, 0.68);
-  const dark = plasticMaterial(grain, PLASTIC_DARK, 0.78);
-  const keyMat = plasticMaterial(grain, KEY_CAP, 0.66);
-  const modMat = plasticMaterial(grain, KEY_MOD, 0.68);
-  const cableMat = plasticMaterial(grain, CABLE, 0.72);
+  const backBody = plasticMaterial(grain, PLASTIC_BACK, 0.58);
+  const dark = plasticMaterial(grain, PLASTIC_DARK, 0.62);
+  const keyWell = plasticMaterial(grain, KEY_WELL, 0.72);
+  const keyMat = plasticMaterial(grain, KEY_CAP, 0.54);
+  const modMat = plasticMaterial(grain, KEY_MOD, 0.56);
+  const cableMat = plasticMaterial(grain, CABLE, 0.66);
 
   const root = new THREE.Group();
   root.rotation.y = FACING;
@@ -1151,7 +1298,7 @@ export function buildComputer() {
   lift.add(
     buildStand(body, dark),
     monitor.group,
-    buildKeyboard(body, dark, keyMat, modMat),
+    buildKeyboard(body, keyWell, keyMat, modMat),
     mouse,
   );
 
@@ -1172,23 +1319,43 @@ export function buildComputer() {
   root.add(lift);
 
   /* Contact shadows: the directional light alone leaves the base and the
-     keyboard looking like they hover, so ground them with a soft blob. */
-  const shadowTex = contactShadowTexture();
+     keyboard looking like they hover, so ground them with a soft blob —
+     **and now a tight one inside it for the contact itself.** The broad
+     blob is ambient shade, which falls off over a couple of units and
+     therefore says "something is above this" rather than "this is
+     touching". The pair is what reads as weight on the walnut.
+
+     **Every broad footprint is exactly the one it was, and every core
+     sits strictly inside one**, so the union of these quads has not
+     moved. That is deliberate and it is not cosmetic: these quads are
+     children of `root`, so `pickTarget` raycasts them and
+     `Box3.setFromObject(computer.root)` measures them — a blob one unit
+     wider is one unit more desk that counts as a press on the machine.
+
+     The cores sit 4mm higher than the broad blobs. Coplanar would
+     z-fight; both are black and `depthWrite` is off, so which draws
+     first makes no difference to the result. */
   const quad = track(new THREE.PlaneGeometry(1, 1));
-  for (const [x, z, sx, sz, o] of [
-    [0, 0, 6.2, 6.2, 1],
-    [0.1, 4.9, 8.4, 4.6, 0.8],
-    [4.6, 4.55, 2.2, 2.6, 0.7],
+  const soft = contactShadowTexture(CONTACT_SOFT);
+  const core = contactShadowTexture(CONTACT_CORE);
+  for (const [tex, y, x, z, sx, sz, o] of [
+    /* the stand's foot (radius 2.25), the keyboard (6.9 x 2.6), the mouse */
+    [soft, 0.012, 0, 0, 6.2, 6.2, 0.8],
+    [core, 0.016, 0, 0, 5.2, 5.2, 0.85],
+    [soft, 0.012, 0.1, 4.9, 8.4, 4.6, 0.62],
+    [core, 0.016, 0.1, 4.9, 7.5, 3.2, 0.8],
+    [soft, 0.012, 4.6, 4.55, 2.2, 2.6, 0.55],
+    [core, 0.016, 4.6, 4.55, 1.9, 2.4, 0.7],
   ]) {
     const mat = track(new THREE.MeshBasicMaterial({
-      map: shadowTex, transparent: true, depthWrite: false, opacity: o,
+      map: tex, transparent: true, depthWrite: false, opacity: o,
     }));
-    const s = new THREE.Mesh(quad, mat);
-    s.rotation.x = -Math.PI / 2;
-    s.scale.set(sx, sz, 1);
-    s.position.set(x, 0.012, z);
-    s.renderOrder = -1;
-    root.add(s);
+    const m = new THREE.Mesh(quad, mat);
+    m.rotation.x = -Math.PI / 2;
+    m.scale.set(sx, sz, 1);
+    m.position.set(x, y, z);
+    m.renderOrder = -1;
+    root.add(m);
   }
 
   return {

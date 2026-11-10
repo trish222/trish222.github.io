@@ -68,13 +68,14 @@ model.
 ## Layout
 
 ```
-index.html        all markup — canvas, windows, taskbar, Start menu, hint (static, no templating)
-src/main.js       window manager: focus/open/close/minimize/maximize, drag, taskbar, clock
+index.html        all markup — canvas, the screen box (login + the whole desktop inside it), hint (static, no templating)
+src/main.js       window manager: focus/open/close/minimize/maximize, drag, taskbar, clock, the sign-in
 src/scene.js      camera, lighting, hover/pick, the orbit, the fly-in, the lamp state
 src/room.js       the room: plank floor, two walls, wainscot, skirting, crown, rug, fog, the void
 src/nightwindow.js  the window in the left wall: joinery, the parallax night backdrop behind it, the rain
 src/computer.js   the CRT machine, keyboard and mouse, built from primitives
-src/desk.js       the steel tanker desk it stands on, likewise
+src/desks/executive.js  the bulky walnut executive desk it stands on, likewise — the default
+src/desks/classic.js    the steel tanker desk it replaced; still builds, still reachable with ?desk=classic
 src/treehouse.js  the brick-built cherry treehouse, and the spare bricks beside it
 src/lamps/greenlamp.js  the desk lamp the room ships with — green glass banker's lamp
 src/lamp.js       the cone lamp it replaced; still builds, still reachable with ?lamp=lamp
@@ -93,24 +94,33 @@ _*.mjs            Playwright review scripts; local-only (.git/info/exclude)
 docs/             the detailed notes indexed below
 ```
 
-`src/scene.js`, `src/computer.js`, `src/desk.js`, `src/room.js`,
+`src/scene.js`, `src/computer.js`, the desk modules, `src/room.js`,
 `src/nightwindow.js`, `src/treehouse.js` and the lamp modules are the
 only modules that import three. `src/main.js` stays a DOM/UI module.
 
 ## Rules that apply to every task
 
-**1. Pressing the monitor must keep flying in, and the arrival pose must
-not move.** That interaction is the site's front door. `SCREEN_TARGET`
-and `screenFrustum` are read off the screen mesh's world matrix, so
-anything that moves the glass moves the fly-in's destination. In
-particular, do not re-centre the computer kit on the desk — see the
+**1. Pressing the monitor must keep flying in, and the arrival pose
+must only ever move on purpose.** That interaction is the site's front
+door. `SCREEN_TARGET` and `screenFrustum` are read off the screen
+mesh's world matrix, so anything that moves the glass moves the
+fly-in's destination as a side effect — which is the thing to avoid.
+In particular, do not re-centre the computer kit on the desk — see the
 `KIT_FRONT_Z` note in [docs/desk.md](docs/desk.md). `_screenpos.mjs`
-and `_sideshot.mjs` are the A/B.
+and `_sideshot.mjs` are the A/B. The framing itself is one constant,
+`ARRIVE_PAD`: the flight stops with the bezel still around the glass
+rather than covering the viewport with it, and the canvas therefore
+stays opaque until the sign-in — see
+[docs/screen-overlay.md](docs/screen-overlay.md).
 
 **2. One press never does two things.** The lamp and the machine are
 picked in a single raycast that takes the nearest hit; a press can only
 ever be one of the two. Anything new that is pressable goes through
-`pickTarget`, not a second handler.
+`pickTarget`, not a second handler. The canvas press parked *at* the
+screen — a click on the room, which flies the camera back out — is the
+one target that is not a raycast, because nothing out there is
+pickable at that framing; it is still the same `initCanvasPress` and
+the same `CLICK_SLOP`, and the two states cannot overlap.
 
 **3. The shadow map is rendered once and frozen.**
 `renderer.shadowMap.autoUpdate = false`. Anything animated back into the
@@ -127,11 +137,15 @@ in one sitting** — see [docs/perf.md](docs/perf.md). A prediction is not
 a reading.
 
 **5. Dev-only code must not reach production, and that is verified by
-grep, not by reasoning.** Two branches sit behind `import.meta.env.DEV`:
-the perf meter (`npm run build && grep -r showPanel dist/` must find
-nothing) and the `?lamp=` resolver, which is what keeps `src/lamp.js`
-out of the bundle (grep `dist/` for `0x3d5a4e`, the cone's shade green —
-`lamp-shade` will not do, both lamp modules use it).
+grep, not by reasoning.** Three branches sit behind
+`import.meta.env.DEV`: the perf meter (`npm run build && grep -r
+showPanel dist/` must find nothing); the `?lamp=` resolver, which is
+what keeps `src/lamp.js` out of the bundle (grep `dist/` for
+`0x3d5a4e`, the cone's shade green — `lamp-shade` will not do, both
+lamp modules use it); and the `?desk=` resolver, which keeps
+`src/desks/classic.js` out of it (grep for `0xc2b79e`, the tanker
+desk's cream enamel — a wood tint will not do, both desk modules carry
+walnut).
 
 **6. Three colours have to agree exactly:** `VOID` in `src/room.js`, the
 fog colour, and `--scene-void` in `src/style.css`. See `src/tonemap.js`
@@ -155,10 +169,35 @@ frame. That is the only path with nothing to paper over a late asset or
 an un-advanced fade, so it is where those bugs surface first — treat the
 reduced-motion variant as a real test, not a formality.
 
-**10. The desktop chrome is inert until the sign-in.** It is
-`opacity: 0; pointer-events: none` until `signed-in` lands on the body,
-so any control that has to work before then (the lamp's hidden button,
-the drag hint) lives outside `#desktop`.
+**10a. Leaving the screen has three routes and one move.** A click on
+the room, Escape, and the `#screen-back-bar` button all call
+`flyFromScreen`; a menu open on the desktop takes the press first
+(`dismissChrome` / `body.menu-open`), and none of them ends the
+session. See [docs/screen-overlay.md](docs/screen-overlay.md).
+
+**10. The desktop is inside the monitor, and inert until the sign-in.**
+`#screen-shell` is a sibling of the login inside the overlay box, so
+the desktop is laid out at the machine's own resolution —
+`SCREEN_BASE_W`, 900, with 900 x 648 of work area above the taskbar —
+and mapped onto the glass by the same matrix; signing in moves no
+camera. That constant in `src/scene.js` is the one knob for how big
+everything on the screen reads. It is `opacity: 0;
+pointer-events: none` until `signed-in` lands on the body, so any
+control that has to work before then (the lamp's hidden button, the
+drag hint) lives outside `#screen`. Anything that reads pointer
+*coordinates* rather than acting on a target has to go through
+`glassPoint`; everything else the browser puts through the transform
+itself. Under `MOBILE_BP` the desktop breaks out and takes the page,
+because the arrival crops the glass there — see
+[docs/screen-overlay.md](docs/screen-overlay.md).
+
+**11. Leaving the screen has three routes and one move.** A click on
+the room around it, Escape, and the `#screen-back-bar` button all call
+`flyFromScreen` and nothing else. A menu open on the desktop takes the
+press first (`dismissChrome`, `body.menu-open`), and none of the three
+ends the session — the desktop stays signed in on the glass and
+pressing the monitor again comes back to it. Log Off is the only thing
+that logs off.
 
 ## 3D: vanilla Three.js, not React Three Fiber
 

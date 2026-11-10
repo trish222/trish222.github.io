@@ -1,7 +1,119 @@
 # The desk
 
-Read this when touching `src/desk.js` — the steel tanker desk everything
-else on the desk stands on.
+Read this when touching a desk module — the thing everything else in
+the room stands on.
+
+**`src/desks/executive.js` is the one the room ships with**, a bulky
+walnut executive desk. `src/desks/classic.js`, the steel tanker desk
+that used to be it, is kept, still builds and still satisfies the same
+contract; it is reachable with `?desk=classic`.
+
+## The contract
+
+A desk module exports:
+
+| | |
+|---|---|
+| `buildDesk()` | returns `{ root, ready }` — origin on the **floor** at the centre of the desk, +Z the front; `ready` settles once any asynchronous map has landed |
+| `disposeDesk()` | frees what `buildDesk` tracked |
+| `DESK_TOP_Y` | height of the top surface — what everything standing on the desk is placed against |
+| `DESK_TOP` | `{ X, Z, W, D }`, the **usable top** in the desk's own local space: the slab's centre and its extent |
+
+`scene.js` calls all of it through one `deskMod` object rather than
+bound imports, for the same reason the lamp does. `DESK_TOP` is what
+lets a different desk carry the same arrangement: `seatToDesk` turns
+the scene's seats — authored with x from the slab's centre and z from
+its **front** edge — into the loaded desk's frame by a single rigid
+translation, so the machine, the lamp, the treehouse and the spare
+bricks keep their spacing exactly.
+
+**The frame the seats were authored in stays the classic desk's top**,
+even though the classic desk is no longer the default. It is where the
+figures were measured and what every argument beside them is stated in;
+re-basing it onto the executive top would change what those notes mean
+while changing nothing on screen. It is a datum, not the default — so
+`classic` still comes out at zero on both deltas, and `executive`, half
+a unit deeper and centred the same way, comes out at `SEAT_DX` 0 and
+`SEAT_DZ` +0.3.
+
+**That +0.3 is the one thing making executive the default moved**, and
+`COMPUTER_Z` with it. Rule 1's "the arrival pose must not move" is
+about not moving the glass by *accident* — by re-centring the kit, by
+nudging the desk — and `SCREEN_TARGET` is read off the screen mesh's
+world matrix precisely so a deliberate move of the desk carries the
+fly-in's destination with it instead of stranding it. A different desk
+is the one change allowed to move it, and it moved it exactly once.
+
+**`?desk=<name>` swaps the desk in the real room, and it is dev only** —
+`src/desks/<name>.js`, behind `import.meta.env.DEV` like `?lamp=`, so
+rollup drops the branch and every module only it reaches. Today that
+means **`classic.js` is absent from production**, not executive. Verify
+it the way the perf meter is verified: `npm run build`, then grep
+`dist/` for a marker only that module has (`0xc2b79e`, the tanker
+desk's cream enamel — a wood tint will not do, both modules carry
+walnut).
+
+
+## executive: the walnut executive desk, the one the room ships with
+
+`src/desks/executive.js`, reachable with `?desk=executive`. A
+traditional double-pedestal executive desk after the reference
+photograph: a heavy moulded top with a crossbanded border, reeded
+pilasters at every front corner, a raised-panel cabinet door under a
+drawer on each pedestal, a stepped moulded plinth, and the pull-out
+writing slide left half out over the knee hole.
+
+- **Two figures are not its own.** `DESK_W` is the tanker desk's 22.8
+  to the unit — that width is set by the left wall, and the brief asks
+  for about the same anyway — and `DESK_TOP_Y` stays 9.0 for the reason
+  above. All the extra bulk is in the plan and in the weight of the
+  mouldings: `DESK_D` is 13.2 and the pedestals are 6.1 across against
+  5.2, which takes the knee hole from 11.3 to 9.5. `DESK_TOP` is
+  `{ X: 0, Z: 0, W: 22.8, D: 13.2 }`, so the arrangement on top moves
+  0.3 forward with the front edge and keeps its spacing exactly.
+- **The top edge is three bands, not a rounded slab.** A bullnose cap
+  at full size, a thin cove set back furthest, and a fascia nearly
+  flush below it. What reads is the shadow line the cove leaves.
+- **The grain direction is a per-part decision**, which is why `wood()`
+  takes a rotation and works the repeat out from it. The scan's grain
+  runs up the file; a quarter turn puts it along the part's width. One
+  material for the whole carcase would run the grain the same way
+  through members at right angles — the look of a thing veneered from
+  one sheet rather than built.
+- **One scan, many parts.** The two jpgs load once and every material
+  takes `Texture.clone()`s with their own repeat, so the pair still
+  uploads once. The catch is that a clone made before the image lands
+  carries its own `version` and three will not re-upload it: hence
+  `pendingClones`, which the load callback bumps. Without it the first
+  frame uploads an empty texture and nothing replaces it — and under
+  reduced motion that first frame is the only one.
+- **Reeds, not flutes**, on the pilasters. A groove this shallow fills
+  with its own shadow under a key that rakes in almost horizontally
+  and reads as three dark lines; a bead catches the lamp along its
+  crown, and a highlight survives a dark room.
+- **The mouldings are applied strips standing proud**, not grooves cut
+  into the panel. A reveal narrower than a shadow-map texel is not
+  there; a strip 0.09 proud casts its own line at any map resolution,
+  and still reads at the azimuth clamps where the face is near
+  edge-on. The two long strips run full width and the short ones butt
+  between them — a mitre is under a pixel here and costs four
+  non-axis-aligned parts per door.
+- **The brass is antique, not the reference's near-black bronze.** At
+  this metalness there is no diffuse term to carry a dark fitting, and
+  in a night room a bronze pull is a pull-shaped hole.
+- **The plinth needs its painted contact shadow more than the tanker
+  desk's feet do, not less.** The tanker desk paints one because a
+  texel never resolves the gap under a 0.55-unit foot; here there is no
+  gap at all, and a solid mass meeting the floor with no darkening at
+  the joint is the clearest tell that a thing was drawn onto a picture.
+- The knee hole's ceiling is the top's own underside plate, which
+  already spans the whole footprint. A second plate there would be two
+  coplanar boxes fighting for the same depth.
+
+## classic: the steel tanker desk, no longer the default
+
+Kept because it satisfies the same contract and is the A/B for
+anything the executive desk does differently.
 
 A 1950s-60s double-pedestal steel "tanker" desk built from primitives,
 after `design-references/desk.png`. Taken from the reference: the cream
@@ -80,7 +192,7 @@ the exception and keeps its `RoundedBoxGeometry`: its edges are
 genuinely soft, and its map is a photograph with no white noise in it to
 alias.
 
-## The paint, and the wood
+### The paint, and the wood
 
 **The wear needs two textures because it is two different problems.**
 The shells want a *tiling* field so a large flat panel is not one dead

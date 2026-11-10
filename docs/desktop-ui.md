@@ -12,7 +12,26 @@ icon basename alongside the title, and skips any entry whose
 before its window does.
 
 The desktop chrome is invisible and inert until the sign-in; see the
-gate in [screen-overlay.md](screen-overlay.md).
+gate in [screen-overlay.md](screen-overlay.md), and the three ways
+back out to the room beside it — none of which ends the session.
+
+**It is also inside the monitor.** The whole desktop — icons, windows,
+taskbar, Start menu — lives in `#screen-shell`, a sibling of the login
+inside the overlay box scene.js maps onto the screen plane. So "the
+desktop's coordinates" below never means the viewport's: `#desktop` is
+`SCREEN_BASE_W` x `SCREEN_BASE_H` less the taskbar (900 x 648), fixed,
+whatever the viewport is, and the matrix scales that onto the glass.
+Nothing in this file has to know that, with one exception — a **drag**,
+which reads `clientX`/`clientY` instead of acting on a target, and so
+goes through `glassPoint` first. Everything else (hit-testing, hover,
+focus, wheel, caret placement) the browser puts through the transform
+itself.
+
+The one viewport-shaped thing left is the narrow break-out: under
+`MOBILE_BP` the arrival crops the glass, so the desktop takes the page
+instead and `#desktop` really is the viewport less the taskbar. Both
+states are the same markup and the same code — see "NARROW VIEWPORTS"
+in style.css.
 
 ## The windows
 
@@ -34,6 +53,26 @@ Five of the six are static markup. Two are worth a note each:
   more than once per load. The listing uses `--font`, not the body face:
   a file list is a UI, not reading matter.
 
+## Escape, and what has the first claim on it
+
+`dismissChrome` closes whatever is open *on* the desktop and reports
+whether it took the press. Escape asks it first and leaves for the
+room only if it says no — the 98 rule, where the key dismissed the
+menu you had open before it meant anything else. The Start menu is the
+whole of the list today, because it is the only chrome with an
+open/closed state: the windows are not modal and Escape never closed
+one in 98 either, and the two real dialogs (Empty Recycle Bin, Shut
+Down) are native `confirm()`s the browser takes the key for before any
+handler here runs. Anything added with a dismissible state goes in
+`dismissChrome`, above the Start menu if it opens over it.
+
+`setStartMenu` is the one place that menu's state is written, and it
+writes three things: the panel, the Start button, and `menu-open` on
+the body. That last one is a contract with the scene — a press on the
+room flies the camera out, and the first press after opening a menu
+has to be the one that closes the menu. `canLeaveScreen` reads the
+class so scene.js never has to know what a Start menu is.
+
 ## Drag and focus
 
 - **Drag is on pointer events with `setPointerCapture`**, not
@@ -46,11 +85,20 @@ Five of the six are static markup. Two are worth a note each:
   follows the next pointer that moves.
 - **Bounds are measured off `#desktop`**, which is the window's own
   containing block, so `left`/`top` and the limits are in the same
-  coordinates — and the answer stays right before the sign-in, when
-  `#desktop` is the whole viewport because there is no taskbar yet.
-  Subtracting a hard-coded 40 from `innerHeight` is wrong in exactly
-  that state. `toggleMaximize` is `height: 100%` for the same reason.
-- **Windows open sized and centred against the viewport.** The widths
+  coordinates. Measuring off the *viewport* — `innerHeight` less a
+  hard-coded 40, say — is wrong by the whole of the overlay transform
+  now, not merely by the taskbar. `toggleMaximize` is `height: 100%`
+  for the same reason: 100% of the glass is the screen's own rectangle.
+- **A drag maps the pointer back through the glass** (`glassPoint`).
+  The scale is `#desktop`'s rendered width against its layout width,
+  which is enough because the framing the desktop is used at is head-on
+  and centred — there the overlay transform is a plain scale and
+  translate (`quadTransform` writes a 2D `matrix()` for exactly that
+  case) and the orbit is disabled while the camera is parked, so
+  nothing can skew it. The no-WebGL path and the break-out carry no
+  transform and fall out of it as scale 1. Unmapped, a window lagged
+  the pointer by ~20% and slid out from under the grab.
+- **Windows open sized and centred against the desktop.** The widths
   and positions in `index.html` are 1995 figures: 480px of About Me at
   `left:130` is a postage stamp in the corner of a 1567px display.
   `placeWindow` makes the authored width a *floor* (`OPEN_FRAC` of the

@@ -60,16 +60,34 @@ desk has that a clean render does not.
   dark `well` under the caps keeps the gaps between keys from showing
   shell plastic. The whole thing is rotated ~2° off square, because
   nobody aligns a keyboard to their monitor.
-- **The screen is on.** `screenTexture()` draws an abstract desktop —
+- **The screen is on.** `drawPicture()` draws an abstract desktop —
   teal ground, one window, a taskbar — into an offscreen canvas, then
-  composites it through `blur(1.5px)` plus a wide low-alpha pass for
-  phosphor bleed, and lays scanlines over it. The blur matters: a crisp
-  bitmap on the glass looks like a screenshot pasted onto a render.
-  Scanline pitch is 5px in a 576px texture so the lines survive being
-  drawn at ~200px across — finer pitches average away to nothing. A
-  small `PointLight` in front of the tube spills onto its own bezel; see
-  [lighting.md](lighting.md) for what it runs at and why its decay is
-  unphysical.
+  `compositePicture()` runs it through a soft blur plus a wide low-alpha
+  pass for phosphor bleed, and lays scanlines over it. The blur matters:
+  a crisp bitmap on the glass looks like a screenshot pasted onto a
+  render. A small `PointLight` in front of the tube spills onto its own
+  bezel; see [lighting.md](lighting.md) for what it runs at and why its
+  decay is unphysical.
+- **The picture is authored at 768x576 and rasterised at 1536x1152.**
+  Every figure in `drawPicture` is in design units and the context is
+  scaled on the way in, so the resolution can move without re-deriving a
+  window border. `compositePicture` cannot use the same trick —
+  `ctx.filter` blur radii are not reliably transformed — so it takes the
+  scale as a multiplier instead. The 2x is **not** for the idle desktop,
+  which is ~250px across at the home framing; it is for the fly-in,
+  where the same map carries a `SCREEN_BASE_W` bitmap of the real page
+  and takes most of the viewport with it (about 68% of the width on a
+  1440px frame since the arrival stopped covering it). At 768 that
+  bitmap was downsampled to 60% before it was ever drawn. The cost is the one per-frame cost in
+  the module: `setMix` redraws the whole canvas during a hover fade, and
+  that went from 0.40ms to 1.60ms median — measured, and only on a
+  pointer device, and only for the ~0.4s the fade lasts.
+- **Scanline pitch is 3.5 design px, finer than the 5 it was.** That is
+  only affordable because of the 2x raster and the anisotropy: at 576px
+  with isotropic mips a finer pitch averaged away to a flat grey wash,
+  which is what the old figure was guarding against. The duty cycle is
+  held at 40% dark, so the picture does not darken as the lines get
+  finer.
 - **The greeting is the one typeset thing left in the scene.** The
   window's body shows `hello` in Playfair, drawn with canvas 2D into the
   texture — so the face has to be *resident* before the first 3D frame.
@@ -90,16 +108,53 @@ desk has that a clean render does not.
   value-noise octave under the per-pixel grain, so the plastic ages
   unevenly instead of reading as one uniform surface.
 - **The plastic is textured through `map`, not just `roughnessMap`.** One
-  noise field comes out as two textures: a wide-range roughness/bump
-  map, and a near-white albedo map with a few percent of value swing.
-  Roughness alone was invisible — on a surface this matt the sheen
-  barely moves, so the shell read as one flat colour whatever the
-  roughness did. Both maps share a field on purpose: on real plastic the
-  duller patches are also the darker ones. Scale matters as much as
-  amplitude — at 512px tiled twice across the shell a texel is about a
-  device pixel, and the blotches sit at a tenth of a tile; 256px tiled
-  six times averages away to flat vinyl at the size the machine actually
-  renders.
+  noise field comes out as two textures: a roughness/bump map, and a
+  near-white albedo map with a few percent of value swing. Roughness
+  alone was invisible — on a surface this matt the sheen barely moves,
+  so the shell read as one flat colour whatever the roughness did. Both
+  maps share a field on purpose: on real plastic the duller patches are
+  also the darker ones. Scale matters as much as amplitude — at 512px
+  tiled twice across the shell a texel is about a device pixel, and the
+  blotches sit at a tenth of a tile; 256px tiled six times averages away
+  to flat vinyl at the size the machine actually renders.
+  **1024px tiled once was tried and rejected**: it is the *same* texel
+  density, because what lands on a surface is `size * repeat` for
+  `RoundedBoxGeometry`'s per-face UVs and `ExtrudeGeometry`'s
+  object-unit UVs alike — so it bought nothing but a less regular blotch
+  field, for 45ms of main-thread loop against 9.4ms and 8MB of texture
+  memory. Measured, both figures.
+- **The shells are a *yellowed* beige, at about 0.5 roughness.** Every
+  tone was pushed toward yellow at roughly constant luminance (blue down
+  ~10 points, red up ~6), so the plastic reads as aged without moving
+  the value the room's lighting is calibrated against. The roughness
+  figure passed to `plasticMaterial` is the one *before* the map
+  multiplies it: the band in `plasticTextures` is 0.77..1.0, so a 0.56
+  shell lands at about 0.5 with a few hundredths of swing. The old band
+  started at 0.54, which spread the same mean over 0.37..0.69 and let
+  the duller patches go chalky. `KEY_WELL` is darker again than
+  `PLASTIC_DARK`: the gaps between the caps have plastic on four sides
+  and nothing but the tube's spill reaching in, so they are the darkest
+  beige on the machine.
+- **Edges are small flat chamfers, not rounded ones.** A chamfer has an
+  arris at each end for a highlight to stop against; a rounded edge
+  spreads the same highlight over the curve and reads soft. So the
+  bezel's `bevelSegments` is 1, the keycap radius is 0.014 rather than
+  0.035, the buttons' is 0.016 rather than 0.04, and the keyboard
+  shell's is 0.06 rather than 0.1. **`bevelThickness` and `bevelSize`
+  on the bezel are untouched at 0.05 on purpose**: the extrude's total
+  depth is `depth + 2 * bevelThickness`, so either one would move the
+  bezel's front face relative to the glass — that is the housing, and
+  the housing does not move. `curveSegments` went 8 to 14 to stop the
+  outline faceting now that there is a crisp edge running round it.
+- **Every canvas texture here is built by `canvasTexture`**, which sets
+  the renderer's maximum anisotropy — handed to `buildComputer` the way
+  `buildRoom` takes it. That is the biggest sharpness win on the
+  machine and it is not about resolution: at a three-quarter view the
+  bezel, the badge and the picture are foreshortened hard along one
+  axis, and isotropic filtering picks the mip level off the *compressed*
+  axis, handing back a texture a level or two blurrier than it was drawn
+  along both. The mip chain stays on, so the scanlines and the grain
+  still average cleanly rather than shimmering.
 - **The shell is kept out of the floor's value range**, with
   `envMapIntensity` at 0.34 — the HDRI was ambient from every direction,
   so it filled exactly the faces the key never reaches (the right flank,
@@ -119,6 +174,19 @@ desk has that a clean render does not.
   darkest. The base gradient is deliberately flatter than the
   contact-shadow one — only a narrow ring of each disc is ever visible,
   and a falloff that has faded by the rim leaves the stand looking lit.
+- **The contact shadows come in pairs.** A broad blob is the ambient
+  shade a body throws on the surface under it; it falls off over a
+  couple of units, so it says "something is above this" rather than
+  "this is touching". Inside each one now sits a tight blob —
+  `CONTACT_CORE`, flat to 0.78 and then gone, scaled a little wider than
+  the foot or the keyboard it sits under so its full strength reaches
+  the rim rather than hiding under the body. That pair is what reads as
+  weight on the walnut. **Every broad footprint is exactly the one it
+  was and every core sits strictly inside one**, which is not cosmetic:
+  these quads are children of `root`, so `pickTarget` raycasts them and
+  `Box3.setFromObject(computer.root)` measures them — a blob a unit
+  wider is a unit more desk that counts as a press on the machine. The
+  cores sit 4mm higher, because coplanar would z-fight.
 - **GTAO `scale` tops out around 1.15 here.** Pushed to 1.35+ the
   sampling noise shows as blotches on the flat of the bezel — the one
   surface in frame with nothing in the depth or normal buffer for the

@@ -24,6 +24,37 @@ let dragState = null;
    WINDOW MANAGEMENT
    ========================================== */
 
+/* ------------------------------------------------------------------
+   POINTER COORDINATES, THROUGH THE GLASS
+
+   The desktop lives inside #screen, which scene.js maps onto the
+   monitor's screen plane with a CSS transform — so a pointer event's
+   clientX/clientY are viewport pixels while every figure a window is
+   positioned in is in the box's own. Hit-testing, hover, focus and
+   scrolling all go through the transform by themselves, because they
+   are about *targets*; a drag is the one thing that is not, because it
+   reads coordinates. Left unmapped, a window lags the pointer by
+   whatever the box is scaled to and slides out from under the grab.
+
+   The mapping is the box's rendered width against its layout width,
+   and that is enough rather than a matrix inversion because the
+   framing the desktop is used at is head-on and centred: there the
+   transform is a plain scale and translate, which is the case
+   `quadTransform` in scene.js writes a 2D `matrix()` for deliberately,
+   and the orbit is disabled while the camera is parked so nothing can
+   skew it. The no-WebGL path and the narrow-viewport break-out carry
+   no transform at all and fall out of this as scale 1.
+   ------------------------------------------------------------------ */
+function glassPoint(e) {
+  const desk = document.getElementById('desktop');
+  const r = desk.getBoundingClientRect();
+  const scale = r.width / (desk.offsetWidth || r.width || 1);
+  return {
+    x: (e.clientX - r.left) / scale,
+    y: (e.clientY - r.top) / scale,
+  };
+}
+
 function getWin(id) {
   return document.getElementById(`window-${id}`);
 }
@@ -34,8 +65,9 @@ function winId(el) {
 
 /* How far a window's top-left may travel. Measured off #desktop, which
    is the window's own containing block, so `left`/`top` and these are
-   in the same coordinates — and so the answer stays right whether or
-   not the taskbar is there yet. The max()es matter: a window clamped
+   in the same coordinates — the glass's, not the viewport's, and the
+   mapping between the two is none of this code's business. The max()es
+   matter: a window clamped
    by its own max-width can be *wider* than the desktop is at that
    moment, and a negative bound would then pin it off the left edge. */
 function dragBounds(win) {
@@ -310,12 +342,15 @@ function initDragging() {
 
       focusWindow(winId(win));
 
-      const rect = win.getBoundingClientRect();
+      /* Where in the window it was grabbed, in the window's own
+         coordinates — which are the desktop's, and so the ones `top`
+         and `left` are written in. */
+      const p = glassPoint(e);
       dragState = {
         win,
         pointerId: e.pointerId,
-        offsetX: e.clientX - rect.left,
-        offsetY: e.clientY - rect.top,
+        offsetX: p.x - win.offsetLeft,
+        offsetY: p.y - win.offsetTop,
       };
       titlebar.setPointerCapture(e.pointerId);
       e.preventDefault();
@@ -323,7 +358,8 @@ function initDragging() {
 
     titlebar.addEventListener('pointermove', e => {
       if (!dragState || dragState.pointerId !== e.pointerId) return;
-      moveWindow(dragState.win, e.clientX - dragState.offsetX, e.clientY - dragState.offsetY);
+      const p = glassPoint(e);
+      moveWindow(dragState.win, p.x - dragState.offsetX, p.y - dragState.offsetY);
     });
 
     /* pointercancel as well as pointerup: the browser can take the
@@ -352,8 +388,8 @@ function maximize(win) {
   win.style.left   = '0';
   win.style.width  = '100%';
   /* 100% of #desktop, which is the containing block and is already
-     the viewport less the taskbar — and is the full viewport before
-     the sign-in, where `calc(100vh - 40px)` left a 40px gap. */
+     the glass less the taskbar — so a maximized window lands on the
+     screen's own rectangle, not on the viewport. */
   win.style.height = '100%';
   win.dataset.maximized = 'true';
 }
@@ -405,32 +441,63 @@ function initWindowControls() {
    START MENU
    ========================================== */
 
+/* Closes whatever is open *on* the desktop, topmost first, and says
+   whether it closed anything. Escape asks this before it does
+   anything of its own: in 98 the key dismissed the menu you had open,
+   and only once there was nothing left to dismiss did it mean "get me
+   out of here".
+
+   The Start menu is the whole list today, because it is the only
+   chrome with an open/closed state of its own — the windows are not
+   modal and Escape never closed one in 98 either, and the two real
+   dialogs (Empty Recycle Bin, Shut Down) are native `confirm()`s the
+   browser takes the key for before this handler ever runs. Anything
+   added with a dismissible state belongs here, above the Start menu
+   if it opens over it. */
+/* The menu's three states in one place: the panel, the button it hangs
+   off, and `menu-open` on the body.
+
+   That last one is a contract with the scene. A press on the room
+   around the screen flies the camera back out (see `canLeaveScreen` in
+   scene.js), and the first click after opening a menu has to be the
+   one that closes the menu — the same rule Escape follows below, and
+   the one 98 followed. The class is how scene.js knows without
+   knowing what a Start menu is. */
+function setStartMenu(open) {
+  document.getElementById('start-menu')?.classList.toggle('hidden', !open);
+  document.getElementById('start-button')?.classList.toggle('active', open);
+  document.body.classList.toggle('menu-open', open);
+}
+
+function dismissChrome() {
+  const menu = document.getElementById('start-menu');
+  if (menu && !menu.classList.contains('hidden')) {
+    setStartMenu(false);
+    return true;
+  }
+  return false;
+}
+
 function initStartMenu() {
   const startBtn  = document.getElementById('start-button');
   const startMenu = document.getElementById('start-menu');
 
   startBtn.addEventListener('click', e => {
     e.stopPropagation();
-    startMenu.classList.toggle('hidden');
-    startBtn.classList.toggle('active', !startMenu.classList.contains('hidden'));
+    setStartMenu(startMenu.classList.contains('hidden'));
   });
 
-  document.addEventListener('click', () => {
-    startMenu.classList.add('hidden');
-    startBtn.classList.remove('active');
-  });
+  document.addEventListener('click', () => setStartMenu(false));
 
   document.querySelectorAll('.start-menu-item[data-window]').forEach(item => {
     item.addEventListener('click', () => {
       openWindow(item.dataset.window);
-      startMenu.classList.add('hidden');
-      startBtn.classList.remove('active');
+      setStartMenu(false);
     });
   });
 
   document.getElementById('logoff-item')?.addEventListener('click', () => {
-    startMenu.classList.add('hidden');
-    startBtn.classList.remove('active');
+    setStartMenu(false);
     logOff();
   });
 
@@ -565,19 +632,37 @@ function refillBin() {
 
    The markup is live HTML the whole time — scene.js lays it onto the
    monitor's screen plane with a CSS transform, and clicking it flies
-   the camera in until it has the viewport. Everything here is the page
+   the camera in until the bezel frames it. Everything here is the page
    itself; the camera work all lives in scene.js.
 
-   Signing in is the gate to the desktop: its chrome is inert and at
-   opacity 0 until `signed-in` is on the body (see "THE SIGN-IN GATE"
-   in style.css). The camera has already arrived by then and the canvas
-   is faded out, so the hand-over is pure DOM — the overlay steps aside
-   and the teal desktop behind it is what is left.
+   Signing in is the gate to the desktop, and it is a **pure DOM
+   hand-over**: the camera does not move. The desktop is on the same
+   glass, inside the same transformed box, so the pose the flight
+   parked at is already the pose it wants — `signed-in` on the body
+   crosses it over the login and the monitor stays in shot around it
+   for the length of the session (see "THE SIGN-IN GATE" in style.css).
+
+   The one thing the scene is told is that the class flipped, because
+   under MOBILE_BP the desktop has to break out of a glass the arrival
+   crops — `syncDesktopOverlay` is that, and it is still not a camera
+   move.
    ========================================== */
 
 /* Long enough to read as a machine doing something, short enough not
-   to be a wait. Skipped under reduced motion. */
+   to be a wait: the note goes up, the drive thinks about it, the
+   desktop fades in. Skipped under reduced motion, where the fade is
+   0.18s and a beat in front of it would be most of the interaction. */
 const SIGN_IN_MS = 550;
+
+/* The scene module once it is up, or null on the no-WebGL path — where
+   there is no monitor, no camera and nothing to move, and the sign-in
+   is the DOM hand-over on its own. */
+let sceneApi = null;
+
+/* True from the submit to the hand-over. The buttons are disabled over
+   that window, but Enter in the username field submits the form again
+   and would stack a second sign-in onto the beat already running. */
+let signingIn = false;
 
 function prefersReducedMotion() {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -588,14 +673,28 @@ function signedIn() {
 }
 
 function signIn() {
+  signingIn = false;
   if (signedIn()) return;
   document.body.classList.add('signed-in');
+  /* After the class, because what it does depends on it: on a narrow
+     viewport the desktop leaves the glass, and the overlay's transform
+     has to come off for that. */
+  sceneApi?.syncDesktopOverlay();
+  /* The windows are laid out against #desktop, which is the box inside
+     the glass — and until the sign-in it is a box nobody has measured.
+     Re-fit whatever was left open from a previous session. */
+  fitAllWindows();
   updateTaskbar();
 }
 
 function logOff() {
   if (!signedIn()) return;
   document.body.classList.remove('signed-in');
+  /* The camera never left the login's framing, so there is nothing to
+     fly back — only the overlay to put back on the glass, which is
+     what a narrow viewport's break-out needs. From here the way out to
+     the desk is the flight's own back button. */
+  sceneApi?.syncDesktopOverlay();
   Object.keys(WINDOWS).forEach(closeWindow);
   /* A new session opens centred again, rather than inheriting where the
      last one happened to leave things. */
@@ -618,7 +717,8 @@ function initLoginScreen() {
 
   form.addEventListener('submit', e => {
     e.preventDefault();
-    if (signedIn()) return;
+    if (signedIn() || signingIn) return;
+    signingIn = true;
     const user = document.getElementById('login-user').value.trim() || 'user';
     note.textContent = `Loading personal settings for ${user}\u2026`;
     /* A second submit mid-wait would stack another timer. */
@@ -642,6 +742,7 @@ function initWithoutScene() {
 /* Wired only once the scene is live, since the way back out is a camera
    move. */
 function initScreenControls(scene) {
+  sceneApi = scene;
   const bar = document.getElementById('screen-back-bar');
   if (bar) bar.hidden = false;
 
@@ -651,13 +752,21 @@ function initScreenControls(scene) {
   document.querySelector('.login-dialog .title-bar-controls button')
     ?.addEventListener('click', back);
 
-  /* Only while the login is what is on screen: signed in, Escape would
-     fly the camera back out from under a desktop that is still up. */
+  /* Escape leaves the monitor — the keyboard's version of clicking the
+     room around it, and the same move either way, signed in or not.
+     The session is not what it unwinds: the desktop stays signed in
+     with its windows where they were, and pressing the monitor again
+     comes back to it. Ending a session is Start > Log Off, which is a
+     thing you mean rather than a thing you escape.
+
+     What has the first claim on the key is anything already open *on*
+     the desktop: a menu closes before the page it is over goes
+     anywhere. That is `dismissChrome`, and it reports whether it took
+     the press. */
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && !signedIn() &&
-        document.body.classList.contains('screen-focused')) {
-      back();
-    }
+    if (e.key !== 'Escape') return;
+    if (dismissChrome()) return;
+    if (document.body.classList.contains('screen-focused')) back();
   });
 }
 

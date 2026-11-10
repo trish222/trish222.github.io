@@ -93,6 +93,36 @@ const MULL_W = 0.25; // the three bars that make six panes of one sheet
 const SILL_T = 0.38;
 const SILL_PROUD = 0.58; // how far the sill projects into the room
 const SILL_EARS = 0.4; // and how far past the casing, each side
+/* **How far the sill's top stands above the opening's bottom edge, and
+   it is not a detail.**
+
+   room.js cuts the opening as an `ExtrudeGeometry` hole, and a hole in
+   an extrude is a real hole: it generates its own side walls through
+   the wall's thickness, including a horizontal one across the bottom
+   at exactly local y = 0. The sill's top face was at local y = 0 too,
+   and the sill runs the full thickness — so over the whole footprint
+   of the opening two upward-facing surfaces sat in the same plane, the
+   wall's field material and the casing paint, and the depth test
+   picked between them per pixel. That is z-fighting, and it is why the
+   sill broke up into a shimmering band as the camera orbited.
+
+   **It was invisible with the lamp off**, which is the thing that made
+   it look like a lighting bug. The two surfaces carry different
+   colours, but with no warm source on that side of the room both crush
+   to within a level or two of the void and the fight has nothing to
+   show. Switch the lamp on — it stands right in front of this window,
+   below the sill, and its pool is the only thing that really lights an
+   upward-facing face here — and the two colours separate.
+
+   Lifting the sill puts its top face above the reveal's and buries the
+   reveal inside the sill, so there is no shared plane left. 0.02 is
+   about a hundred times the depth buffer's resolution at this range
+   (z²/(near·2^24) at a 40-unit subject and CAM_NEAR 0.5 is ~2e-4) and
+   about a sixteenth of an inch at this scale, so it is far more than
+   the test needs and far less than the eye can find. It is also what a
+   real sill does: the board is bedded over the opening's bottom, not
+   butted flush into it, and the sash sits on top of it. */
+const SILL_RISE = 0.02;
 const APRON_H = 0.6;
 const APRON_OUT = 0.16;
 
@@ -1256,7 +1286,11 @@ export function buildNightWindow({
      see, and a sill that stopped at the wall face would show the
      opening's bottom edge as a gap. */
   const sillW = OPEN_W + 2 * CASE_W + 2 * SILL_EARS;
-  box(sillW, SILL_T, thickness + SILL_PROUD, 0, -SILL_T / 2, (SILL_PROUD - thickness) / 2, casing);
+  /* Spans y -SILL_T .. +SILL_RISE: the board grows upward by the rise
+     rather than moving, so its underside stays where the apron meets
+     it and no gap opens between the two. See SILL_RISE for why its top
+     may not sit at 0. */
+  box(sillW, SILL_T + SILL_RISE, thickness + SILL_PROUD, 0, (SILL_RISE - SILL_T) / 2, (SILL_PROUD - thickness) / 2, casing);
   box(OPEN_W + CASE_W, APRON_H, APRON_OUT, 0, -SILL_T - APRON_H / 2, APRON_OUT / 2, casing);
 
   return { group, backdrop, materials };

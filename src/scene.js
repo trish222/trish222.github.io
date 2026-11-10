@@ -22,7 +22,96 @@ import {
   SCREEN_H,
   OVERSCAN,
 } from "./computer.js";
-import { buildDesk, disposeDesk, DESK_TOP_Y } from "./desk.js";
+import * as executiveDesk from "./desks/executive.js";
+
+/* **Which desk module the room is built with**, on the same pattern as
+   the lamp below — `src/desks/executive.js` is the bulky walnut
+   executive desk the room ships with, and `?desk=<name>` loads
+   `src/desks/<name>.js` instead. `src/desks/classic.js`, the steel
+   tanker desk that used to be it, is kept and still satisfies the same
+   contract; it is reachable with `?desk=classic`.
+
+   Dev only, for the same reason and with the same consequence as
+   `?lamp=`: Vite folds `import.meta.env.DEV` to `false` at build, so
+   rollup drops the branch *and every module only it reaches* — which
+   now means `classic.js` is absent from production rather than
+   executive. Verify the way the perf meter is verified: `npm run
+   build`, then grep `dist/` for a marker only that module has
+   (`0xc2b79e`, the tanker desk's cream enamel — a wood tint will not
+   do, both modules carry walnut).
+
+   The contract is `buildDesk()` → `{ root, ready }`, `disposeDesk()`,
+   `DESK_TOP_Y` and `DESK_TOP` — and **every call goes through
+   `deskMod`**, never a bound import, because a call site reaching past
+   it would be the one place that quietly was not swappable.
+
+   `DESK_TOP` is what makes "the same arrangement, on a different desk"
+   mean something: see `seatToDesk`. */
+let deskMod = executiveDesk;
+
+async function resolveDesk() {
+  if (!import.meta.env.DEV) return;
+  const name = new URLSearchParams(location.search).get("desk");
+  if (!name || name === "executive" || !/^[a-z0-9-]+$/.test(name)) return;
+  try {
+    deskMod = await import(`./desks/${name}.js`);
+  } catch (err) {
+    console.error(`desk module "${name}" failed to load`, err);
+  }
+}
+
+/* --- The seat frame --------------------------------------
+   Everything that stands on the desk — the machine, the lamp, the
+   treehouse, the spare bricks — is seated by a pair of figures below
+   that were authored against the **classic desk's top**: x measured
+   from the slab's centre, z from its **front** edge, which is the edge
+   someone sits at and the one the kit is spaced off. `seatToDesk`
+   turns those into the current desk's frame by one translation, so a
+   different top carries the identical arrangement rather than needing
+   every seat re-tuned.
+
+   **The reference frame stays the classic desk's even though the
+   classic desk is no longer the default**, and deliberately: it is
+   where the figures below were measured, every argument written beside
+   them is stated in it, and re-basing it onto the executive top would
+   silently change what each of those notes means while changing
+   nothing on screen. The frame is a datum, not the default.
+
+   One translation, not a rescale: "the same spacing" is exactly what a
+   rigid shift preserves and what fitting the seats to a new width
+   would destroy.
+
+   **What this moved, once, when the executive desk became the
+   default.** That desk's top is 0.6 deeper and centred like the
+   tanker desk's, so `SEAT_DZ` is +0.3 and `SEAT_DX` is 0: the whole
+   arrangement walks 0.3 toward the viewer with the front edge it is
+   spaced off, and `COMPUTER_Z` with it. Rule 1's "the arrival pose
+   must not move" is about not moving the glass *by accident* — by
+   re-centring the kit, by nudging the desk — and `SCREEN_TARGET` is
+   read off the screen mesh's world matrix precisely so that a
+   deliberate move of the desk carries the fly-in's destination with
+   it rather than stranding it. A different desk is the one change
+   that is allowed to move it, and it moves it exactly once. */
+const SEAT_REF_X = 0;
+const SEAT_REF_FRONT_Z = 6.3;
+let SEAT_DX = 0;
+let SEAT_DZ = 0;
+/* Height of the top the kit stands on. A `let` rather than a bound
+   import because which desk is loaded is not known until the query
+   string has been read. */
+let DESK_TOP_Y = executiveDesk.DESK_TOP_Y;
+
+function seatToDesk() {
+  const top = deskMod.DESK_TOP;
+  DESK_TOP_Y = deskMod.DESK_TOP_Y;
+  SEAT_DX = top.X - SEAT_REF_X;
+  SEAT_DZ = top.Z + top.D / 2 - SEAT_REF_FRONT_Z;
+  /* The two figures derived from the seat frame rather than written
+     down. Both are read at build time and `MONITOR_TARGET` is also
+     read by the fly-in, so it is re-set in place rather than rebound. */
+  COMPUTER_Z = SEAT_DZ + KIT_FRONT_Z - KIT_Z_MAX;
+  MONITOR_TARGET.set(SEAT_DX, DESK_TOP_Y + MON_Y, COMPUTER_Z);
+}
 /* The brick-built cherry blossom treehouse standing on the desk. Its
    own module for the same reason the desk is: it is a self-contained
    object with its own origin on the surface it stands on. */
@@ -277,7 +366,10 @@ const KIT_Z_MAX = 7.2;     // the front of the keyboard's contact shadow
    is held where it was and the 1.47 the funnel gave up all becomes
    clear walnut behind the monitor. */
 const KIT_FRONT_Z = 5.985;
-const COMPUTER_Z = KIT_FRONT_Z - KIT_Z_MAX;
+/* Derived, and re-derived by `seatToDesk` once the desk module is
+   known — hence a `let`. On the classic desk `SEAT_DZ` is 0 and this
+   is the figure it always was. */
+let COMPUTER_Z = KIT_FRONT_Z - KIT_Z_MAX;
 
 /* --- Where the treehouse is set down ---------------------
    On the desk to the **right of the monitor as the home view sees
@@ -871,7 +963,8 @@ const FLY_FROM = "current";
    - **Well before that it stops being a picture.** cos(80°) is 0.17, so
      at this threshold the glass is drawn about a fifth of its square-on
      width — a 240px panel down to 40 — and the box behind it is still
-     1200px being blurred and gradient-filled to produce that sliver.
+     `SCREEN_BASE_W` of blurring and gradient-filling to produce that
+     sliver.
      The 3D texture underneath carries the same tube at the same angle,
      and at a sliver's width the two are indistinguishable.
 
@@ -886,7 +979,8 @@ const FACE_MIN = 0.17; // ~80° off the normal
    FLYING INTO THE SCREEN
 
    One parameter, `fly.value`: 0 is the isometric establishing shot, 1
-   is the screen filling the viewport. `applyFly` derives the whole
+   is sitting at the machine — the glass centred and large with the
+   bezel still around it (`screenFrustum`). `applyFly` derives the whole
    pose — position, look-at target and frustum — from it, so a resize
    mid-flight re-derives the framing instead of losing it, and
    `applyFly(0)` reproduces the original isometric shot exactly. That
@@ -940,11 +1034,42 @@ const ZOOM_START = 0.45; // ...and the push-in has already started
    monitor's own size — a little room around the case. */
 const MONITOR_FRAME = 1.12;
 
-/* The live HTML on the glass is a DOM box of this width, mapped onto
-   the screen plane with a CSS matrix. Big enough that the dialog is
-   near its natural size once the page fills a desktop viewport, so the
-   arrival does not read as a blown-up screenshot. */
-const SCREEN_BASE_W = 1200;
+/* How much taller than the glass the arrival's frame is. The flight
+   used to end with the picture *covering* the viewport, which cropped
+   the panel on every axis and left no monitor in shot at all: the
+   arrival read as a page, not as a machine. Above 1 the camera stops
+   short of that, so the bezel and a little of the case sit around the
+   screen and it reads as sitting down at the thing.
+
+   It is a multiple of the glass, not of the case, because the glass is
+   what the login is mapped onto — so this figure *is* the share of the
+   frame the page keeps (1/1.2, about 83% of the height on a desktop
+   viewport). The case is 5.4 units against the glass's 3.63, so
+   holding the whole front panel would want 1.49 and cost the dialog a
+   third of its size; "a bit of the housing" is the trade.
+
+   Narrow viewports get their own, barely over 1. There the frame is
+   taller than it is wide and the glass is 4:3, so the height is the
+   only axis with anything to spare — see screenFrustum. */
+const ARRIVE_PAD = 1.2;
+const ARRIVE_PAD_MOBILE = 1.06;
+
+/* **The machine's resolution.** The live HTML on the glass is a DOM
+   box of this width, mapped onto the screen plane with a CSS matrix,
+   and everything on it — the login, and since the sign-in the whole
+   desktop — is laid out in these pixels. It is the one knob for how
+   big the picture reads: the height comes off the glass's aspect
+   below, the window manager measures every figure as a share of it,
+   and the still is rasterised at it, so nothing else needs touching.
+
+   Smaller is bigger. The box is scaled onto the glass, so dropping
+   this from 1200 to 900 magnifies the contents by a third; 900 also
+   puts the box within a tenth of 1:1 against the pixels it lands on at
+   the arrival (~981 wide on a 1440x900 viewport), which is as sharp as
+   a scaled box gets. Much under this and the chrome starts to read as
+   a blown-up screenshot; much over it and 11px text on a tube two
+   feet away is a squint. */
+export const SCREEN_BASE_W = 900;
 /* Mapped inside the picture's black overscan border: the bezel lip
    overhangs the glass by more than the opening's clearance, so at the
    isometric camera it clips a sliver off the left edge of the panel.
@@ -1168,11 +1293,15 @@ function buildScene() {
      whole group simply rises by the height of the desk top — including
      the contact-shadow blobs under the stand, the keyboard and the
      mouse, which then land on the wood rather than on the floor. */
-  desk = buildDesk();
+  desk = deskMod.buildDesk();
   desk.root.name = "desk";
   s.add(desk.root);
 
-  computer = buildComputer();
+  /* Max anisotropy, as the room takes it: the machine is seen at a
+     three-quarter view, so its canvas textures are foreshortened hard
+     along one axis and isotropic mip selection costs them a level or
+     two of sharpness — see `canvasTexture` in computer.js. */
+  computer = buildComputer(renderer.capabilities.getMaxAnisotropy());
   computer.root.name = "computer";
   /* **scene.js owns what the tube's light runs at, computer.js owns
      where it is and how it falls off.** The loop multiplies this by
@@ -1183,14 +1312,15 @@ function buildScene() {
      symptom would be a dim tube for exactly the visitors who get a
      single static frame. */
   computer.screenGlow.intensity = screenGlowBase;
-  computer.root.position.set(0, DESK_TOP_Y, COMPUTER_Z);
+  computer.root.position.set(SEAT_DX, DESK_TOP_Y, COMPUTER_Z);
   s.add(computer.root);
 
   /* The treehouse, likewise built with its origin on the surface it
      stands on, so it only has to be lifted by the desk's height. */
   treehouse = buildTreehouse();
   treehouse.root.name = "treehouse";
-  treehouse.root.position.set(TREEHOUSE_X, DESK_TOP_Y, TREEHOUSE_Z);
+  treehouse.root.position.set(
+    SEAT_DX + TREEHOUSE_X, DESK_TOP_Y, SEAT_DZ + TREEHOUSE_Z);
   treehouse.root.rotation.y = TREEHOUSE_FACING;
   treehouse.root.scale.setScalar(TREEHOUSE_SCALE);
   s.add(treehouse.root);
@@ -1202,7 +1332,7 @@ function buildScene() {
      `__fit("treehouse")` still measures only the model. */
   const spares = buildSpareBricks();
   spares.name = "spares";
-  spares.position.set(SPARES_X, DESK_TOP_Y, 0);
+  spares.position.set(SEAT_DX + SPARES_X, DESK_TOP_Y, SEAT_DZ);
   s.add(spares);
 
   /* The desk lamp, on the back-left corner. Built with its origin on
@@ -1216,9 +1346,9 @@ function buildScene() {
      stand at to clear the walnut's edges are its own facts, not the
      scene's — see the note in src/lamps/greenlamp.js. */
   lamp.root.position.set(
-    lampMod.LAMP_X ?? LAMP_X,
+    SEAT_DX + (lampMod.LAMP_X ?? LAMP_X),
     DESK_TOP_Y,
-    lampMod.LAMP_Z ?? LAMP_Z,
+    SEAT_DZ + (lampMod.LAMP_Z ?? LAMP_Z),
   );
   s.add(lamp.root);
   /* The lights and the emissives at the state the page opens in.
@@ -1640,6 +1770,8 @@ const ISO_TARGET = new THREE.Vector3(0, 7.05, 0);
    MON_Y is in the machine's own space, which now starts at the desk
    top, and COMPUTER_Z is where the machine was set down on it. */
 const MONITOR_TARGET = new THREE.Vector3(0, DESK_TOP_Y + MON_Y, COMPUTER_Z);
+/* Re-set by `seatToDesk` — see there for why it is mutated rather than
+   rebound. */
 /* Filled in from the screen mesh once the machine is built. */
 const SCREEN_TARGET = new THREE.Vector3();
 const flyTarget = new THREE.Vector3();
@@ -1662,9 +1794,27 @@ function monitorFrustum(aspect) {
   return Math.max(MON_H * MONITOR_FRAME, (MON_W * MONITOR_FRAME) / aspect);
 }
 
-/* ...and the one at which the picture covers the viewport. `min`, not
-   `max`: the screen is 4:3-ish and the viewport rarely is, so covering
-   means cropping the other axis rather than letterboxing it.
+/* ...and the one the flight arrives at: the glass centred and large,
+   with the bezel and a little of the case around it. `ARRIVE_PAD` is
+   the whole of the pull-back; the target is still the screen's own
+   centre, so nothing here decides where the glass sits in the frame,
+   only how much of the machine comes with it.
+
+   **`max`, not the `min` this used to be.** `min` was "cover the
+   viewport": it took the smaller of the two fits, so the glass
+   overhung whichever axis was spare and the panel was cropped on all
+   four sides. `max` contains the glass instead — both axes fit — and
+   the pad then buys the border. On a 16:9 frame the width is what is
+   spare, which is why the sides show more case than the top and bottom
+   show bezel. That asymmetry is the viewport's, not a choice.
+
+   **Narrow viewports keep the height fit alone.** A portrait frame
+   containing a 4:3 panel's *width* would leave the glass about a third
+   of the frame — and with it the login, which is already the smallest
+   it can usefully be there. So the height is fitted, padded barely
+   over 1, and the sides of the panel run off frame: less bezel on a
+   phone, on purpose. Over 4:3 that is the looser of the two fits
+   anyway, so a narrow landscape window gets the whole glass regardless.
 
    Both of these are unchanged by the perspective camera, and that is
    the point of specifying framings as frustum heights: the relationship
@@ -1672,10 +1822,11 @@ function monitorFrustum(aspect) {
    is the same for either projection. Only the step from a height to a
    camera position is new. */
 function screenFrustum(aspect) {
-  return Math.min(
-    SCREEN_H * SCREEN_INNER,
-    (SCREEN_W * SCREEN_INNER) / aspect,
-  );
+  const h = SCREEN_H * SCREEN_INNER;
+  const w = SCREEN_W * SCREEN_INNER;
+  return isMobile()
+    ? ARRIVE_PAD_MOBILE * h
+    : ARRIVE_PAD * Math.max(h, w / aspect);
 }
 
 /* The two-phase turn-then-zoom path the fly-in used to run on. It is no
@@ -1827,6 +1978,20 @@ function applyFly(p, width, height) {
   return f;
 }
 
+/* The camera posed for this viewport, from the one parameter that
+   decides it. Kept as its own name because the sign-in used to add a
+   second move on top of this and the callers should not have to know
+   whether it still does: both of them — a resize and a re-frame — want
+   "whatever pose the camera is supposed to be in, at this size", and
+   the flight derives that from `fly.value` rather than storing it.
+
+   The desktop no longer has a pose of its own. It arrives on the glass
+   at the framing the flight parked at, which is what keeps the monitor
+   around it; see "THE SIGN-IN GATE" in style.css. */
+function applyPose(width, height) {
+  return applyFly(fly.value, width, height);
+}
+
 /* Position, orientation and aspect all come from applyFly; the clip
    planes are set here and only move with the FOV.
 
@@ -1841,9 +2006,13 @@ function applyFly(p, width, height) {
    leash, and the flat view's bottom edge is floor about 40 units ahead.
 
    What `near` has to clear instead is the closest the camera ever gets
-   to anything, which is the arrival: distFor(screenFrustum) is ~6.7
-   units in front of the glass at a 25° FOV and ~11 at 15°, so half a
-   unit is a wide margin. `far` reaches the far edge of the floor plane
+   to anything, which is the arrival: it stands ~12 units off the glass
+   at the default 20° FOV, and ~9.5 at the 25° end of what
+   `window.__fov` will shoot. (It used to have to clear a second,
+   closer move — the sign-in pushed in until the glass covered the
+   viewport, ~8 units out — and half a unit was a wide margin even
+   there. The desktop arrives on the glass at the arrival's own framing
+   now, so nothing comes closer than this.) `far` reaches the far edge of the floor plane
    from the furthest the camera ever stands — a portrait viewport at the
    narrowest FOV worth shooting.
 
@@ -1875,18 +2044,15 @@ function buildCamera() {
    `fly.value === 0` and nowhere else.
    ========================================== */
 
-/* The controls are the camera's owner only at the establishing shot,
-   and only while the login is still what the visitor is looking at.
-   Both halves matter: the flight disables them on its way in, and
-   signing out leaves the camera parked at the screen until the back
-   button flies it out. */
+/* The controls are the camera's owner at the establishing shot and
+   nowhere else. `fly.value === 0` is the whole of it: the flight
+   disables them on its way in and `depart` hands them back, and that
+   holds whether or not anyone is signed in — a visitor can leave the
+   desktop up on the glass, walk the camera back out to the room and
+   swing it, and the desktop is still there when they press the monitor
+   again. */
 function orbitAllowed() {
-  return (
-    !!controls &&
-    controls.enabled &&
-    fly.value === 0 &&
-    !document.body.classList.contains("signed-in")
-  );
+  return !!controls && controls.enabled && fly.value === 0;
 }
 
 /* True while the camera is in motion for any reason: the flight, a
@@ -2172,17 +2338,71 @@ function pickTarget(e) {
    **The lamp is decided in the same raycast as the monitor**, which is
    what makes "one click never does both" a property of the code rather
    than of where the two objects happen to sit — see `pickTarget`. */
+/* Is this point on the glass? The canvas is only asked once the camera
+   has arrived, and the arrival is head-on: the quad is axis-aligned
+   there (`quadTransform` takes its `matrix()` branch), so the box's
+   client rect is the glass exactly rather than a bound around it.
+
+   The press below is on the canvas, which sits *under* #screen — so a
+   press that lands on the picture never reaches it in the first place.
+   This is the second half of that, for the pointer *up*: the canvas
+   captures the stream on the way down, so a release that drifted onto
+   the glass would otherwise still arrive here. Both ends outside is
+   the rule. */
+function overScreen(x, y) {
+  if (!screenEl) return false;
+  const r = screenEl.getBoundingClientRect();
+  return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+}
+
+/* Can a press on the room take the camera back out? Only parked at the
+   screen, only while nothing else is moving, never on a phone's
+   full-page desktop — there the canvas is behind the whole page and
+   there is no "outside the screen" to press — and not while a menu is
+   open on the desktop, because the first press after opening one
+   closes it and does nothing else. `menu-open` is main.js's, written
+   so this does not have to know what a Start menu is; Escape follows
+   the same rule through `dismissChrome`. */
+function canLeaveScreen() {
+  return (
+    !!screenEl &&
+    fly.value === 1 &&
+    fly.dir === 0 &&
+    !screenBrokenOut() &&
+    !document.body.classList.contains("menu-open")
+  );
+}
+
 function initCanvasPress(canvas) {
   onCanvasDown = (e) => {
     press.id = -1;
-    if (!orbitAllowed() || !e.isPrimary) return;
+    if (!e.isPrimary) return;
     if (e.pointerType === "mouse" && e.button !== 0) return;
-    press = {
-      id: e.pointerId,
-      x: e.clientX,
-      y: e.clientY,
-      target: pickTarget(e),
-    };
+    if (orbitAllowed()) {
+      press = {
+        id: e.pointerId,
+        x: e.clientX,
+        y: e.clientY,
+        target: pickTarget(e),
+      };
+      return;
+    }
+    /* Parked at the screen, the canvas is everything that is *not* the
+       picture — bezel, case, desk, lamp, room, wall. A click on any of
+       it is "take me back", which is the same gesture as clicking off
+       a dialog. One target for the lot: nothing out here is pickable
+       while the camera is at the glass. */
+    if (!canLeaveScreen() || overScreen(e.clientX, e.clientY)) return;
+    press = { id: e.pointerId, x: e.clientX, y: e.clientY, target: "room" };
+    /* OrbitControls would normally be holding the capture, but it is
+       disabled at the screen and takes none — so without this a
+       release a few pixels away over the glass never arrives. */
+    try {
+      canvas.setPointerCapture(e.pointerId);
+    } catch {
+      /* A pointer that has already gone. The slop check below still
+         holds without the capture. */
+    }
   };
   /* OrbitControls captures the pointer on this same element, so the up
      still arrives here however far outside the canvas the drag went. */
@@ -2191,6 +2411,17 @@ function initCanvasPress(canvas) {
     const moved = Math.hypot(e.clientX - press.x, e.clientY - press.y);
     const target = press.target;
     press.id = -1;
+    if (target === "room") {
+      if (canvas.hasPointerCapture?.(e.pointerId)) {
+        canvas.releasePointerCapture(e.pointerId);
+      }
+      /* A drag is a drag wherever it ends: the leash is not live here,
+         so travel means the visitor changed their mind, not that they
+         swung the camera. */
+      if (moved > CLICK_SLOP || overScreen(e.clientX, e.clientY)) return;
+      if (canLeaveScreen()) flyFromScreen();
+      return;
+    }
     if (!target || moved > CLICK_SLOP || !orbitAllowed()) return;
     /* The lamp first, and it returns — so the monitor's zoom cannot
        also see this press. */
@@ -2350,7 +2581,7 @@ function reframeHome() {
      the path is about to be rebuilt from home anyway. */
   flyStart = null;
   buildFlyPath(width, height);
-  applyFly(fly.value, width, height);
+  applyPose(width, height);
 
   if (controls) {
     killReturn();
@@ -2504,6 +2735,17 @@ function quadTransform(boxW, boxH) {
    the camera — so both are tracked and neither clears the other.
    `visibility`, not opacity: an element at opacity 0 is still painted,
    and painting this one is the whole cost worth avoiding. */
+/* The last string written, so a frame that computes the same transform
+   costs no style invalidation — which the break-out, writing `none` on
+   every call, would otherwise do once per resize-driven update. */
+let screenTransform = "";
+
+function setScreenTransform(t) {
+  if (t === screenTransform) return;
+  screenTransform = t;
+  screenEl.style.transform = t;
+}
+
 function syncScreenVisibility() {
   if (!screenEl) return;
   const v = stillHidden || screenAway ? "hidden" : "";
@@ -2517,6 +2759,21 @@ function updateScreenOverlay() {
   const width = canvasEl.clientWidth;
   const height = canvasEl.clientHeight;
   if (!width || !height) return;
+
+  /* Signed in on a viewport where the arrival crops the glass, the box
+     is not on the plane at all: CSS has laid it over the whole page
+     (see "NARROW VIEWPORTS" in style.css) and the matrix has to come
+     off for `inset: 0` to mean anything. Written once on the way in
+     rather than every frame, and the overlay stays *visible* — it is
+     the only thing on screen in that state. */
+  if (screenBrokenOut()) {
+    setBrokenOut(true);
+    setScreenTransform("none");
+    screenAway = false;
+    syncScreenVisibility();
+    return;
+  }
+  setBrokenOut(false);
 
   /* Seen from behind, a plane projects to a mirrored quad: the matrix
      below would fold the login inside out rather than hide it. **The
@@ -2547,7 +2804,7 @@ function updateScreenOverlay() {
     syncScreenVisibility();
     return;
   }
-  screenEl.style.transform = transform;
+  setScreenTransform(transform);
 
   /* Scanline pitch and CRT softness are authored in the box's own
      pixels but want to be constant in *device* pixels, so both are
@@ -2786,7 +3043,16 @@ function arrive() {
   applyFade(1);
   showStill(false);
   hover.target = 0;
-  document.getElementById("login-user")?.focus({ preventScroll: true });
+  /* Arriving on a phone's signed-in session, the desktop takes the
+     page from here — and `screenBrokenOut` only becomes true now that
+     `fly.dir` is back to 0, so the overlay has to be asked again. */
+  updateScreenOverlay();
+  /* The login's field is what a visitor who has not signed in came
+     for. One who has is coming back to a desktop they left open, and
+     taking the focus off whatever is up in it would be rude. */
+  if (!document.body.classList.contains("signed-in")) {
+    document.getElementById("login-user")?.focus({ preventScroll: true });
+  }
   logArrival();
 }
 
@@ -2820,15 +3086,30 @@ function depart() {
    on the same timeline, overlapping the last FADE_S of the move, and
    `fade` carries all three of its parts so they cannot drift:
 
-   - the canvas dissolves (it is still drawing the monitor the page is
-     mapped onto, so this is the actual hand-over),
+   - the live overlay takes the picture over from the still (the
+     stylesheet derives its opacity from `--page-fade`),
    - the page scales the last FADE_SCALE up to its resting size, so it
      settles into the frame rather than snapping to it,
    - and `--page-fade` crosses the body from the floor grey the taskbar
      strip shows during the flight to the desktop teal behind the login.
+
+   **The canvas no longer dissolves here, and the arrival framing is
+   why.** It used to: the flight ended with the glass covering the
+   viewport, so the monitor it was mapped onto had nothing left in shot
+   and fading it out was free. The arrival now keeps the bezel and a
+   little of the case around the screen (see `screenFrustum`), and the
+   canvas is the only thing drawing them — dissolve it and the login is
+   left floating on bare teal, which is the exact framing this change
+   was made to get away from. The hand-over is still a crossfade, just
+   of the picture on the glass alone: the still underneath and the live
+   overlay on top are the same login at the same place, so there is
+   nothing to give away. The canvas goes out at the **sign-in**
+   instead, where the desktop really does take the whole viewport —
+   that is a CSS transition off `body.signed-in`, which is also why
+   nothing here writes the canvas's opacity any more (an inline one
+   would outrank it).
    ========================================== */
 function applyFade(v) {
-  if (canvasEl) canvasEl.style.opacity = `${1 - v}`;
   document.body.style.setProperty("--page-fade", v.toFixed(4));
   if (!screenEl) return;
   screenEl.style.setProperty("--settle", (1 - FADE_SCALE * (1 - v)).toFixed(5));
@@ -2919,8 +3200,55 @@ function collectTokens() {
 
    So the subtree is assembled as real DOM and handed to XMLSerializer,
    which closes the void elements and escapes the CSS text for us. */
-function buildStillMarkup(w, h) {
-  const page = document.getElementById("screen-page");
+/* Nothing inside a <foreignObject> can reach the network, which the
+   fonts already have to live with — but the desktop is *made* of
+   images (every icon, on the desktop, in a title bar, in the taskbar,
+   on the Start button), and a still with holes where they go is worse
+   than no still at all. So they are fetched once, turned into `data:`
+   URIs and kept: the set is small, fixed and generated by
+   `npm run icons`, and after the first still every one of them is a
+   cache hit. */
+const dataUrls = new Map();
+
+async function inlineImages(root) {
+  await Promise.all(
+    [...root.querySelectorAll("img[src]")].map(async (img) => {
+      const src = img.getAttribute("src");
+      if (!src || src.startsWith("data:")) return;
+      try {
+        if (!dataUrls.has(src)) {
+          const blob = await (await fetch(src)).blob();
+          dataUrls.set(
+            src,
+            await new Promise((ok, fail) => {
+              const r = new FileReader();
+              r.onload = () => ok(r.result);
+              r.onerror = fail;
+              r.readAsDataURL(blob);
+            }),
+          );
+        }
+        img.setAttribute("src", dataUrls.get(src));
+      } catch {
+        /* One icon that would not load is a gap in a bitmap shown for
+           1.6s. The rest of the still is still worth having, so this
+           is deliberately not fatal. */
+      }
+    }),
+  );
+}
+
+/* Whichever layer is the picture right now. They are siblings in the
+   same box and exactly one of them is up, so the still follows the
+   sign-in without being told about it. */
+function stillLayer() {
+  return document.getElementById(
+    document.body.classList.contains("signed-in") ? "screen-shell" : "screen-page",
+  );
+}
+
+async function buildStillMarkup(w, h) {
+  const page = stillLayer();
   if (!page) return null;
 
   const wrap = document.createElement("div");
@@ -2942,7 +3270,15 @@ function buildStillMarkup(w, h) {
   /* textContent, not innerHTML: the serializer escapes it on the way
      out and the XML parser hands the CSS back verbatim. */
   style.textContent = collectStyles();
-  wrap.append(style, page.cloneNode(true));
+  const clone = page.cloneNode(true);
+  /* The gate's state is carried by a class on the *body*, and in here
+     there is no body to carry it — so the stylesheet's `opacity: 0`
+     for a desktop nobody has signed in to would blank the bitmap.
+     This is the one thing the clone has to be told. */
+  clone.style.opacity = "1";
+  clone.style.visibility = "visible";
+  await inlineImages(clone);
+  wrap.append(style, clone);
 
   /* serializeToString puts the XHTML namespace on the div itself. */
   const inner = new XMLSerializer().serializeToString(wrap);
@@ -2961,7 +3297,7 @@ async function drawStill() {
        stylesheet in the document and runs XMLSerializer over the
        result, and a throw out there would be an unhandled rejection
        rather than the graceful fallback below. */
-    const svg = buildStillMarkup(w, h);
+    const svg = await buildStillMarkup(w, h);
     if (!svg) return false;
 
     const img = new Image();
@@ -3005,6 +3341,40 @@ function refreshStill() {
   };
   if (window.requestIdleCallback) requestIdleCallback(run, { timeout: 2000 });
   else setTimeout(run, 0);
+}
+
+/* The login changes only when someone types into it, which the form's
+   `input` listener covers. The desktop changes whenever a window
+   opens, moves, is minimized or closed, and there is no one event for
+   that — so the subtree is watched instead and the bitmap redrawn once
+   the changes stop. Debounced, not per-mutation: dragging a window is
+   a mutation a frame and rasterising is several milliseconds.
+
+   The clock is excluded. It rewrites its own text once a second for as
+   long as the page is open, and a still whose clock is a minute stale
+   — on a picture shown for 1.6s, shrinking as it goes — is not a
+   defect worth a redraw a second. */
+const STILL_SETTLE_MS = 600;
+let stillObserver = null;
+let stillTimer = 0;
+
+function watchDesktopStill() {
+  const shell = document.getElementById("screen-shell");
+  if (!shell || !window.MutationObserver) return;
+  const clock = document.getElementById("taskbar-clock");
+  stillObserver = new MutationObserver((records) => {
+    if (clock && records.every((r) => clock.contains(r.target))) return;
+    stillDirty = true;
+    clearTimeout(stillTimer);
+    stillTimer = setTimeout(refreshStill, STILL_SETTLE_MS);
+  });
+  stillObserver.observe(shell, {
+    subtree: true,
+    childList: true,
+    characterData: true,
+    attributes: true,
+    attributeFilter: ["class", "style", "hidden"],
+  });
 }
 
 /* The hand-over between the texture and the live subtree. Both show the
@@ -3095,6 +3465,80 @@ function jumpFly(to) {
   }
 }
 
+/* ==========================================
+   THE SIGN-IN — a hand-over with no camera move in it
+
+   The desktop comes up **on the glass**, inside the same overlay box
+   the login is in and at the framing the flight already parked at. So
+   there is no second camera move here and nothing for this module to
+   animate: `signed-in` on the body is the whole of it, the stylesheet
+   crosses the desktop over the login, and the monitor the canvas is
+   drawing stays exactly where it was for the length of the session.
+
+   What is left for the scene to do is the overlay. Two cases:
+
+   - On a viewport wide enough for the arrival to *contain* the glass,
+     nothing: the matrix that was laying the login onto the plane goes
+     on laying the desktop onto it, and the desktop is interactive
+     through it because the browser hit-tests through a transform.
+   - Under MOBILE_BP the arrival fits the glass's height alone and the
+     panel runs off frame sideways, so a desktop mapped onto it would
+     be two thirds off screen. There it breaks out and takes the page,
+     the room fading out behind it — see "NARROW VIEWPORTS" in
+     style.css. The camera still does not move; the overlay just stops
+     being mapped onto anything.
+
+   `glass-fullscreen` on the body is the second case, and it is derived
+   rather than remembered — `screenBrokenOut` is re-asked on every
+   overlay update, so crossing the breakpoint on a resize, or leaving
+   for the room, lands on the right one without anyone switching it.
+   ========================================== */
+
+/* True while the desktop has left the glass: signed in, parked at the
+   screen, on a viewport where the arrival crops the panel. All four
+   conditions are load-bearing. The last two are what lets the visitor
+   walk back out to the room from a phone: the moment the flight starts
+   the desktop goes back onto the plane, because the picture during the
+   flight has to be the picture *on the monitor*.
+
+   The box is laid out by CSS over the whole page in this state, so the
+   matrix has to come off — a transform and `inset: 0` would otherwise
+   fight each other every frame. */
+function screenBrokenOut() {
+  return (
+    isMobile() &&
+    fly.value === 1 &&
+    fly.dir === 0 &&
+    document.body.classList.contains("signed-in")
+  );
+}
+
+/* The last value written, so the class is toggled on the transitions
+   rather than on every frame of a flight. */
+let brokenOut = false;
+
+function setBrokenOut(v) {
+  if (v === brokenOut) return;
+  brokenOut = v;
+  document.body.classList.toggle("glass-fullscreen", v);
+}
+
+/* The one call main.js makes across the sign-in and the log off, after
+   it has flipped the body class. There is no pose to change, so this
+   is only the overlay catching up with which state the box is in —
+   plus a frame, because the loop stops drawing while the camera is
+   parked and the break-out changes what the canvas is for.
+
+   The still goes stale here by definition: the picture on the glass
+   has just changed from a login to a desktop, or back. */
+export function syncDesktopOverlay() {
+  if (!screenEl) return;
+  stillDirty = true;
+  refreshStill();
+  updateScreenOverlay();
+  render();
+}
+
 export function flyToScreen() {
   if (!screenEl || fly.value === 1 || (flyTl && flyTl.isActive() && flyTl.reversed() === false)) return;
   /* The camera is applyFly's again from here to `depart`. */
@@ -3118,7 +3562,11 @@ export function flyToScreen() {
 }
 
 export function flyFromScreen() {
-  if (!screenEl || fly.value === 0 || (flyTl && flyTl.isActive() && flyTl.reversed())) return;
+  /* Signed in or not: the desktop is on the glass, so flying out leaves
+     it there rather than from under anything. It is the same session
+     when the camera comes back — see `arrive`. */
+  if (!screenEl || fly.value === 0 ||
+      (flyTl && flyTl.isActive() && flyTl.reversed())) return;
   document.body.classList.remove("screen-focused");
   if (prefersReducedMotion()) return jumpFly(0);
   document.body.classList.add("screen-zooming");
@@ -3152,6 +3600,7 @@ function initScreenOverlay() {
     refreshStill();
   };
   screenEl.addEventListener("input", onScreenInput);
+  watchDesktopStill();
   refreshStill();
 
   updateScreenOverlay();
@@ -3235,6 +3684,8 @@ export async function initScene(canvas) {
      sets any type, and the screen is what keeps it alive. */
   await loadScreenFont();
 
+  await resolveDesk();
+  seatToDesk();
   await resolveLamp();
   scene = buildScene();
   camera = buildCamera();
@@ -3922,19 +4373,28 @@ export async function initScene(canvas) {
        aspect — and so, under perspective, do its position knots: the
        path has to be rebuilt, not just re-sampled. */
     buildFlyPath(width, height);
-    /* Re-derived from fly.value rather than reset, so a resize part-way
-       through the fly-in — or while the login page is up — keeps the
-       camera where it was. */
+    /* Re-derived from whichever move owns the camera rather than
+       reset, so a resize part-way through either one — or while the
+       login page is up, or while the desktop has the viewport — keeps
+       the camera where it was. Both framings are aspect-dependent, so
+       this is also what keeps the desktop edge to edge across a resize
+       rather than only at the size it was signed in at. */
     const keep = orbitAllowed()
       ? { theta: controls.getAzimuthalAngle(), phi: controls.getPolarAngle() }
       : null;
-    applyFly(fly.value, width, height);
+    applyPose(width, height);
     /* applyFly puts the camera back on the path, which at the
        establishing shot is home — and the visitor may have swung it
        off. A resize is not a reason to take that away. */
     if (keep) setOrbitAngles(keep.theta, keep.phi);
       updateScreenOverlay();
-    if (!frame && fly.value < 1) render();
+    /* The loop draws this one unless it has stopped — either because
+       there is no loop at all (reduced motion) or because the camera
+       is parked at the screen, where the canvas is now the monitor
+       around the login rather than something faded out. `setSize` has
+       just reallocated the drawing buffer, so a frame nobody redraws
+       is a blank one. */
+    if (!frame || fly.value >= 1) render();
   };
   window.addEventListener("resize", onResize);
 
@@ -4022,9 +4482,14 @@ export async function initScene(canvas) {
     screenGlow.intensity = screenGlowBase * bright;
 
     /* The fly-in is advanced by the GSAP timeline on its own ticker;
-       all this loop owes it is a frame to land in. Once the page has
-       the viewport the canvas is faded out, so there is nothing left to
-       draw until the camera starts back. */
+       all this loop owes it is a frame to land in. Parked at the
+       screen it owes it nothing: the camera is still, the live overlay
+       has the glass, and the only animated thing the arrival framing
+       still holds — the tube's brightness flicker — is under that
+       overlay. So the loop stops drawing and the canvas keeps its last
+       frame, which is what pays for leaving the canvas *visible*
+       there. Anything that invalidates that frame while it is up has
+       to draw one itself; the resize handler is the one that does. */
     if (fly.value < 1) render();
     perf?.end(fly.value);
   };
@@ -4096,7 +4561,7 @@ export function disposeScene() {
   disposables.forEach((d) => d.dispose());
   disposables = [];
   disposeComputer();
-  disposeDesk();
+  deskMod.disposeDesk();
   disposeTreehouse();
   lampMod.disposeLamp();
   computer = null;
@@ -4113,23 +4578,26 @@ export function disposeScene() {
     screenEl.hidden = true;
     screenEl.style.transform = "";
     screenEl.style.visibility = "";
+    screenTransform = "";
   }
+  stillObserver?.disconnect();
+  stillObserver = null;
+  clearTimeout(stillTimer);
   stillCanvas = null;
   stillDirty = true;
   stillHidden = false;
   screenAway = false;
+  brokenOut = false;
   screenHidden = "";
   sceneFade = -1;
   document.body.style.removeProperty("--scene-fade");
-  if (canvasEl) {
-    canvasEl.style.opacity = "";
-    canvasEl.style.cursor = "";
-  }
+  if (canvasEl) canvasEl.style.cursor = "";
   document.body.style.removeProperty("--page-fade");
   document.body.classList.remove(
     "screen-active",
     "screen-zooming",
     "screen-focused",
+    "glass-fullscreen",
     "orbit-live",
     "orbit-used",
   );

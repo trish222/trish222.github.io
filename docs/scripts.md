@@ -45,6 +45,41 @@ and `window.__shadowfit` exist for.
 - **`_screenpos.mjs`** / **`_sideshot.mjs`** read `#screen`'s client
   rect, which *is* the projection of the screen plane's corners — so
   they are the A/B for "did the arrival pose move".
+- **`_deskglass.mjs <w> <h> [out.png]`** signs in and checks the
+  desktop landed on the glass: the screen box and `#desktop`'s rect
+  before and against after (they must be identical on a viewport that
+  is not the break-out), the camera's position and quaternion across
+  the sign-in (they must not move at all), a real double-click on a
+  real icon, and a real drag — reported as the pointer's travel in
+  viewport pixels against the window's in the box's own, which must
+  differ by exactly the scale. Pass a path for a screenshot. The one
+  script to run after touching the overlay, the gate or the window
+  manager's geometry.
+- **`_backout.mjs <w> <h>`** is the other half: the three ways back to
+  the room, against the gestures that must *not* trigger one. A drag
+  on the room, and a drag that starts on a window's title bar and ends
+  on the room, both have to leave the camera where it is; a click on
+  the room, Escape and the button all have to land it at home with
+  `orbit-live` back on; Escape with the Start menu open has to close
+  the menu and nothing else, and so does a click on the room. Then it
+  flies back in and checks the desktop is still signed in with its
+  window where it was. **Pick the probe point in the bottom-left** —
+  the back button is in the top-left corner and a "click on the room"
+  that is really a click on the button passes for the wrong reason.
+- **`_fitdesk.mjs [w] [h]`** opens every window the UI can reach and
+  measures all of it — each window, the icon column, the taskbar and
+  the Start menu — against `#desktop`, in the box's own pixels, with
+  the slack on each side. Anything negative has gone off the glass.
+  The check after moving `SCREEN_BASE_W`, which is the only thing that
+  changes those numbers: above `MOBILE_BP` the desktop's layout is the
+  same at every viewport, so one run covers them all.
+- **`_pickab.mjs`** samples `window.__pick` — the real `pickTarget` —
+  over a 10px grid of the whole viewport and prints a per-target count
+  and a hash of the map. The A/B for "did anything change what a press
+  does", which is the question every time something is added to
+  `computer.root` or `lamp.root`: the contact-shadow quads are children
+  of the machine, so they are pickable, and a wider blob is more desk
+  that answers to a click on the monitor.
 
 ## Framing and the camera
 
@@ -58,7 +93,7 @@ and `window.__shadowfit` exist for.
   `window.__camera` and prints what fraction of its width is inside
   the frame. That is the criterion `FRUSTUM_MOBILE` is actually set
   against, and the pedestals move whenever `DESK_W` does — the
-  constants at the top of the script are derived from desk.js's, so
+  constants at the top of the script are derived from src/desks/classic.js's, so
   **re-derive them if the desk's proportions change again**.
 - **`_deskshots.mjs`** — the room with the chrome hidden from home and
   both ends of the leash. **Shoot both after moving anything on the

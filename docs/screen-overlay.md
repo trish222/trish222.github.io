@@ -33,12 +33,16 @@ close, but the failure mode is a login smeared across the viewport.
 
 Three other things there are less obvious than they look:
 
-- **The box is sized from JS, not CSS.** `SCREEN_BASE_W` (1200) and the
-  height derived from it are the denominators of the transform, and
-  `offsetHeight` rounds to whole pixels. The base width also sets how
-  big the dialog lands once the page has the viewport: at 1200 it is
-  near its natural size on a desktop viewport, so the arrival does not
-  read as a blown-up screenshot.
+- **The box is sized from JS, not CSS.** `SCREEN_BASE_W` (900) and the
+  height derived from it (688) are the denominators of the transform,
+  and `offsetHeight` rounds to whole pixels. The base width is **the
+  machine's resolution**: what the login is set at, what the whole
+  desktop is laid out at, what the still is rasterised at, and the one
+  knob for how big any of it reads. Smaller is bigger, because the box
+  is scaled onto the glass — it came down from 1200, which magnifies
+  everything by a third and lands the box within a tenth of 1:1
+  against the pixels it occupies at the arrival (~981 wide on a
+  1440x900 viewport), which is as sharp as a scaled box gets.
 - **It is mapped inside the overscan, not onto the whole panel.** The
   bezel lip overhangs the glass by more than the opening's lateral
   clearance, so at the isometric camera it clips about 1.5% off the left
@@ -73,7 +77,7 @@ clear the other's hiding.
 ## The fly-in
 
 **It is one parameter.** `fly.value` is 0 at the establishing shot and 1
-with the page filling the viewport, and `applyFly` derives the entire
+sitting at the machine, and `applyFly` derives the entire
 camera pose from it — so a resize part-way through re-derives the
 framing instead of losing it. `applyFly(0)` reproduces the isometric
 pose exactly; that is the only definition of it. `applyFly` is
@@ -89,9 +93,11 @@ GSAP writing camera properties directly:
 
 - **the move**, 1.6s on `power3.inOut`;
 - **the crossfade**, 0.3s on `power1.inOut`, starting at 1.3s so it
-  overlaps the tail of the move. It fades the canvas out, fades the live
-  HTML overlay in, and scales the page the last 1.5% up to its resting
-  size, so the arrival settles rather than popping.
+  overlaps the tail of the move. It fades the live HTML overlay in over
+  the still beneath it and scales the page the last 1.5% up to its
+  resting size, so the arrival settles rather than popping. It used to
+  dissolve the canvas too; it no longer touches it — see "what the
+  arrival frames" below.
 
 GSAP owns the timing; `applyFly` owns the pose. Keep it that way: the
 curved path means position is sampled off a spline rather than
@@ -118,9 +124,42 @@ guarantees identical parameterisation where a separate scalar easing
 would drift, and log space matters because the frustum height *is* the
 zoom, so lerping it linearly lurches. It is clamped to its endpoints: a
 frustum that dips below the final height and comes back reads as a
-bounce. `screenFrustum` uses `min`, not `max`: the screen is 4:3-ish and
-the viewport rarely is, so "fills the viewport" means cropping the other
-axis rather than letterboxing it.
+bounce.
+
+### What the arrival frames
+
+**The flight stops with the monitor still in shot.** `screenFrustum` is
+the frame height at the glass, and it is `ARRIVE_PAD` (1.2) times the
+height needed to *contain* the glass — so the login keeps about 83% of
+the frame's height and the bezel, plus a little of the case and the
+wall behind it, sits around it. It used to be `min` of the two fits,
+which is "cover the viewport": the panel was cropped on all four sides
+and the arrival read as a page rather than as a machine.
+
+Two things follow from that, and they are the whole of the change:
+
+- **The canvas is no longer faded out by the crossfade.** It is the
+  only thing drawing the bezel, so dissolving it would leave the login
+  on bare teal — the exact framing the pull-back exists to avoid. The
+  hand-over is still a crossfade, of the picture on the glass alone:
+  the still underneath and the live overlay on top are the same login
+  at the same place. The canvas does not go out at the sign-in either
+  any more — the desktop arrives *on the glass*, so the monitor has to
+  stay in shot around it. The one place it still fades is the narrow
+  viewport's break-out, on a CSS transition off `body.signed-in`, which
+  is why nothing writes its opacity inline.
+- **A frame parked at the screen is a frame that must stay valid.** The
+  rAF loop still stops drawing at `fly.value === 1` — nothing in shot
+  moves, and that is most of what the arrival costs — so whatever
+  invalidates that frame while the login is up has to draw one itself.
+  `onResize` is the case that exists: `setSize` reallocates the drawing
+  buffer, and before this the blank frame that left was invisible.
+
+**Narrow viewports keep nearly all of it.** A portrait frame containing
+a 4:3 panel's width would leave the glass about a third of the frame,
+and the login with it, so there the *height* alone is fitted and padded
+by `ARRIVE_PAD_MOBILE` (1.06): a sliver of bezel top and bottom, the
+sides of the panel off frame. The glass keeps ~94% of the height.
 
 `FLY_TENSION` is 0.42 rather than three's default 0.5 — slacker, so the
 curve bows a little more gently through the knots.
@@ -221,33 +260,121 @@ journey.
 
 ## The sign-in gate
 
-**The Win98 desktop is behind the login, not beside it.** Its chrome —
-icons, windows, taskbar, Start menu — is `opacity: 0` and
-`pointer-events: none` until `signed-in` lands on the body, which the
-login form's submit handler in `main.js` does. That covers the two
-states it used to be visibly wrong in: overlaid on the establishing shot
-of the 3D room, and showing through the login once the camera had
-arrived.
+**The Win98 desktop is behind the login and on the same glass.** Its
+chrome — `#screen-shell`, holding the icons, the windows, the taskbar
+and the Start menu — is a sibling of `#screen-page` inside the overlay
+box, `opacity: 0` and `pointer-events: none` until `signed-in` lands on
+the body, which the login form's submit handler in `main.js` does. That
+covers the two states it used to be visibly wrong in: overlaid on the
+establishing shot of the 3D room, and showing through the login once
+the camera had arrived.
 
-Signing in is a pure DOM hand-over, not another camera move: the camera
-is already parked at the screen and the canvas already faded out, so
-`#screen` and its back button go to `display: none` (not opacity — it is
-a 1200px box under a transform and would keep taking the clicks) and the
-teal desktop behind them is what is left. Start ▸ Log Off reverses it,
-which is also what makes the state testable.
+**Signing in moves nothing.** The camera is already parked at the
+screen and stays there for the whole session: the desktop comes up in
+the screen rectangle, at the arrival's framing, with the bezel and a
+little of the case around it — the login's framing exactly, because it
+*is* the login's framing. The stylesheet crosses the shell over the
+dialog in 0.45s and takes the dialog's `visibility` away on a delay
+behind it, so the form leaves the tab order once it is out of sight.
+`#scene` keeps drawing the room the whole time; it is the only thing
+drawing the monitor the desktop is sitting in. Start ▸ Log Off reverses
+it, which is also what makes the state testable.
 
-Two consequences elsewhere:
+That replaces a second camera move. The sign-in used to push in from
+the bezel framing until the glass covered the viewport (`dive`,
+`coverFrustum`, ~0.9s) and then hand over to a desktop that took the
+whole page. Everything it needed is gone: `applyPose` is `applyFly`
+again, `cameraMoving` has one parameter to watch, the still is only
+ever the flight's, and `CAM_NEAR` has nothing closer than the arrival
+to clear.
 
-- **`#desktop` is `100vh` until the sign-in**, because the taskbar that
-  the usual `100vh - 40px` reserves for is not there yet; at the old
-  height the strip showed bare body under the room.
-- **No WebGL has a way in.** The monitor was the only route to the
-  login, so a visitor without WebGL would have reached nothing at all.
-  `initWithoutScene` adds `no-scene` to the body and unhides `#screen`,
-  and the CSS drops its transform and lets it fill the viewport: the
-  same login with no room around it, and the same sign-in to the same
-  desktop. The CRT variables go to their "arrived" values there, so
-  there are no scanlines on a tube that is not in the picture.
+Three consequences elsewhere:
+
+- **The desktop is laid out at the box's size, not the viewport's.**
+  `#desktop` is `SCREEN_BASE_W` wide and 40px of taskbar short of
+  `SCREEN_BASE_H` — 900 x 648 — and the window manager's every figure
+  is a percentage of that. It is live DOM under a matrix, not a scaled
+  bitmap: the browser lays the desktop out at 900 and rasters it
+  *through* the transform, which is why `body.screen-focused #screen`
+  drops the `will-change: transform` the flight needs. Promoted, the
+  subtree would be rastered at its own scale and resampled by the
+  compositor, which the box being slightly magnified now would show.
+- **A drag is the one interaction that needs the transform spelled
+  out.** Hit-testing, hover, focus, wheel and caret placement all go
+  through a CSS transform on their own; a drag reads `clientX`/
+  `clientY`, so `glassPoint` in main.js divides the travel by the box's
+  current scale. See [desktop-ui.md](desktop-ui.md).
+- **Under `MOBILE_BP` the desktop breaks out of the glass.** There the
+  arrival fits the glass's *height* alone (`ARRIVE_PAD_MOBILE`) and the
+  4:3 panel runs off frame sideways, so a desktop mapped onto it would
+  be two thirds off screen. On those viewports the sign-in gives it the
+  page instead and fades the canvas out behind it — `glass-cropped` on
+  the body, written from `isMobile` on every resize, with
+  `screenBrokenOut` standing the matrix down so `inset: 0` means
+  something. The camera still does not move, and Log Off puts the
+  desktop back on the glass.
+
+And one that did not change: **no WebGL has a way in.** The monitor was
+the only route to the login, so a visitor without WebGL would have
+reached nothing at all. `initWithoutScene` adds `no-scene` to the body
+and unhides `#screen`, and the CSS drops its transform and lets it fill
+the viewport: the same login with no room around it, the same sign-in,
+and the same desktop — which, with the box over the whole page, is the
+break-out's layout arrived at from the other direction. The CRT
+variables go to their "arrived" values there, so there are no scanlines
+on a tube that is not in the picture.
+
+## The way back to the room
+
+**Three routes out, one move.** All of them call `flyFromScreen`, which
+reverses the flight's own timeline — so the way back is the way in run
+backwards, with the same still on the glass and the same crossfade, and
+reduced motion gets `jumpFly(0)` instead.
+
+- **A click on the room around the screen.** The canvas takes pointer
+  events while `screen-focused` (and only then, and never on the
+  phone's full-page desktop), so "outside the screen" needs no geometry
+  of its own: `#screen` is painted over the canvas and takes its own
+  clicks first, and what reaches the canvas is by definition the bezel,
+  the case, the desk, the lamp or the wall. The press goes through the
+  **same** `initCanvasPress` handler the fly-in does, with the same
+  `CLICK_SLOP`: both ends of the gesture outside the glass, no more
+  than 5px apart. A drag anywhere is not a click, and a drag that
+  starts inside the desktop — pulling a window past the screen edge —
+  never reaches the canvas at all, because the title bar captured the
+  pointer on the way down. The canvas captures the room press for the
+  same reason, since OrbitControls is disabled here and takes no
+  capture of its own; `overScreen` then rejects a release that drifted
+  onto the glass.
+- **Escape**, unless something on the desktop is open: `dismissChrome`
+  in main.js closes the Start menu and reports that it took the press,
+  which is the 98 behaviour and the same rule a click follows —
+  `canLeaveScreen` refuses while `menu-open` is on the body.
+- **The "Back to the room" button**, `#screen-back-bar`, fixed in the
+  top-left corner outside `#screen` and on screen for as long as
+  `screen-focused` is. It is the only one of the three a keyboard or a
+  screen reader can reach, which is why it is there; on the phone's
+  full-page desktop it and Escape are the only two that exist.
+
+**The session survives the trip.** Nothing about leaving logs anyone
+out: `signed-in` stays on the body, the desktop stays on the glass with
+its windows where they were, and pressing the monitor again lands back
+on it rather than on the login (`arrive` leaves the focus alone when
+someone is signed in — there is no field to put it in and a desktop
+they left open is not ours to re-focus). Ending a session is
+Start ▸ Log Off, which is a thing you mean rather than a thing you
+escape. `orbitAllowed` is `fly.value === 0` and nothing else for the
+same reason: a signed-in visitor can stand back and swing the camera
+around the room with their desktop glowing on the monitor.
+
+The still follows all of this. `stillLayer` rasterises whichever of the
+two layers is up, so the bitmap on the tube during the flight out is
+the *desktop* when the desktop is what is showing — and because a
+`<foreignObject>` can reach the network no more than it can fetch a
+font, every icon in it is inlined as a `data:` URI first and cached by
+URL. What keeps it current is a `MutationObserver` on `#screen-shell`,
+debounced by `STILL_SETTLE_MS` so that dragging a window costs one
+raster rather than one a frame, and deliberately deaf to the clock.
 
 ## Handles
 

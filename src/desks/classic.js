@@ -92,6 +92,20 @@ const DESK_D = 12.6;
    machine the hero. */
 export const DESK_TOP_Y = 9.0;
 
+/* **The usable top, in the desk's own local space** — the part of the
+   module's contract that says where things may be *set down*, as
+   DESK_TOP_Y says how high. `X`/`Z` are the slab's centre and `W`/`D`
+   its extent, so the four edges are X ± W/2 and Z ± D/2.
+
+   scene.js seats the machine, the lamp, the treehouse and the spare
+   bricks against this rather than against figures of its own, which is
+   what lets a different desk carry the same arrangement. It anchors x
+   on `X` and z on the **front** edge (`Z + D/2`), because that is the
+   edge someone sits at and the one the kit is spaced off. This desk's
+   slab is centred on the desk, so both are the identity and every seat
+   lands exactly where it always did — which rule 1 requires. */
+export const DESK_TOP = { X: 0, Z: 0, W: DESK_W, D: DESK_D };
+
 const TOP_THICK = 0.62;         // a solid slab, not a veneered panel
 const TOP_EDGE_R = 0.1;         // softly rounded, satin, worn smooth
 /* The slab stands proud of the steel on the two ends and the front; the
