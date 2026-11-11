@@ -849,11 +849,16 @@ const HOVER_RATE = 7; // hover easing, per second
    and the decay that go with this. */
 const SCREEN_GLOW = 8.5;
 
-/* Capped at 1.5 rather than 2: the scene is shaded through GTAO on a
-   full-screen composite, so cost goes with the square of this number,
-   and on a 2x display the difference between 1.5 and 2 is not visible
-   on matt plastic and a blurred tube. */
+/* Desktop's GTAO composite stays capped at 1.5. Phones use the cheaper
+   direct render and need a sharper raster for the small furniture and
+   lettering on high-density screens. Cap those at 2 rather than native
+   3x/4x so the improvement has a bounded fill-rate cost. */
 const MAX_DPR = 1.5;
+const MOBILE_MAX_DPR = 2;
+
+function scenePixelRatio() {
+  return Math.min(window.devicePixelRatio || 1, isMobile() ? MOBILE_MAX_DPR : MAX_DPR);
+}
 
 /* ==========================================
    LOOKING AROUND
@@ -4048,7 +4053,7 @@ export async function initScene(canvas) {
      `applyVoidColor`. */
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = TONE_EXPOSURE;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_DPR));
+  renderer.setPixelRatio(scenePixelRatio());
   renderer.setSize(w, h, false);
   renderer.shadowMap.enabled = true;
   /* **This is deliberately not `PCFSoftShadowMap`**, which is what the
@@ -4808,7 +4813,7 @@ export async function initScene(canvas) {
     const width = canvas.clientWidth;
     const height = canvas.clientHeight;
     if (!width || !height) return;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_DPR));
+    renderer.setPixelRatio(scenePixelRatio());
     renderer.setSize(width, height, false);
     composer?.setSize(width, height);
     /* The camera's distance is derived from the frustum, which crosses
