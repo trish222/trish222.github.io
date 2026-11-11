@@ -1750,7 +1750,7 @@ const GRAIN_CELLS = 7;
 const GRAIN_SIZE = 256;
 const GRAIN_FLOOR = 0.84; // the dullest multiplier the field reaches
 const GRAIN_REPEAT = 3;
-function brassGrain() {
+function brassGrain(register = track) {
   const n = GRAIN_CELLS;
   const size = GRAIN_SIZE;
   const cell = size / n;
@@ -1783,7 +1783,7 @@ function brassGrain() {
   }
   ctx.putImageData(img, 0, 0);
 
-  const t = track(new THREE.CanvasTexture(c));
+  const t = register(new THREE.CanvasTexture(c));
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   /* Every part here is a different primitive with its own 0..1 UV — a
      cylinder, a lathe, a sphere, a tube — so there is no single world
@@ -1823,7 +1823,7 @@ function brassGrain() {
    facing away from one. */
 const ENV_W = 256;
 const ENV_H = 128;
-function brassEnvironment() {
+function brassEnvironment(register = track) {
   const c = document.createElement("canvas");
   c.width = ENV_W;
   c.height = ENV_H;
@@ -1871,7 +1871,7 @@ function brassEnvironment() {
      being a black shape. */
   blob(0.78, 0.2, 52, "#4a2f14", 0.8);
 
-  const t = track(new THREE.CanvasTexture(c));
+  const t = register(new THREE.CanvasTexture(c));
   t.mapping = THREE.EquirectangularReflectionMapping;
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
@@ -1881,8 +1881,8 @@ function brassEnvironment() {
    rather than memoised at module scope: `disposeLamp` frees everything
    `track` holds, so a module-level singleton would be disposed and
    then handed to the next build. */
-function brassMaterial(colour, rough, finish) {
-  return track(
+function brassMaterial(colour, rough, finish, register = track) {
+  return register(
     new THREE.MeshStandardMaterial({
       color: colour,
       metalness: 1.0,
@@ -1896,6 +1896,39 @@ function brassMaterial(colour, rough, finish) {
       envMapIntensity: 1.0,
     }),
   );
+}
+
+/* **The same metal, for something in the room that is not this lamp.**
+   The nameplate on the desk is polished brass, and "the same brass" has
+   to mean the same material rather than a second recipe that drifts
+   from this one: one colour, one roughness, one grain, and above all
+   **one drawn room reflected in both**, so a patch moved in
+   `brassEnvironment` moves on every brass object at once.
+
+   `register` is how the caller takes ownership. Everything else in
+   this module goes on `disposables` and is freed by `disposeLamp`,
+   which would be wrong here twice over — the nameplate outlives no
+   lamp swap, but `?lamp=lamp` loads a different module entirely and
+   this one's `disposeLamp` is then never called at all. So the texture
+   and the material are handed back untracked and the nameplate puts
+   them on its own list.
+
+   Exported from the *green* lamp rather than from a shared module
+   because this is where the brass is defined and tuned; nothing about
+   the lamp contract is involved, and nothing here reaches back into
+   the fixture. It costs no bundle either way — scene.js already
+   imports this module statically (see `?lamp=` in docs/lamps.md). */
+export function brassKit(register) {
+  const finish = {
+    grain: brassGrain(register),
+    env: brassEnvironment(register),
+  };
+  return {
+    finish,
+    colour: BRASS,
+    roughness: BRASS_ROUGH,
+    material: brassMaterial(BRASS, BRASS_ROUGH, finish, register),
+  };
 }
 
 /* The painted contact shadow under the base. Both of this lamp's

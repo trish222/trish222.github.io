@@ -272,3 +272,116 @@ apron face.
 The desk is grounded with painted contact shadows under each pedestal,
 for the same reason the computer's are: a shadow-map texel never resolves
 the gap under a 0.55-unit foot.
+
+## The nameplate
+
+`src/nameplate.js` — a dark walnut wedge with a brushed brass plate on
+its sloped front face, the name engraved into the brass. It stands on
+the **left of the top, just in front of the lamp**, at
+`NAMEPLATE_X` / `NAMEPLATE_Z` in scene.js (-6.8, 0.9 in the seat
+frame, so (-6.8, 1.2) in the world),
+turned `AZIMUTH * 0.26` — square to the desk is where someone sitting
+at it would set one down, and a quarter of the way toward the lens is
+what buys back some of the legibility 37° off-normal costs without it
+reading as aimed at the viewer. The rest of that is bought by the
+face's own lean rather than by more yaw; see below.
+
+Scale is the real thing at the room's own: 3.25 x 0.78 x 0.9 units is
+an 8 x 2 x 2¼-inch nameplate, set against the keyboard's 6.9-unit
+17-inch width rather than against the desk, because the keyboard is
+what the eye reads scale from. The clearances it was placed by, as the
+yawed solid's own box measures them — the keyboard's painted contact
+shadow at 1.01, the walnut's left edge at 2.91, its front edge at
+4.66, the lamp's own box at 0.46 and its contact shadow at 0.37 — are
+written out beside the constants.
+
+**The lamp is what it is placed against now, and in front of it is
+where the light is.** The beam lands at (-8.05, -0.92) and spreads
+forward, so walking the plate back toward the base walks it into the
+pool: the brass measures a median 57 of 255 across its own face at
+z 4.8, 78 at 3.6, 95 at 1.8, 99 at 1.2, 100 at 0.95 and 105 at 0.75,
+and `_platesweep.mjs` is that walk kept runnable.
+
+The curve flattens long before the walk has to stop, so the seat is
+chosen on the **gap** rather than on the light: 1.2 leaves 0.46 to
+the fixture's box and 0.37 to its contact shadow, which is a strip of
+lit walnut you can see between them; 0.95 leaves 0.12 and the two read
+as one object; 0.75 has reached the fixture and crossed into its
+shadow. Behind the base is the one place on this half of the desk the
+shade's own shadow falls, which is the other half of why the plate
+goes in front of it rather than beside or behind. It stood at 5.4,
+then 4.5, then 1.8, all of which left it out on the front half of the
+desk with the lamp behind it.
+
+It is still not pickable, but it now stands in front of something
+that is: 31 of 169 points over its *projected box* — the top of the
+box, which is mostly the lamp's base seen above and behind the
+wedge — come back `lamp` from `window.__pick` (`_platepick.mjs`),
+where the same grid gave 20 at z 1.8. That is one press doing one
+thing, which is the rule; it is the number to watch if the plate goes
+back any further, because the share of it that is really *the plate*
+with the lamp behind grows with every unit.
+
+Three things worth knowing before touching it:
+
+- **It is not pressable and cannot become so by accident.**
+  `pickTarget` raycasts the lamp's root and the computer's, so an
+  object in neither can never take a press (rule 2). Its meshes also
+  carry a no-op `raycast`, which is belt and braces for anything that
+  ever raycasts the whole scene.
+- **The brass reflects the lamp's room, but it is not the lamp's
+  finish.** `brassKit` in `src/lamps/greenlamp.js` hands back the
+  colour, the roughness, the grain and — the part that matters, and
+  the part that is still shared — the same drawn equirect, so a patch
+  moved in `brassEnvironment` moves on both objects. It takes a
+  `register` callback because everything else in that module is freed
+  by `disposeLamp`, which would be the wrong owner here twice over:
+  the nameplate outlives no lamp swap, and under `?lamp=lamp` that
+  module's `disposeLamp` is never called at all. The plate then
+  re-finishes the material it was handed — `PLATE_BRASS`,
+  `PLATE_ROUGH` 0.45, `PLATE_METAL` 0.76 and a horizontal brush in
+  the roughness map. A near-mirror at 0.27 reflected one thing from
+  this pose, the unlit end of the room, and measured 5..12 of 255
+  across its whole face with the lamp on: it was black. Brushed and
+  with a diffuse quarter it measures 40..70 lit and 20..35 with the
+  lamp off, which is the "clearly readable lit, faintly legible dark"
+  the plate is for. Re-finishing cannot reach the fixture — `brassKit`
+  builds a fresh material per call and the lamp makes its own.
+- **The plate is two meshes, and the split is about UVs.**
+  `ExtrudeGeometry` generates UVs from world position, so there is no
+  0..1 face on the bevelled sheet to centre a line of type in. The
+  sheet carries the bevel and the plain brass; a plane a hair proud of
+  it carries the engraving on a proper 0..1 UV, with a clone of the
+  same material so the environment, grain and roughness cannot drift.
+
+The engraving is a pair of 1024-wide canvases drawn in one pass: the
+colour, and a height field used as a `bumpMap`. The colour carries a
+lit lower lip two pixels below the letters, a thin burnished rim
+stroked round them, and the near-black cut over both; the height field
+carries the same rim as white and the same letters as near-black, so
+the groove is genuinely recessed and keeps reading as a groove from
+poses the painted rim was not drawn for. The rim is a stroke rather
+than the blurred halo it replaced — a blur that wide lifted the field
+around the name and cost the letters their contrast once the brass
+went gold.
+The field is deliberately below white (`FIELD`, 0.84) so the halo has
+headroom above it, and the face material's colour is lifted by the same
+figure **converted to the working space** — 0.84 sRGB is 0.68 linear,
+and compensating by the sRGB figure would leave the plate a fifth dark.
+Playfair is the face, the same one the CRT's greeting is set in;
+`loadScreenFont` is awaited before `buildScene`, which is the only
+reason it is not quietly engraved in Georgia.
+
+**It darkens with the lamp**, which the lamp's own brass does not need
+to: that fixture is a hand's width from the bulb and its speculars
+carry the switch, while this is eight units away and `metalness: 1`
+has no diffuse term — lit by a drawn environment alone it would be the
+one object in the room that did not notice the light go out. So
+`applyLampLevel` scales its `envMapIntensity` between `ENV_OFF` and 1.
+Two uniform writes, no recompile, and nothing moves: the frozen shadow
+map stays valid (rule 3). The wedge needs none of it — it is a
+dielectric lit by the lamp itself.
+
+The wedge casts and receives; it is built inside `buildScene`, so the
+single shadow pass that follows and freezes the map is the one that
+renders it.

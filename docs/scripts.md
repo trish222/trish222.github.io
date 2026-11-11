@@ -39,6 +39,13 @@ and `window.__shadowfit` exist for.
   each stop.
 - **`_flycheck.mjs`** clicks the screen for real, fills the form and
   clicks back, on mobile and under reduced motion.
+- **`_mobcheck.mjs`** walks the phone's whole hand-over — fly in, park
+  the second move mid-dive with `window.__diveTo`, sign in, measure
+  every tap target, open a window, Log Off, and out to the desk — in
+  portrait, in landscape, and under reduced motion. It prints the box's
+  client rect and the two framings at each stop, so "did the desktop
+  actually take the viewport" and "did Log Off put it back on the
+  glass" are numbers rather than screenshots. Needs `npm run preview`.
 - **`_flyfrom.mjs`** shoots the two `FLY_FROM` modes side by side from
   the same off-home pose. Both legs are *posed* rather than played,
   because SwiftShader cannot render a 1.6s flight in 1.6s.
@@ -283,6 +290,25 @@ and `window.__shadowfit` exist for.
   the whole 0.4s ramp lands between two samples; `curve` is the same
   ease the loop uses, read off the page). And the height it prints is
   the conservative `Box3` figure.
+- **`_plate.mjs [tag]`** is the nameplate's A/B: it prints the plate's
+  world box and projected box beside the lamp's, the computer's and
+  the desk's — which is where its clearances come from — and then
+  samples 27 points across the plate's own face with `__pixel`, with
+  the lamp on and with it off, before shooting a close crop of each.
+  The luma rows are the point: "the brass reads black" was a reading
+  of 5..12 of 255 across the whole face, and the brushed finish is
+  40..70 lit and 20..35 dark. Needs `npm run preview`.
+- **`_platesweep.mjs <z> <z> ...`** is how the plate's seat beside the
+  lamp was chosen: it walks the nameplate's world z toward the base,
+  **re-rendering the frozen shadow map at each stop** (`__lamp({tilt})`
+  is the one handle that sets `needsUpdate`, so what is measured is
+  the plate standing in the lamp's real shadow rather than in the one
+  baked for its old seat), and prints the gap to the lamp's box and
+  contact shadow against the face's median luma lit and dark. It moves
+  a live object and changes nothing on disk.
+- **`_platepick.mjs`** walks `window.__pick` over the plate's
+  projected box. The plate is not pickable; this is what says how much
+  of it has the lamp *behind* it.
 - **`_lampbig.mjs`** answers **"does the lamp get in front of the
   monitor"**, and it is separate because it asks a different kind of
   question: not where the fixture is, but what is on the ray. It walks a

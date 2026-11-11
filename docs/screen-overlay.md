@@ -269,11 +269,13 @@ covers the two states it used to be visibly wrong in: overlaid on the
 establishing shot of the 3D room, and showing through the login once
 the camera had arrived.
 
-**Signing in moves nothing.** The camera is already parked at the
-screen and stays there for the whole session: the desktop comes up in
-the screen rectangle, at the arrival's framing, with the bezel and a
-little of the case around it — the login's framing exactly, because it
-*is* the login's framing. The stylesheet crosses the shell over the
+**Signing in moves nothing — on a desktop viewport.** The camera is
+already parked at the screen and stays there for the whole session: the
+desktop comes up in the screen rectangle, at the arrival's framing,
+with the bezel and a little of the case around it — the login's framing
+exactly, because it *is* the login's framing. (On a phone there is a
+second, shorter move in front of that hand-over; see "The second move"
+below. Everything in this section is what happens once it has landed.) The stylesheet crosses the shell over the
 dialog in 0.45s and takes the dialog's `visibility` away on a delay
 behind it, so the form leaves the tab order once it is out of sight.
 `#scene` keeps drawing the room the whole time; it is the only thing
@@ -304,15 +306,14 @@ Three consequences elsewhere:
   through a CSS transform on their own; a drag reads `clientX`/
   `clientY`, so `glassPoint` in main.js divides the travel by the box's
   current scale. See [desktop-ui.md](desktop-ui.md).
-- **Under `MOBILE_BP` the desktop breaks out of the glass.** There the
+- **On a handheld the desktop breaks out of the glass.** There the
   arrival fits the glass's *height* alone (`ARRIVE_PAD_MOBILE`) and the
   4:3 panel runs off frame sideways, so a desktop mapped onto it would
-  be two thirds off screen. On those viewports the sign-in gives it the
-  page instead and fades the canvas out behind it — `glass-cropped` on
-  the body, written from `isMobile` on every resize, with
-  `screenBrokenOut` standing the matrix down so `inset: 0` means
-  something. The camera still does not move, and Log Off puts the
-  desktop back on the glass.
+  be two thirds off screen. On those viewports the sign-in zooms the
+  rest of the way in and then gives the desktop the page, fading the
+  canvas out behind it — `glass-fullscreen` on the body, from
+  `screenBrokenOut`, which also stands the matrix down so `inset: 0`
+  means something. Log Off reverses both halves.
 
 And one that did not change: **no WebGL has a way in.** The monitor was
 the only route to the login, so a visitor without WebGL would have
@@ -323,6 +324,53 @@ and the same desktop — which, with the box over the whole page, is the
 break-out's layout arrived at from the other direction. The CRT
 variables go to their "arrived" values there, so there are no scanlines
 on a tube that is not in the picture.
+
+## The second move: the phone's hand-over
+
+**Phones only, and it sits on top of the flight rather than inside
+it.** `ARRIVE_PAD` is deliberately a pull-back — the monitor stays in
+shot, which is what makes the login read as a machine in a room — and
+on a desktop viewport the desktop that follows is legible inside that
+monitor. On a phone it is not: the glass is already cropped at the
+arrival. So the sign-in spends a second, shorter dolly getting the
+glass to *cover* the viewport, and only then hands the page over.
+
+- **`dive` is its own parameter, not `fly` past 1.** `fly.value === 1`
+  is tested in a dozen places as "parked at the login" — the rAF loop
+  stops there, the orbit is disabled there, a press on the room flies
+  back out there — and the spline's knots are the four framings the
+  flight was art-directed through. `dive.value` 0 *is* `applyFly(1)`:
+  `applyDive` calls it and only shortens the radius, so anything that
+  moves the glass moves both framings together.
+- **`coverFrustum` is `screenFrustum`'s opposite.** The arrival takes
+  the `max` of the two fits (contain, plus `ARRIVE_PAD`); this takes
+  the `min` (cover, less `COVER_BLEED`), so nothing but picture is left
+  in the frame. On a portrait phone that is a 6% push; in landscape it
+  is nearer 2x.
+- **One tween, `DIVE_S` 0.9s on the flight's own ease**, paused,
+  `play()` in and `reverse()` out — the same bargain the flight makes,
+  so the two directions cannot drift. The still is on the tube for the
+  whole of it, for the same raster reason.
+- **Which test decides is `isHandheld`, not `isMobile`.** `isMobile`
+  is the *framing* question and is width alone; this one is "narrow, or
+  short and being touched", so a phone held sideways (844x390) hands
+  over too and a short laptop window does not. `PHONE` in main.js and
+  "THE PHONE'S DESKTOP" in style.css are the same test — keep the three
+  in step.
+- **Reduced motion gets `jumpDive`** and the 0.18s CSS fade, exactly as
+  the flight gets `jumpFly`.
+- **`window.__diveTo(t)`** parks it on its timeline and draws it, and
+  reports both framings it is between. It takes the camera to
+  `applyFly(1)` first, since the move is defined nowhere else.
+
+Log Off runs it backwards, one beat (`LOG_OFF_MS`) behind the DOM
+half — so the desktop has crossfaded back to the login, and the
+login's bitmap has been re-rasterised, before the camera starts
+pulling away. From the bezel framing it lands at, the three routes
+below take over. While the page has the viewport they are all refused
+(`canLeaveScreen` wants `dive.value === 0`), and the back bar hides
+itself there rather than sitting on screen doing nothing: on a phone's
+full-page desktop, Log Off is the way out.
 
 ## The way back to the room
 

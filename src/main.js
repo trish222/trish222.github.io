@@ -158,7 +158,14 @@ function placeWindow(win) {
    covers the icons *and* leaves a dead strip under itself. Better to
    commit — one window at a time, filling the frame, with the taskbar as
    the switcher, which is how a phone works anyway. */
-const PHONE = window.matchMedia('(max-width: 560px)');
+/* The height arm is a phone held sideways — 844x390, where a window
+   has no more room than it does upright. `pointer: coarse` keeps a
+   short *laptop* window out of it, which matters because that viewport
+   still shows the desktop inside the monitor at the machine's own
+   900px and wants the machine's own chrome. `isHandheld` in scene.js
+   and "THE PHONE'S DESKTOP" in style.css are the same test; keep the
+   three in step. */
+const PHONE = window.matchMedia('(max-width: 560px), (max-height: 520px) and (pointer: coarse)');
 
 /* Maximized because of the viewport, not because anyone pressed the
    button. The flag is what lets a resize back to a desktop width undo
@@ -635,24 +642,38 @@ function refillBin() {
    the camera in until the bezel frames it. Everything here is the page
    itself; the camera work all lives in scene.js.
 
-   Signing in is the gate to the desktop, and it is a **pure DOM
-   hand-over**: the camera does not move. The desktop is on the same
-   glass, inside the same transformed box, so the pose the flight
-   parked at is already the pose it wants — `signed-in` on the body
-   crosses it over the login and the monitor stays in shot around it
-   for the length of the session (see "THE SIGN-IN GATE" in style.css).
+   Signing in is the gate to the desktop, and on a desktop viewport it
+   is a **pure DOM hand-over**: the camera does not move. The desktop
+   is on the same glass, inside the same transformed box, so the pose
+   the flight parked at is already the pose it wants — `signed-in` on
+   the body crosses it over the login and the monitor stays in shot
+   around it for the length of the session (see "THE SIGN-IN GATE" in
+   style.css).
 
-   The one thing the scene is told is that the class flipped, because
-   under MOBILE_BP the desktop has to break out of a glass the arrival
-   crops — `syncDesktopOverlay` is that, and it is still not a camera
-   move.
+   **On a phone there is a camera move in front of that**, because the
+   arrival crops the glass there and a 900px desktop mapped onto a
+   third of a panel is not a desktop. `scene.diveToDesktop` pushes in
+   the rest of the way until the glass covers the viewport (~0.9s, the
+   login's bitmap on the tube throughout) and calls back; the page then
+   leaves the glass and the hand-over is the same one, to a desktop
+   laid out for the phone. The call is unconditional — the scene
+   decides whether there is a move to make, and calls back either way,
+   so there is one path here rather than two.
    ========================================== */
 
 /* Long enough to read as a machine doing something, short enough not
    to be a wait: the note goes up, the drive thinks about it, the
-   desktop fades in. Skipped under reduced motion, where the fade is
-   0.18s and a beat in front of it would be most of the interaction. */
+   desktop fades in. It also buys the login still a redraw in idle
+   time (see `refreshLoginStill`) before the phone's push-in starts
+   using it. Skipped under reduced motion, where the fade is 0.18s and
+   a beat in front of it would be most of the interaction. */
 const SIGN_IN_MS = 550;
+
+/* And the beat on the way out, which is shorter because nothing is
+   loading: it is the desktop's fade-to-login finishing before the
+   camera starts pulling back from it, and the login's bitmap being
+   rasterised for the move in the same window. */
+const LOG_OFF_MS = 300;
 
 /* The scene module once it is up, or null on the no-WebGL path — where
    there is no monitor, no camera and nothing to move, and the sign-in
@@ -690,11 +711,23 @@ function signIn() {
 function logOff() {
   if (!signedIn()) return;
   document.body.classList.remove('signed-in');
-  /* The camera never left the login's framing, so there is nothing to
-     fly back — only the overlay to put back on the glass, which is
-     what a narrow viewport's break-out needs. From here the way out to
-     the desk is the flight's own back button. */
+  /* The DOM half runs now rather than on any move's completion: the
+     desktop has to be gone, and the login back, before the camera
+     starts pulling away from it. On a desktop viewport that is the
+     whole of it — the camera never left the login's framing, so there
+     is only the overlay to re-sync.
+
+     On a phone the page is full-screen and the camera is a move in
+     front of the bezel framing, so the reverse of that move follows,
+     one beat behind: long enough for the desktop to have crossfaded
+     back to the login and for the login's bitmap to have been
+     rasterised for the trip. `riseFromDesktop` is a no-op wherever
+     there was no push-in, so this is one path, not two. */
   sceneApi?.syncDesktopOverlay();
+  sceneApi?.refreshLoginStill();
+  const rise = () => sceneApi?.riseFromDesktop();
+  if (prefersReducedMotion()) rise();
+  else setTimeout(rise, LOG_OFF_MS);
   Object.keys(WINDOWS).forEach(closeWindow);
   /* A new session opens centred again, rather than inheriting where the
      last one happened to leave things. */
@@ -723,8 +756,20 @@ function initLoginScreen() {
     note.textContent = `Loading personal settings for ${user}\u2026`;
     /* A second submit mid-wait would stack another timer. */
     form.querySelectorAll('button').forEach(b => { b.disabled = true; });
-    if (prefersReducedMotion()) signIn();
-    else setTimeout(signIn, SIGN_IN_MS);
+    /* The bitmap on the glass carries the dialog as it was *before*
+       that note: it is redrawn on `input`, and a submit is not one.
+       Ask for a fresh one now so it lands in idle time during the beat
+       below rather than on the first frame of the phone's move. */
+    sceneApi?.refreshLoginStill();
+    /* The scene owns the reduced-motion decision for the move it may
+       be about to make — it has the still and the render loop — and
+       calls back either way. */
+    const go = () => {
+      if (sceneApi) sceneApi.diveToDesktop(signIn);
+      else signIn();
+    };
+    if (prefersReducedMotion()) go();
+    else setTimeout(go, SIGN_IN_MS);
   });
 }
 

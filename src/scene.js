@@ -116,6 +116,10 @@ function seatToDesk() {
    own module for the same reason the desk is: it is a self-contained
    object with its own origin on the surface it stands on. */
 import { buildTreehouse, buildSpareBricks, disposeTreehouse } from "./treehouse.js";
+/* The brass nameplate on the front edge of the desk. Its own module
+   for the same reason, and it borrows the lamp's brass rather than
+   mixing a second one — see `brassKit` in src/lamps/greenlamp.js. */
+import { buildNameplate, disposeNameplate } from "./nameplate.js";
 /* The desk lamp — the one object in the scene the visitor can change,
    and so the only one this module has to carry a *state* for as well
    as a place. lamp.js owns the shape and what "on" means for each of
@@ -459,6 +463,74 @@ const TREEHOUSE_SCALE = 1.1733;
    *scaling* there, which would walk the pieces a share of seven units
    back toward the mouse. A translation has no such side effect. */
 const SPARES_X = 1.2;
+
+/* --- Where the nameplate is set down ---------------------
+   The one piece of furniture on the desk that is read rather than
+   used, so it goes where there is clear walnut and nothing behind it
+   to be in front of: the **left** of the top, a little in front of
+   the lamp, in the seat frame like everything else here.
+
+   **In front of the lamp is where the light is.** The fixture's beam
+   lands at (-8.05, -0.92) and spreads forward from there, so walking
+   the plate back toward the base walks it into the pool: measured
+   across its own face, the brass reads a median 57 of 255 at z 4.8,
+   78 at 3.6, 95 at 1.8, 99 at 1.2, 100 at 0.95 and 105 at 0.75.
+
+   The curve flattens long before the walk has to stop, so the seat is
+   chosen on the **gap** rather than on the light. At z 1.2 the
+   plate's box stands 0.46 off the fixture's and 0.37 off its painted
+   contact shadow — about three quarters of an inch at this scale,
+   which is a strip of lit walnut you can see between them. At 0.95 it
+   is 0.12 and the two read as one object; at 0.75 the box has reached
+   the fixture (0.01) and crossed into its shadow (-0.08), which is
+   touching. So 1.2: as close to the base as the plate can go while
+   still plainly standing apart from it, for the last 10 of 255 the
+   remaining distance was worth. `_platesweep.mjs` is that walk, kept
+   runnable.
+
+   What the figures are set against, in plan — all world, and all of
+   them things that were already on the desk:
+
+   - the keyboard's painted contact shadow, x -4.1..4.3 over
+     z 1.685..6.285. That quad is the *pick* footprint of the machine
+     as well as its contact, so overlapping it would put the nameplate
+     inside the press target it must never interfere with. The plate
+     is 3.25 across, so at x -6.8 its right-hand end lands at -5.175:
+     **1.08 clear.**
+   - the walnut's left edge at -11.4 and its front edge at 6.6. The
+     yawed solid reaches -8.5 and, at z 0.9, 1.94: **2.9 and 4.66
+     clear.** It stood at 5.4, then 4.5, then 1.5, all of which left
+     it out on the front half of the desk with the lamp behind it;
+     this shares the lamp's corner instead.
+   - **the lamp, which is what it is placed against now.** It stands
+     at (-8.05, -2.45); its own box ends at z 0 and its painted
+     contact shadow reaches 0.09. The nameplate's box starts at
+     z 0.46: **0.46 clear of the fixture and 0.37 of its shadow.** In
+     front and not touching, and in front is the side the light is
+     on — behind the base is the one place on this half of the desk
+     the shade's own shadow falls.
+
+   The treehouse and the mouse are both on the +X half and never come
+   into it; the monitor is at the middle and behind. Screen x runs
+   roughly `0.8x - 0.6z` here, so the plate's near end lands at about
+   -5.3 and the keyboard's at -4.3: the two are still a clear
+   separation apart on screen even though they now share a band of
+   depth. */
+const NAMEPLATE_X = -6.8;
+const NAMEPLATE_Z = 0.9;
+/* **Facing the seat, turned a little toward the lens.** 0 is square to
+   the desk, which is where someone sitting at it would set a
+   nameplate down and what the brief asks for; the camera is 37° off
+   that (AZIMUTH), so dead square the brass is read at a slant. A
+   quarter of the way round recovers most of the legibility and still
+   reads as an object placed for the chair — turn it the whole way and
+   it reads as aimed at the viewer, which is the one thing a nameplate
+   on someone's own desk is not. The other quarter of that recovery is
+   the face's own lean, `RUN` in nameplate.js, which costs nothing in
+   how the object reads because a wedge is expected to lean. */
+const NAMEPLATE_FACING = AZIMUTH * 0.26;
+/* Whose desk it is. */
+const NAMEPLATE_NAME = "Trish Nguyen";
 
 /* --- Where the desk lamp is set down ---------------------
    On the desk at the **back left as the home view sees it**, which is
@@ -1054,6 +1126,47 @@ const MONITOR_FRAME = 1.12;
 const ARRIVE_PAD = 1.2;
 const ARRIVE_PAD_MOBILE = 1.06;
 
+/* ==========================================
+   THE SECOND MOVE — the bezel framing in to a full viewport
+
+   **Phones only.** `ARRIVE_PAD` is deliberately a pull-back: the
+   flight stops with the monitor in shot, because that is what makes
+   the login read as a machine in a room, and on a desktop viewport the
+   desktop that follows is legible inside that monitor (see
+   "THE SIGN-IN" below). On a phone it is not — the glass is already
+   cropped at the arrival and a 900px desktop mapped onto it would be
+   two thirds off frame — so there the sign-in spends a second, shorter
+   push-in getting the glass to cover the viewport, and hands over to a
+   desktop laid out for the phone.
+
+   It is kept as its own parameter rather than extending `fly` past 1,
+   for two reasons. `fly.value === 1` is tested in a dozen places as
+   "parked at the login" (the rAF loop stops there, the resize handler
+   draws its own frame there, the orbit is disabled there, a press on
+   the room flies back out there), and the spline's knots are the four
+   framings the first flight was art-directed through — the arrival is
+   its endpoint by construction. `dive.value` sits on top: 0 is exactly
+   `applyFly(1)`, 1 is the glass covering the viewport. Nothing about
+   the first flight changes, on any viewport.
+
+   The move is a pure dolly: both poses are head-on at `SCREEN_TARGET`,
+   so the only thing between them is the radius, and the radius comes
+   off a log-space lerp of the two frustum heights for the same reason
+   the flight's does — the frustum *is* the zoom, and lerping it
+   linearly lurches. `applyDive` therefore takes its direction from
+   `applyFly(1)` rather than restating it, which is what guarantees
+   q = 0 and the arrival are the same pose down to the digits.
+   ========================================== */
+const DIVE_S = 0.9; // seconds; the flight's 1.6s would drag over a dolly this short
+const DIVE_EASE = FLY_EASE;
+/* The glass overfills the frame by this much at the end, rather than
+   meeting it exactly. The quad's corners land on rounded CSS pixels and
+   the tube's own overscan border is the outermost thing in the texture,
+   so a framing that only just contains the viewport can leave a
+   hairline of bezel down one edge on some viewport sizes. 1.5% is
+   invisible and cannot. */
+const COVER_BLEED = 0.985;
+
 /* **The machine's resolution.** The live HTML on the glass is a DOM
    box of this width, mapped onto the screen plane with a CSS matrix,
    and everything on it — the login, and since the sign-in the whole
@@ -1092,11 +1205,18 @@ let gtaoPass = null;
 let screenEl = null;
 /* value: 0 isometric, 1 arrived. dir: -1 / 0 / +1 while moving. */
 let fly = { value: 0, dir: 0 };
+/* The second move, on top of the first and only ever at fly.value === 1
+   — see "THE SECOND MOVE". 0 is the arrival's bezel framing, 1 is the
+   glass covering the viewport, and only a phone's sign-in ever leaves
+   0. Same shape as `fly` on purpose: `dir` is what the rAF loop and
+   `cameraMoving` read. */
+let dive = { value: 0, dir: 0 };
 let camera = null;
 let composer = null;
 let computer = null;
 let desk = null;
 let treehouse = null;
+let nameplate = null;
 /* { root, shade, point, spot } from buildLamp. The only object in the
    scene with a state the visitor can change, so it is the only one
    this module carries more than a handle for:
@@ -1243,6 +1363,36 @@ function isMobile() {
   return window.innerWidth < MOBILE_BP;
 }
 
+/* `isMobile` is the *framing* question — which frustum the establishing
+   shot and the arrival are fitted at — and it is width alone, because
+   that is what it has always been and the arrival pose is not a thing
+   to move by accident (rule 1).
+
+   This is the other question: is the glass a place a desktop can
+   actually live? A phone held sideways is 844x390, which is wider than
+   MOBILE_BP and still a phone — the glass is cropped top and bottom
+   instead of left and right, and a 900px desktop mapped onto it is no
+   more usable for the rotation. So the hand-over's own test is "narrow,
+   or short and being touched".
+
+   `pointer: coarse` is only on the short arm, and deliberately: a
+   laptop window dragged down to 500px tall is a laptop, and rule 1's
+   sibling here is that a desktop viewport keeps the in-monitor desktop.
+   Width under MOBILE_BP needs no such qualification — it is the
+   breakpoint the scene already frames itself at.
+
+   Three places have to agree on this: here, `PHONE` in main.js, and
+   "THE PHONE'S DESKTOP" in style.css. */
+const PHONE_MAX_H = 520;
+
+function isHandheld() {
+  return (
+    isMobile() ||
+    (window.innerHeight <= PHONE_MAX_H &&
+      window.matchMedia("(pointer: coarse)").matches)
+  );
+}
+
 /* How much wider than the authored framing the establishing shot is
    taken. 1 is FRUSTUM / FRUSTUM_MOBILE exactly; above that the camera
    stands further back and the furniture keeps the same share of the
@@ -1334,6 +1484,22 @@ function buildScene() {
   spares.name = "spares";
   spares.position.set(SEAT_DX + SPARES_X, DESK_TOP_Y, SEAT_DZ);
   s.add(spares);
+
+  /* The nameplate, on the front left of the top. Same contract as the
+     two above — origin on the surface it stands on, +Z its front — so
+     it is lifted by the desk's height and yawed, and nothing else.
+     Built here rather than lazily because the shadow map is rendered
+     once after `buildScene` returns and frozen: a caster that arrives
+     later would stand in the room without a shadow. */
+  nameplate = buildNameplate(
+    NAMEPLATE_NAME,
+    renderer.capabilities.getMaxAnisotropy(),
+  );
+  nameplate.root.name = "nameplate";
+  nameplate.root.position.set(
+    SEAT_DX + NAMEPLATE_X, DESK_TOP_Y, SEAT_DZ + NAMEPLATE_Z);
+  nameplate.root.rotation.y = NAMEPLATE_FACING;
+  s.add(nameplate.root);
 
   /* The desk lamp, on the back-left corner. Built with its origin on
      the surface it stands on like everything else here, so it only
@@ -1610,6 +1776,11 @@ function setMoonAt(x, y, z) {
 function applyLampLevel(level) {
   lampLevel = level;
   lampMod.setLamp(level);
+  /* The nameplate's brass is lit by a drawn environment rather than by
+     the fixture, so it has to be told; see ENV_OFF in nameplate.js.
+     Two uniform writes, and nothing here moves a light — the frozen
+     shadow map is as valid after this as before it. */
+  nameplate?.setLight(level);
   /* `lights` is still null when `buildScene` calls this to seed the
      fixture — the lamp is built before the fill is — and the rig is
      created at its lamp-on figures, so there is nothing to catch up. */
@@ -1829,6 +2000,26 @@ function screenFrustum(aspect) {
     : ARRIVE_PAD * Math.max(h, w / aspect);
 }
 
+/* ...and the one the *second* move arrives at: the glass covering the
+   viewport, which is the `min` this one's sibling above deliberately
+   stopped being. Both fits are candidates and the smaller wins, so the
+   glass overhangs whichever axis is spare and nothing but picture is
+   left in the frame — no bezel, no case, no wall. That is the wrong
+   framing for a login and the only possible one for a phone's
+   desktop, which is why there are two of these rather than one knob.
+
+   Note how little of a move it is on a portrait phone: `screenFrustum`
+   is already at `ARRIVE_PAD_MOBILE` (1.06) on the same axis this fits,
+   so the dive is a 6% push that takes the last sliver of bezel off the
+   top and bottom. Correct, and deliberately undramatic — the glass
+   already overflows a phone sideways at the arrival. What the move
+   buys is not drama; it is the right to hand the page over. */
+function coverFrustum(aspect) {
+  const h = SCREEN_H * SCREEN_INNER;
+  const w = SCREEN_W * SCREEN_INNER;
+  return COVER_BLEED * Math.min(h, w / aspect);
+}
+
 /* The two-phase turn-then-zoom path the fly-in used to run on. It is no
    longer what the camera follows — it is sampled at FLY_KNOTS to build
    the spline that replaced it, which is how the arc that was
@@ -1978,18 +2169,48 @@ function applyFly(p, width, height) {
   return f;
 }
 
-/* The camera posed for this viewport, from the one parameter that
-   decides it. Kept as its own name because the sign-in used to add a
-   second move on top of this and the callers should not have to know
-   whether it still does: both of them — a resize and a re-frame — want
-   "whatever pose the camera is supposed to be in, at this size", and
-   the flight derives that from `fly.value` rather than storing it.
+/* The second move's pose, and it is deliberately thin: `applyFly(1)`
+   does all the work and this only shortens the radius.
 
-   The desktop no longer has a pose of its own. It arrives on the glass
-   at the framing the flight parked at, which is what keeps the monitor
-   around it; see "THE SIGN-IN GATE" in style.css. */
+   That is what keeps the two moves honest with each other. The arrival
+   is defined by the spline's endpoint — not by a copy of it here — so
+   q = 0 *is* `applyFly(1)`, and anything that moves the glass (which
+   moves `SCREEN_TARGET`, and with it the whole flight; see
+   docs/screen-overlay.md) moves both framings together. Direction comes
+   off the camera applyFly just posed, for the same reason: the arrival
+   is head-on by construction rather than by assertion, and this does
+   not need to know that.
+
+   Linear in q, like `applyFly` — the easing is the timeline's. */
+function applyDive(q, width, height) {
+  const f0 = applyFly(1, width, height);
+  const u = clamp01(q);
+  if (u === 0) return f0;
+  /* `min` guards the one case that would read as a zoom *out* mid
+     sign-in: a viewport whose cover fit is somehow looser than the
+     arrival's. There isn't one at either pad, but the guard is free. */
+  const f1 = Math.min(f0, coverFrustum(width / height));
+  const f = Math.exp(lerp(Math.log(f0), Math.log(f1), u));
+  const dist = distFor(f);
+  flyOffset.copy(camera.position).sub(flyTarget);
+  const len = flyOffset.length() || 1;
+  camera.position.copy(flyTarget).addScaledVector(flyOffset, dist / len);
+  camera.lookAt(flyTarget);
+  camera.updateMatrixWorld();
+  flyPose.frustum = f;
+  flyPose.dist = dist;
+  return f;
+}
+
+/* The one call anything outside the two moves should make: whichever of
+   them currently owns the camera, posed for this viewport. Both are
+   derived from their parameter rather than stored, so this is also the
+   whole of what a resize has to do — which is what keeps a phone that
+   rotates mid-session framed correctly. See onResize and reframeHome. */
 function applyPose(width, height) {
-  return applyFly(fly.value, width, height);
+  return dive.value > 0
+    ? applyDive(dive.value, width, height)
+    : applyFly(fly.value, width, height);
 }
 
 /* Position, orientation and aspect all come from applyFly; the clip
@@ -2063,6 +2284,7 @@ function orbitAllowed() {
 function cameraMoving() {
   return (
     fly.dir !== 0 ||
+    dive.dir !== 0 ||
     orbitDragging ||
     !!orbitTween ||
     performance.now() - orbitChangedAt < ORBIT_SETTLE_MS
@@ -2368,6 +2590,8 @@ function canLeaveScreen() {
     !!screenEl &&
     fly.value === 1 &&
     fly.dir === 0 &&
+    dive.value === 0 &&
+    dive.dir === 0 &&
     !screenBrokenOut() &&
     !document.body.classList.contains("menu-open")
   );
@@ -3015,6 +3239,16 @@ function setFly(p) {
   }
 }
 
+/* setFly's counterpart for the second move. There is no `--scene-fade`
+   hand-over to drive here: it finished at 1 well before the flight
+   landed, and the strip under the canvas has been desktop teal ever
+   since. */
+function setDive(q) {
+  dive.value = q;
+  applyDive(q, canvasEl.clientWidth, canvasEl.clientHeight);
+  updateScreenOverlay();
+}
+
 /* Where the camera ends up, so the framing can be tuned by hand. The
    frustum height is still what the arrival is *specified* as; the
    distance beside it is what that works out to at this FOV, and is the
@@ -3494,22 +3728,31 @@ function jumpFly(to) {
    for the room, lands on the right one without anyone switching it.
    ========================================== */
 
-/* True while the desktop has left the glass: signed in, parked at the
-   screen, on a viewport where the arrival crops the panel. All four
-   conditions are load-bearing. The last two are what lets the visitor
-   walk back out to the room from a phone: the moment the flight starts
-   the desktop goes back onto the plane, because the picture during the
-   flight has to be the picture *on the monitor*.
+/* True while the page has left the glass: parked at the end of the
+   second move, where the glass covers the viewport anyway, so the box
+   can stop being mapped onto it and simply *be* the page.
 
-   The box is laid out by CSS over the whole page in this state, so the
-   matrix has to come off — a transform and `inset: 0` would otherwise
-   fight each other every frame. */
+   `dive.value === 1` is the main clause and the dive is a phone's
+   alone, so this is the phone's full-screen desktop. The `isHandheld`
+   arm beside it is the case with no dive in it: a window dragged
+   narrower than `MOBILE_BP` while signed in, where the glass is
+   suddenly cropped and the in-monitor desktop has nowhere to live.
+   Both want the same layout, which is why they are one flag.
+
+   Everything else is "and the camera is parked at the screen", which
+   is what ends the state the moment either move starts — the picture
+   during a move has to be the picture *on the monitor*.
+
+   The box is laid out by CSS over the whole page here, so the matrix
+   has to come off: a transform and `inset: 0` would otherwise fight
+   each other every frame. */
 function screenBrokenOut() {
   return (
-    isMobile() &&
     fly.value === 1 &&
     fly.dir === 0 &&
-    document.body.classList.contains("signed-in")
+    dive.dir === 0 &&
+    (dive.value === 1 ||
+      (isHandheld() && document.body.classList.contains("signed-in")))
   );
 }
 
@@ -3521,6 +3764,156 @@ function setBrokenOut(v) {
   if (v === brokenOut) return;
   brokenOut = v;
   document.body.classList.toggle("glass-fullscreen", v);
+}
+
+/* ==========================================
+   THE SECOND MOVE — the timeline and the hand-over
+
+   Same shape as the flight, one tween deep: a paused timeline whose
+   `play()` pushes in and whose `reverse()` is the way back, so the two
+   directions cannot drift apart. The still is on the tube for the
+   whole of it, for the same reason and by the same mechanism as the
+   flight's — the overlay is a subtree the matrix rescales every frame,
+   and this move is the one that ends with it filling a phone.
+
+   What the move hands over to is not the login grown large: it is the
+   desktop, laid out for the phone rather than for the machine's 900px
+   screen. So the sequence is "zoom to the glass, then change the
+   picture", and the change is the sign-in's own crossfade (see "THE
+   SIGN-IN GATE" in style.css) rather than anything here. `diveLanded`
+   therefore puts the *live* page back on the glass before it calls
+   main.js: the login re-appears at the phone's own size for the
+   instant it takes the desktop to fade up over it, which is what the
+   crossfade has to be a crossfade *of*.
+   ========================================== */
+let diveTl = null;
+const diveState = { q: 0 };
+/* What to run once the camera has the viewport. main.js's sign-in, in
+   practice: the camera move has to finish before the DOM hand-over,
+   and the module that owns the desktop is not this one. */
+let onDiveLanded = null;
+
+function buildDiveTimeline() {
+  diveTl = gsap
+    .timeline({
+      paused: true,
+      onComplete: diveLanded,
+      onReverseComplete: diveLifted,
+    })
+    .to(
+      diveState,
+      {
+        q: 1,
+        duration: DIVE_S,
+        ease: DIVE_EASE,
+        onUpdate: () => setDive(diveState.q),
+      },
+      0,
+    );
+}
+
+/* Both ends of the move land the same way — the camera stops, the
+   live page comes back on the glass, and whoever asked is told. The
+   only difference is which picture is there afterwards. */
+function diveSettled() {
+  dive.dir = 0;
+  document.body.classList.remove("screen-zooming");
+  document.body.classList.add("screen-focused");
+  /* `setDive` re-asks `screenBrokenOut`, which only now can be true:
+     `dive.dir` is back to 0. So this is also what makes the box the
+     page, before anything is shown in it. */
+  setDive(dive.value);
+  applyFade(1);
+  showStill(false);
+  /* The rAF loop stops drawing the moment `dive.dir` is 0 — same
+     bargain as the arrival — and GSAP's ticker is not this loop, so
+     the frame the camera actually landed on is this call's to draw. */
+  render();
+}
+
+function diveLanded() {
+  diveState.q = 1;
+  diveSettled();
+  const done = onDiveLanded;
+  onDiveLanded = null;
+  done?.();
+}
+
+function diveLifted() {
+  diveState.q = 0;
+  onDiveLanded = null;
+  diveSettled();
+  /* Back at the bezel framing with the login on the glass, which is a
+     form again from here — unless nobody logged off, which is the
+     resize case below: a session that is still signed in has no field
+     to put the focus in, and `arrive` declines it for the same
+     reason. */
+  if (!document.body.classList.contains("signed-in")) {
+    document.getElementById("login-user")?.focus({ preventScroll: true });
+  }
+}
+
+/* Sign-in on a phone: push in from the bezel framing until the glass
+   has the viewport, then hand over. `onLanded` is called either way —
+   reduced motion, and every viewport that takes no second move at all
+   — so the caller never has to know which path ran. */
+export function diveToDesktop(onLanded) {
+  if (!screenEl || !diveTl || !isHandheld() || fly.value !== 1 || dive.value === 1) {
+    onLanded?.();
+    return;
+  }
+  onDiveLanded = onLanded ?? null;
+  document.body.classList.remove("screen-focused");
+  /* The still is drawn on `input` and refreshed on departure, so the
+     dialog it carries is the one the visitor typed into — but the
+     sign-in note is written by a submit handler, not an input event.
+     `refreshLoginStill` is what the caller uses to close that gap; by
+     here the bitmap is either current or the previous one, and the
+     previous one differs by a line of text under a form that is about
+     to leave. */
+  showStill(true);
+  applyFade(0);
+  if (prefersReducedMotion()) return jumpDive(1);
+  document.body.classList.add("screen-zooming");
+  dive.dir = 1;
+  diveTl.play();
+}
+
+/* Log Off on a phone: the reverse, back to the login at its bezel
+   framing. From there the way out to the desk is the room around the
+   screen, Escape, or the back button — the same three as anywhere. */
+export function riseFromDesktop() {
+  if (!screenEl || !diveTl || dive.value === 0) return;
+  onDiveLanded = null;
+  document.body.classList.remove("screen-focused");
+  showStill(true);
+  applyFade(0);
+  if (prefersReducedMotion()) return jumpDive(0);
+  document.body.classList.add("screen-zooming");
+  dive.dir = -1;
+  diveTl.reverse();
+}
+
+/* Reduced motion gets the pose without the push, exactly as `jumpFly`
+   does for the flight. The hand-over it leaves behind is a short CSS
+   fade rather than none at all — see "THE SIGN-IN GATE" in style.css. */
+function jumpDive(to) {
+  diveTl?.pause();
+  diveState.q = to;
+  dive.dir = 0;
+  dive.value = to;
+  document.body.classList.remove("screen-zooming");
+  if (to === 1) diveLanded();
+  else diveLifted();
+}
+
+/* The form's `input` listener keeps the still current, but the sign-in
+   note is not an input event. Called at submit, so the redraw lands in
+   idle time during the beat before the move rather than on its first
+   frame. */
+export function refreshLoginStill() {
+  stillDirty = true;
+  refreshStill();
 }
 
 /* The one call main.js makes across the sign-in and the log off, after
@@ -3564,8 +3957,14 @@ export function flyToScreen() {
 export function flyFromScreen() {
   /* Signed in or not: the desktop is on the glass, so flying out leaves
      it there rather than from under anything. It is the same session
-     when the camera comes back — see `arrive`. */
-  if (!screenEl || fly.value === 0 ||
+     when the camera comes back — see `arrive`.
+
+     `dive.value > 0` is the phone's desktop having the viewport (or
+     being on its way there): the flight's endpoint is not where the
+     camera is, so reversing from here would jump. Log Off brings the
+     dive back first, and nothing that leads here is reachable until it
+     has — see `riseFromDesktop`. */
+  if (!screenEl || fly.value === 0 || dive.value > 0 ||
       (flyTl && flyTl.isActive() && flyTl.reversed())) return;
   document.body.classList.remove("screen-focused");
   if (prefersReducedMotion()) return jumpFly(0);
@@ -4332,6 +4731,15 @@ export async function initScene(canvas) {
     if (!flyTl) return null;
     const t = clamp01(x);
     flyTl.pause();
+    /* The flight's parameter means nothing while the second move is
+       off its endpoint, so park that first. Straight to 0 rather than
+       animated: this is a review handle, not a transition. */
+    if (dive.value !== 0) {
+      diveTl?.pause();
+      diveState.q = 0;
+      dive.dir = 0;
+      setDive(0);
+    }
     const moving = t > 0 && t < 1;
     document.body.classList.toggle("screen-active", t > 0);
     document.body.classList.toggle("screen-zooming", moving);
@@ -4357,6 +4765,44 @@ export async function initScene(canvas) {
     };
   };
 
+  /* The same, for the second move: parks the sign-in push-in at a point
+     of its timeline and draws it. It seeks the real timeline too, so
+     the still and the body classes are whatever the move puts there.
+     The flight has to be at its endpoint first — this move is defined
+     on top of that pose and nowhere else — so it takes the camera
+     there rather than refusing. Phones only in production; the handle
+     ignores the breakpoint so the framing can be shot anywhere. */
+  window.__diveTo = (x) => {
+    if (!diveTl) return null;
+    const t = clamp01(x);
+    if (fly.value !== 1) window.__flyTo(1);
+    diveTl.pause();
+    const moving = t > 0 && t < 1;
+    document.body.classList.toggle("screen-zooming", moving);
+    document.body.classList.toggle("screen-focused", !moving);
+    showStill(moving);
+    applyFade(moving ? 0 : 1);
+    dive.dir = 0; // parked
+    /* Timeline progress, like __flyTo — so the two differ from the
+       geometric parameter by the same easing, and what this shows is
+       what the move shows there. */
+    diveTl.progress(t, false);
+    setDive(diveState.q);
+    render();
+    return {
+      position: camera.position.toArray(),
+      target: flyTarget.toArray(),
+      frustumHeight: 2 * camera.position.distanceTo(flyTarget) * tanHalfFov,
+      dist: camera.position.distanceTo(flyTarget),
+      /* What covering this viewport asks for, beside what the login's
+         framing asks for — the whole of what the move is between. */
+      arriveFrustum: screenFrustum(canvasEl.clientWidth / canvasEl.clientHeight),
+      coverFrustum: coverFrustum(canvasEl.clientWidth / canvasEl.clientHeight),
+      brokenOut: document.body.classList.contains("glass-fullscreen"),
+      fov,
+    };
+  };
+
   onResize = () => {
     const width = canvas.clientWidth;
     const height = canvas.clientHeight;
@@ -4373,6 +4819,13 @@ export async function initScene(canvas) {
        aspect — and so, under perspective, do its position knots: the
        path has to be rebuilt, not just re-sampled. */
     buildFlyPath(width, height);
+    /* A viewport that has stopped being a handheld's — a rotation is
+       not this, a dev-tools drag or a desktop browser's zoom is —
+       takes the second move back, so the desktop returns to the glass
+       where a desktop viewport's desktop belongs. Jumped rather than
+       animated: a resize is not an occasion for a camera move, and the
+       pose below is then derived from the parameter this just set. */
+    if (dive.value > 0 && dive.dir === 0 && !isHandheld()) jumpDive(0);
     /* Re-derived from whichever move owns the camera rather than
        reset, so a resize part-way through either one — or while the
        login page is up, or while the desktop has the viewport — keeps
@@ -4401,6 +4854,7 @@ export async function initScene(canvas) {
   render();
   initScreenOverlay();
   buildFlyTimeline();
+  buildDiveTimeline();
   /* Both before the reduced-motion return: the camera is still the
      visitor's to swing there, and the canvas is still what carries the
      press that flies in. What reduced motion loses is the inertia and
@@ -4490,8 +4944,13 @@ export async function initScene(canvas) {
        frame, which is what pays for leaving the canvas *visible*
        there. Anything that invalidates that frame while it is up has
        to draw one itself; the resize handler is the one that does. */
-    if (fly.value < 1) render();
-    perf?.end(fly.value);
+    if (fly.value < 1 || dive.dir !== 0) render();
+    /* The meter counts a frame as the animation's when its parameter is
+       strictly between the endpoints, so the second move has to be fed
+       in on the same scale: 1 - dive.value is 1 parked at the login, 0
+       parked at the phone's desktop, and strictly between while it
+       moves. */
+    perf?.end(fly.value < 1 ? fly.value : 1 - dive.value);
   };
   tick();
 
@@ -4563,8 +5022,10 @@ export function disposeScene() {
   disposeComputer();
   deskMod.disposeDesk();
   disposeTreehouse();
+  disposeNameplate();
   lampMod.disposeLamp();
   computer = null;
+  nameplate = null;
   desk = null;
   disposeRoom();
   room = null;
@@ -4572,6 +5033,10 @@ export function disposeScene() {
   flyTl = null;
   flyState.p = flyState.fade = 0;
   flyPath = null;
+  diveTl?.kill();
+  diveTl = null;
+  diveState.q = 0;
+  onDiveLanded = null;
   if (screenEl) {
     screenEl.removeEventListener("click", onScreenClick);
     if (onScreenInput) screenEl.removeEventListener("input", onScreenInput);
@@ -4602,6 +5067,7 @@ export function disposeScene() {
     "orbit-used",
   );
   fly = { value: 0, dir: 0 };
+  dive = { value: 0, dir: 0 };
   screenEl = null;
   gtaoPass = null;
   canvasEl = null;

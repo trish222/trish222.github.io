@@ -77,6 +77,7 @@ src/computer.js   the CRT machine, keyboard and mouse, built from primitives
 src/desks/executive.js  the bulky walnut executive desk it stands on, likewise — the default
 src/desks/classic.js    the steel tanker desk it replaced; still builds, still reachable with ?desk=classic
 src/treehouse.js  the brick-built cherry treehouse, and the spare bricks beside it
+src/nameplate.js  the walnut-and-brass desk nameplate, left of the top in front of the lamp; brushed brass, reflecting the lamp's drawn room
 src/lamps/greenlamp.js  the desk lamp the room ships with — green glass banker's lamp
 src/lamp.js       the cone lamp it replaced; still builds, still reachable with ?lamp=lamp
 src/tonemap.js    the tone-mapping operators, and the void's pre-image on the composer path
@@ -95,8 +96,8 @@ docs/             the detailed notes indexed below
 ```
 
 `src/scene.js`, `src/computer.js`, the desk modules, `src/room.js`,
-`src/nightwindow.js`, `src/treehouse.js` and the lamp modules are the
-only modules that import three. `src/main.js` stays a DOM/UI module.
+`src/nightwindow.js`, `src/treehouse.js`, `src/nameplate.js` and the
+lamp modules are the only modules that import three. `src/main.js` stays a DOM/UI module.
 
 ## Rules that apply to every task
 
@@ -173,22 +174,31 @@ reduced-motion variant as a real test, not a formality.
 the room, Escape, and the `#screen-back-bar` button all call
 `flyFromScreen`; a menu open on the desktop takes the press first
 (`dismissChrome` / `body.menu-open`), and none of them ends the
-session. See [docs/screen-overlay.md](docs/screen-overlay.md).
+session. All three are refused while a phone's desktop has the
+viewport — Log Off reverses that move first, and the back bar hides
+itself there rather than sitting on screen doing nothing. See
+[docs/screen-overlay.md](docs/screen-overlay.md).
 
 **10. The desktop is inside the monitor, and inert until the sign-in.**
 `#screen-shell` is a sibling of the login inside the overlay box, so
 the desktop is laid out at the machine's own resolution —
-`SCREEN_BASE_W`, 900, with 900 x 648 of work area above the taskbar —
-and mapped onto the glass by the same matrix; signing in moves no
-camera. That constant in `src/scene.js` is the one knob for how big
-everything on the screen reads. It is `opacity: 0;
-pointer-events: none` until `signed-in` lands on the body, so any
-control that has to work before then (the lamp's hidden button, the
-drag hint) lives outside `#screen`. Anything that reads pointer
-*coordinates* rather than acting on a target has to go through
-`glassPoint`; everything else the browser puts through the transform
-itself. Under `MOBILE_BP` the desktop breaks out and takes the page,
-because the arrival crops the glass there — see
+`SCREEN_BASE_W`, 900, with 900 x `SCREEN_BASE_H` minus the taskbar of
+work area — and mapped onto the glass by the same matrix; on a desktop
+viewport signing in moves no camera. On a handheld it does: a second,
+shorter dolly (`dive`, see "THE SECOND MOVE" in `src/scene.js`) takes
+the glass from the bezel framing to covering the viewport, and the
+desktop then takes the page at the phone's own size. `isHandheld` is
+what decides — "narrow, or short and being touched" — and `PHONE` in
+`main.js` and "THE PHONE'S DESKTOP" in `style.css` are the same test;
+the three have to stay in step.
+
+`SCREEN_BASE_W` is the one knob for how big everything on the glass
+reads. The shell is `opacity: 0; pointer-events: none` until
+`signed-in` lands on the body, so any control that has to work before
+then (the lamp's hidden button, the drag hint) lives outside `#screen`.
+Anything that reads pointer *coordinates* rather than acting on a
+target has to go through `glassPoint`; everything else the browser puts
+through the transform itself. See
 [docs/screen-overlay.md](docs/screen-overlay.md).
 
 **11. Leaving the screen has three routes and one move.** A click on
@@ -259,7 +269,7 @@ Conventions for the scene:
 Exposed for the review scripts: `window.__scene`, `window.__camera`,
 `window.__composer`, `window.__fit(name?)`, `window.__pick(x, y)`,
 `window.__fov(deg)`, `window.__zoom(f)`, `window.__orbit(swing, rise)`,
-`window.__flyTo(t)`, `window.__flyFrom(mode)`, `window.__enter()`,
+`window.__flyTo(t)`, `window.__diveTo(t)`, `window.__flyFrom(mode)`, `window.__enter()`,
 `window.__lights(opts)`, `window.__lamp(opts)`, `window.__shadowfit()`,
 `window.__probes()`, `window.__histogram()`, `window.__pixel(u, v)`,
 `window.__rain(speed?)`, `window.__tonemap(name)`, `window.__perf`
@@ -280,6 +290,7 @@ Plain paths, deliberately — read the one you need.
 | [docs/computer.md](docs/computer.md) | touching the CRT, the keyboard, the picture on the glass or the hover |
 | [docs/lamps.md](docs/lamps.md) | touching either lamp, the lamp-module contract, `?lamp=`, the lamp lab, or the press precedence |
 | [docs/treehouse.md](docs/treehouse.md) | touching the tree, the house, the canopy, the spare bricks or the brick-batching kit |
+| [docs/desk.md](docs/desk.md) — "The nameplate" | touching the nameplate, its engraving, or the brass it re-finishes from the lamp's |
 | [docs/desktop-ui.md](docs/desktop-ui.md) | touching the windows, drag/focus, the phone interaction model, the fonts, the icons or 98.css |
 | [docs/scripts.md](docs/scripts.md) | you need to *check* something — which `_*.mjs` script answers it, and how to read what it prints |
 | [docs/perf.md](docs/perf.md) | optimising anything, or before calling a frame time a regression |

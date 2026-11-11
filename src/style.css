@@ -84,6 +84,11 @@
   --black: #000000;
   --title-active: #000080;
   --highlight: #000080;
+  /* The taskbar's height, and so where the work area stops. 40px of a
+     900px-wide screen is the 98 proportion; the phone block raises it,
+     because there it is a row of thumb targets rather than a strip of
+     chrome a mouse points at. */
+  --taskbar-h: 40px;
   /* Must match VOID in src/room.js: the 3D canvas stops at the taskbar,
      so this is what shows in the strip the taskbar vacates during the
      fly-in. The room is a finite diorama floating in this colour, so
@@ -127,8 +132,9 @@ body {
    ================================ */
 /* The desktop work area — everything above the taskbar. It is inside
    the glass now (see #screen-shell), so these are percentages of the
-   overlay box rather than of the viewport: SCREEN_BASE_W wide and 40px
-   of taskbar short of SCREEN_BASE_H tall. Every figure the window
+   overlay box rather than of the viewport: SCREEN_BASE_W wide and a
+   taskbar short of SCREEN_BASE_H tall — one knob, `--taskbar-h`, which
+   the phone block raises so the Start button can be a thumb target. Every figure the window
    manager works in is measured off this element, which is why the id
    stayed put when the box underneath it changed. */
 #desktop {
@@ -136,7 +142,7 @@ body {
   top: 0;
   left: 0;
   width: 100%;
-  height: calc(100% - 40px);
+  height: calc(100% - var(--taskbar-h));
   overflow: hidden;
 }
 
@@ -430,7 +436,7 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 40px;
+  height: var(--taskbar-h);
   background: var(--bg);
   border-top: 2px solid var(--white);
   display: flex;
@@ -538,7 +544,7 @@ body {
    ================================ */
 #start-menu {
   position: absolute;
-  bottom: 40px;
+  bottom: var(--taskbar-h);
   left: 4px;
   background: var(--bg);
   border-top: 2px solid var(--white);
@@ -1149,12 +1155,21 @@ body.screen-focused #screen {
    hands the desktop the whole page instead, and the room fades out
    behind it.
 
-   Still no camera move — the camera is parked exactly where the
-   flight left it. `glass-fullscreen` is scene.js's `screenBrokenOut`,
+   The sign-in gets there by a camera move of its own — the second,
+   shorter dolly in "THE SECOND MOVE" (scene.js), which pushes in from
+   the bezel framing until the glass covers the viewport, so the page
+   takes over a rectangle the glass was already filling rather than
+   cutting to it. `glass-fullscreen` is scene.js's `screenBrokenOut`,
    re-asked on every overlay update, so this state ends the moment any
-   one of its conditions does: Log Off, a resize past the breakpoint,
-   or the flight back out to the room, which puts the desktop back on
-   the glass for the trip.
+   one of its conditions does: Log Off (which reverses that move), a
+   resize past the breakpoint, or the flight back out to the room,
+   which puts the desktop back on the glass for the trip.
+
+   The canvas fades rather than cutting because it is the far half of
+   that hand-over: the monitor with the login's bitmap still on its
+   tube goes out over the same 0.45s the desktop comes up in. Both
+   durations are #scene's and #screen-shell's transitions, and they are
+   the same figure on purpose.
    ================================ */
 body.glass-fullscreen #screen {
   position: fixed;
@@ -1188,6 +1203,120 @@ body.glass-fullscreen #scene {
   body.signed-in #screen-page {
     transition: visibility 0s 0.18s;
   }
+}
+
+/* ================================
+   THE PHONE'S DESKTOP
+
+   Only ever seen through the break-out: on a phone the sign-in zooms
+   the rest of the way in and hands the page over (see "THE SECOND
+   MOVE" in scene.js), so from here down the desktop *is* the viewport
+   and these are real device pixels, not the machine's 900.
+
+   Keyed on size, on both axes — a phone held sideways is 844x390 and
+   wants exactly the same treatment as one held upright. Only the
+   height arm asks about the pointer, and only to keep a short laptop
+   window out: that viewport still shows the desktop inside the monitor
+   at the machine's 900px, where 44px chrome would be wrong. It pairs
+   with `PHONE` in main.js and `isHandheld` in scene.js, which are the
+   same test; keep the three in step.
+
+   **Everything in here is a thumb target.** 44px is the floor, which
+   is most of the block: the Win98 figures are mouse figures — a 16x14
+   close button, a 28px taskbar button — and on glass they are a coin
+   toss. The look survives it. A title bar with a 44px close button is
+   still unmistakably a Win98 title bar; one you cannot close is just a
+   picture of software.
+   ================================ */
+@media (max-width: 560px), (max-height: 520px) and (pointer: coarse) {
+  :root {
+    /* Exactly a 44px Start button plus the bar's own 2px bevel and its
+       4px of padding either side — `box-sizing: border-box` is global,
+       so this figure has to carry all three or the button overflows
+       into the padding it is supposed to sit inside. */
+    --taskbar-h: 54px;
+  }
+
+  #start-button {
+    height: 44px;
+    min-width: 92px;
+    font-size: 14px;
+    gap: 6px;
+  }
+
+  .start-logo { width: 20px; height: 20px; }
+
+  .taskbar-item {
+    height: 44px;
+    min-width: 0;
+    flex: 1 1 0;
+    max-width: none;
+    font-size: 12px;
+    padding: 2px 10px;
+  }
+
+  #taskbar-clock { font-size: 12px; }
+
+  /* Wide enough to hit without aiming, and capped so it never runs off
+     a 320px screen. */
+  #start-menu { width: min(280px, calc(100vw - 8px)); }
+  .start-menu-item { min-height: 44px; padding: 8px 16px; font-size: 14px; }
+  .start-menu-item img { width: 20px; height: 20px; }
+  #shutdown-item { padding-left: 44px; }
+  .start-menu-sidebar { width: 24px; }
+
+  /* The window chrome. The title bar grows with its buttons rather
+     than letting them overhang it, and the body copy comes up with
+     them — a maximized window on a phone is the whole screen, so there
+     is no reason for 11px chrome in it. */
+  .window-titlebar { padding: 4px 4px 4px 10px; }
+  .window-title { font-size: 13px; }
+  .window-controls { gap: 6px; }
+  /* Square, because 44 is the floor on *both* axes and a close button
+     that misses is the one that matters: the window is the whole screen
+     here, so it is the only way out of it. The title bar grows to 52px
+     to hold them, which still reads as a title bar. */
+  .win-btn { width: 44px; height: 44px; font-size: 15px; }
+  .window-menubar span { padding: 10px 12px; font-size: 13px; }
+  .window-body { font-size: 14px; }
+  .window-statusbar { font-size: 12px; padding: 6px 8px; }
+
+  /* Controls inside a window's body, which are the rest of the places
+     a finger has to land: buttons, fields, and the bin's rows. */
+  .window-body .win-button,
+  .window-body .win-input {
+    min-height: 44px;
+    font-size: 14px;
+    padding: 8px 14px;
+  }
+
+  .bin-row { min-height: 44px; align-items: center; }
+
+  /* The safe areas, and only while the page *is* the viewport: on the
+     glass this box is 900 CSS pixels under a matrix and the insets
+     would be measuring the wrong rectangle. The taskbar grows by the
+     home indicator and pads it back off, so the chrome keeps its 52px
+     and `--taskbar-h` — which is also what #desktop and the Start menu
+     are measured from — accounts for the whole strip. */
+  body.glass-fullscreen {
+    --taskbar-h: calc(54px + env(safe-area-inset-bottom, 0px));
+  }
+
+  body.glass-fullscreen #taskbar {
+    padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Icons: a bigger label and a bigger box under the same 32px art,
+     spaced so two columns never share a thumb. Clear of a notch in
+     landscape, where the inset is on the side the icons start at. */
+  .desktop-icons { top: 12px; left: 12px; gap: 18px; }
+
+  body.glass-fullscreen .desktop-icons {
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    left: calc(12px + env(safe-area-inset-left, 0px));
+  }
+  .desktop-icon { width: 88px; padding: 8px 4px; gap: 6px; }
+  .desktop-icon span { font-size: 13px; }
 }
 
 /* ================================
@@ -1458,6 +1587,18 @@ body.screen-active {
 body.screen-focused #screen-back-bar {
   opacity: 1;
   pointer-events: auto;
+}
+
+/* Not on the phone's full-page desktop. There is no room around the
+   glass to go back to from in there — `canLeaveScreen` refuses while
+   the second move is at its end, because the flight's endpoint is not
+   where the camera is — and a button that does nothing is worse than
+   no button. Start > Log Off is the way out of that state, and it
+   reverses the dolly to the bezel framing, where this comes back and
+   the room is a press away. */
+body.glass-fullscreen #screen-back-bar {
+  opacity: 0;
+  pointer-events: none;
 }
 
 #screen-back-bar button {
