@@ -81,6 +81,7 @@ try {
     }
     await page.evaluate(() => window.__orbit(0, 0));
     const home = await page.evaluate(() => window.__camera.position.toArray());
+    assert.ok(Math.abs(await page.evaluate(() => window.__orbit().front)) < .1, 'opening faces the monitor head-on');
     await page.evaluate(() => window.__enter());
     await page.waitForFunction(() => document.body.classList.contains('screen-focused'));
     assert.equal(await page.evaluate(() => window.__orbit().enabled), false, 'flight owns the camera');
@@ -116,7 +117,8 @@ try {
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => document.body.classList.contains('orbit-live'));
     const back = await page.evaluate(() => window.__camera.position.toArray());
-    assert.ok(back.every((value, i) => Math.abs(value - home[i]) < 1e-7), 'flight preserves camera home');
+    assert.ok(Math.abs(await page.evaluate(() => window.__orbit().front) - 37) < .1, 'return navigation restores the isometric room view');
+    assert.ok(back[2] > home[2], 'room overview pulls back from the seated opening');
     await page.setViewportSize({ width: width - 10, height: height - 10 });
     await page.waitForTimeout(200);
     const raster = await page.locator('#scene').evaluate(c => ({ width: c.width, height: c.height, cssWidth: c.clientWidth, cssHeight: c.clientHeight }));

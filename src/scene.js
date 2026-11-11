@@ -1961,6 +1961,12 @@ function applyCameraSize(cam, width, height) {
    at the old (0,0,0) the whole thing now sat in the top half of it with
    bare floor underneath. */
 const ISO_TARGET = new THREE.Vector3(0, 7.05, 0);
+// Start at the desk; the existing return-to-room action restores the overview.
+let seatedHome = true;
+const SEATED_FRAME = 1.35;
+function homeTarget() {
+  return seatedHome ? SCREEN_TARGET : ISO_TARGET;
+}
 /* The whole monitor, square to the camera — the turn's resting place.
    MON_Y is in the machine's own space, which now starts at the desk
    top, and COMPUTER_Z is where the machine was set down on it. */
@@ -2064,13 +2070,13 @@ function samplePose(p, aspect) {
   const turn = easeInOut(clamp01(p / TURN_END));
   const zoom = easeInOut(clamp01((p - ZOOM_START) / (1 - ZOOM_START)));
 
-  legacyPose.target.lerpVectors(ISO_TARGET, MONITOR_TARGET, turn);
+  legacyPose.target.lerpVectors(homeTarget(), seatedHome ? SCREEN_TARGET : MONITOR_TARGET, turn);
   legacyPose.target.lerp(SCREEN_TARGET, zoom);
-  const azimuth = AZIMUTH * (1 - turn);
-  const elevation = ELEVATION * (1 - turn);
+  const azimuth = (seatedHome ? FACING : AZIMUTH) * (1 - turn);
+  const elevation = (seatedHome ? 0 : ELEVATION) * (1 - turn);
   legacyPose.frustum = Math.exp(
     lerp(
-      lerp(Math.log(frustumFor()), Math.log(monitorFrustum(aspect)), turn),
+      lerp(Math.log(seatedHome ? monitorFrustum(aspect) * SEATED_FRAME : frustumFor()), Math.log(monitorFrustum(aspect)), turn),
       Math.log(screenFrustum(aspect)),
       zoom,
     ),
@@ -2145,7 +2151,7 @@ const flyScratch = new THREE.Vector3();
 /* The single source of truth for where the camera is. Linear in p — the
    easing lives on the GSAP timeline, so `__flyTo(0.5)` is the
    geometric middle of the move rather than the temporal one.
-   p = 0 reproduces buildCamera's original isometric pose exactly. */
+   p = 0 is the seated opening view, or the overview after returning to the room. */
 function applyFly(p, width, height) {
   if (!flyPath) buildFlyPath(width, height);
   const u = clamp01(p);
@@ -2349,7 +2355,7 @@ function wallAzimuthRange(radius, phi) {
   /* The -X wall: camera.x >= X0, and camera.x - target.x = R sin(t),
      so sin(t) >= s. That bounds t below at asin(s) and above at its
      reflection, pi - asin(s). */
-  const sx = (ROOM_PLAN.X0 - ISO_TARGET.x) / R;
+  const sx = (ROOM_PLAN.X0 - homeTarget().x) / R;
   if (sx > -1) {
     const a = Math.asin(Math.min(1, sx));
     lo = Math.max(lo, a);
@@ -2357,7 +2363,7 @@ function wallAzimuthRange(radius, phi) {
   }
   /* The -Z wall: camera.z >= Z0, and camera.z - target.z = R cos(t),
      so cos(t) >= s, which is the band |t| <= acos(s). */
-  const sz = (ROOM_PLAN.Z0 - ISO_TARGET.z) / R;
+  const sz = (ROOM_PLAN.Z0 - homeTarget().z) / R;
   if (sz > -1) {
     const a = Math.acos(Math.min(1, sz));
     lo = Math.max(lo, -a);
@@ -2698,7 +2704,7 @@ function enterScreen() {
 
 function initOrbit() {
   controls = new OrbitControls(camera, canvasEl);
-  controls.target.copy(ISO_TARGET);
+  controls.target.copy(homeTarget());
   /* **Resync the controls' own spherical before anything reads it.**
      OrbitControls' constructor ends with an `update()`, and that ran
      with `target` still at its default origin — so the cached spherical
@@ -2834,7 +2840,7 @@ function reframeHome() {
   if (controls) {
     killReturn();
     orbitIdleAt = 0;
-    controls.target.copy(ISO_TARGET);
+    controls.target.copy(homeTarget());
     /* Same resync initOrbit needs, and for the same reason: the cached
        spherical still describes wherever the camera was before
        applyFly re-posed it. Here the clamps have to come off to do it,
@@ -3351,6 +3357,7 @@ function depart() {
     flyStart = null;
     if (canvasEl) buildFlyPath(canvasEl.clientWidth, canvasEl.clientHeight);
   }
+  if (!seatedHome) reframeHome();
   setOrbitEnabled(true);
   /* The form may have been typed into while it was up, so the bitmap is
      stale for the next flight. */
@@ -4013,6 +4020,13 @@ export function flyFromScreen() {
      has — see `riseFromDesktop`. */
   if (!screenEl || fly.value === 0 || dive.value > 0 ||
       (flyTl && flyTl.isActive() && flyTl.reversed())) return;
+  // At the shared screen endpoint both paths coincide, so rebuilding here
+  // preserves the reverse GSAP transition without a camera jump.
+  if (seatedHome && fly.value === 1) {
+    seatedHome = false;
+    flyStart = null;
+    buildFlyPath(canvasEl.clientWidth, canvasEl.clientHeight);
+  }
   document.body.classList.remove("screen-focused");
   if (prefersReducedMotion()) return jumpFly(0);
   document.body.classList.add("screen-zooming");
@@ -4142,6 +4156,8 @@ export async function initScene(canvas) {
   await Promise.all([loadScreenFont(), resolveDesk(), resolveLamp()]);
   performance.mark('room:assets-ready');
   seatToDesk();
+  seatedHome = true;
+  flyPath = null;
   scene = buildScene();
   performance.mark('room:geometry-ready');
   camera = buildCamera();
@@ -4914,7 +4930,20 @@ export async function initScene(canvas) {
   performance.mark('room:before-first-frame');
   // Allocate/upload the small motion targets before interaction, not on the
   // first drag. The following full-resolution draw reuses programs/shadows.
-  motionComposer?.render();
+  // The close opening view culls furniture that a first drag can reveal.
+  // Warm those static buffers too, then restore culling before the visible
+  // frame. Both draws are synchronous, so only the seated view is presented.
+  const culled = [];
+  scene.traverse((object) => {
+    if (object.isMesh && object.frustumCulled) {
+      culled.push(object);
+      object.frustumCulled = false;
+    }
+  });
+  renderer.compile(scene, camera);
+  if (motionComposer) motionComposer.render();
+  else renderer.render(scene, camera);
+  for (const object of culled) object.frustumCulled = true;
   render();
   performance.mark('room:first-frame');
   initScreenOverlay();
