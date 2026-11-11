@@ -516,8 +516,10 @@ const SPARES_X = 1.2;
    -5.3 and the keyboard's at -4.3: the two are still a clear
    separation apart on screen even though they now share a band of
    depth. */
-const NAMEPLATE_X = -6.8;
-const NAMEPLATE_Z = 0.9;
+// Shift toward the window and slightly toward the lamp, leaving a gap
+// in front of its base and keeping the whole wedge on the desktop.
+const NAMEPLATE_X = -8.2;
+const NAMEPLATE_Z = 0.6;
 /* **Facing the seat, turned a little toward the lens.** 0 is square to
    the desk, which is where someone sitting at it would set a
    nameplate down and what the brief asks for; the camera is 37° off
