@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Trish Nguyen — Portfolio</title>
+  <style>
+    html, body { margin: 0; background: #1c1a2a; }
+    #scene-poster { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+    #scene-poster img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  </style>
   <!--
     The CRT's greeting is drawn with canvas 2D, so the webfont has to be
     resident before the first 3D frame or it silently falls back to
@@ -23,6 +28,13 @@
   <script type="module" src="/src/main.js"></script>
 </head>
 <body>
+
+  <!-- Initial room image paints while the interactive WebGL scene starts. -->
+  <picture id="scene-poster" aria-hidden="true">
+    <source media="(max-width: 759px)" srcset="/images/room-mobile.jpg">
+    <img src="/images/room-desktop.jpg" alt="" width="1440" height="900"
+         fetchpriority="high" decoding="sync">
+  </picture>
 
   <!-- Ambient 3D backdrop; falls back to the flat teal desktop without WebGL -->
   <canvas id="scene"></canvas>

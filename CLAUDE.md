@@ -57,7 +57,7 @@ model.
   **no `tailwind.config.js` and no `postcss.config.js`** — v4 needs
   neither and content scanning is automatic, so ignore any advice about
   `content` globs or class purging.
-- **3D:** `three` (vanilla, see the decision below), lazy-loaded.
+- **3D:** `three` (vanilla, see the decision below), loaded with the entry.
 - **Also:** `npm run icons` regenerates the desktop icons;
   `npm run vendor:98` regenerates `src/vendor/98.scoped.css`.
 - **Deploy:** GitHub Pages via `.github/workflows/deploy.yml`, on push
@@ -215,9 +215,9 @@ that logs off.
 
 **Decision: vanilla `three`.** `src/scene.js` owns one
 `<canvas id="scene">` and exports `initScene(canvas)` /
-`disposeScene()`. `main.js` lazy-loads it via dynamic `import()` after
-the desktop is wired up, so three lands in its own chunk instead of
-blocking first paint.
+`disposeScene()`. `main.js` imports the scene with the entry so its
+download starts early. A responsive room image in `index.html` paints
+before JavaScript and is removed after initialization or on WebGL failure.
 
 Why not R3F: there is no React here, and R3F would mean adding `react`,
 `react-dom`, `@react-three/fiber` and almost certainly `drei` to a site
@@ -312,9 +312,10 @@ Plain paths, deliberately — read the one you need.
   (about -1°..+88° on desktop) — see docs/camera-and-orbit.md.
   `_roomshots.mjs` and `_winshots.mjs` read a `window.__walls` that went
   with the wall fade.
-- The scene chunk is ~215 kB gzipped plus ~106 kB of walnut for the desk
-  top, all lazy-loaded after the desktop paints. The entry chunk is
-  ~3.9 kB gzipped. GSAP is ~26 kB of the scene chunk (importing
+- The combined entry is approximately 229 kB gzipped. Startup images
+  are approximately 194 kB desktop / 60 kB mobile; refresh both when
+  the opening composition changes (see public/images/README.md).
+  GSAP is ~26 kB of the entry (importing
   `gsap/gsap-core` rather than `gsap` saves ~7 kB of that); OrbitControls
   ~8 kB; the treehouse ~8 kB and no asset at all.
 - No tests, no linter, no README. Don't assume a test command exists.

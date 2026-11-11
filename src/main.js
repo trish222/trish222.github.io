@@ -1,4 +1,5 @@
 import './style.css';
+import * as roomScene from './scene.js';
 
 /* ==========================================
    WINDOW REGISTRY
@@ -778,6 +779,7 @@ function initLoginScreen() {
    scene.js never unhid the overlay or wrote its sizes, hence both here
    (the rest is CSS — see "NO WEBGL" in style.css). */
 function initWithoutScene() {
+  document.getElementById('scene-poster')?.remove();
   document.body.classList.add('no-scene');
   const screen = document.getElementById('screen');
   if (screen) screen.hidden = false;
@@ -839,14 +841,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   initLoginScreen();
 
-  /* Three.js is lazy-loaded so the page paints first. */
+  /* Fetch the first-view scene with the entry, before DOM setup. */
   const canvas = document.getElementById('scene');
   if (canvas) {
-    import('./scene.js')
+    Promise.resolve(roomScene)
       .then(async scene => {
         /* The way to the login is the 3D monitor, so the overlay stays
            hidden unless the scene actually came up. */
-        if (await scene.initScene(canvas)) initScreenControls(scene);
+        if (await scene.initScene(canvas)) {
+          initScreenControls(scene);
+          document.getElementById('scene-poster')?.remove();
+        }
         else initWithoutScene();
       })
       /* A throw anywhere in the scene's build lands here and the page

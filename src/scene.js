@@ -4083,11 +4083,8 @@ export async function initScene(canvas) {
      to Georgia — a canvas does not re-draw itself when a face arrives
      later. This used to be the rug wordmark's await; the rug no longer
      sets any type, and the screen is what keeps it alive. */
-  await loadScreenFont();
-
-  await resolveDesk();
+  await Promise.all([loadScreenFont(), resolveDesk(), resolveLamp()]);
   seatToDesk();
-  await resolveLamp();
   scene = buildScene();
   camera = buildCamera();
   /* The machine never moves, so one update pins the screen plane's
