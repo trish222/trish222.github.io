@@ -779,7 +779,6 @@ function initLoginScreen() {
    scene.js never unhid the overlay or wrote its sizes, hence both here
    (the rest is CSS — see "NO WEBGL" in style.css). */
 function initWithoutScene() {
-  document.getElementById('scene-poster')?.remove();
   document.body.classList.add('no-scene');
   const screen = document.getElementById('screen');
   if (screen) screen.hidden = false;
@@ -850,7 +849,6 @@ document.addEventListener('DOMContentLoaded', () => {
            hidden unless the scene actually came up. */
         if (await scene.initScene(canvas)) {
           initScreenControls(scene);
-          document.getElementById('scene-poster')?.remove();
         }
         else initWithoutScene();
       })

@@ -216,8 +216,8 @@ that logs off.
 **Decision: vanilla `three`.** `src/scene.js` owns one
 `<canvas id="scene">` and exports `initScene(canvas)` /
 `disposeScene()`. `main.js` imports the scene with the entry so its
-download starts early. A responsive room image in `index.html` paints
-before JavaScript and is removed after initialization or on WebGL failure.
+download starts early. The opening view renders directly in WebGL, with
+no placeholder image. Critical font and desk textures preload from HTML.
 
 Why not R3F: there is no React here, and R3F would mean adding `react`,
 `react-dom`, `@react-three/fiber` and almost certainly `drei` to a site
@@ -312,9 +312,9 @@ Plain paths, deliberately — read the one you need.
   (about -1°..+88° on desktop) — see docs/camera-and-orbit.md.
   `_roomshots.mjs` and `_winshots.mjs` read a `window.__walls` that went
   with the wall fade.
-- The combined entry is approximately 229 kB gzipped. Startup images
-  are approximately 194 kB desktop / 60 kB mobile; refresh both when
-  the opening composition changes (see public/images/README.md).
+- The combined entry is approximately 229 kB gzipped. Startup CPU
+  profiles and timings can be captured with `npm run profile:startup`
+  against a production preview on port 4320; see docs/perf.md.
   GSAP is ~26 kB of the entry (importing
   `gsap/gsap-core` rather than `gsap` saves ~7 kB of that); OrbitControls
   ~8 kB; the treehouse ~8 kB and no asset at all.

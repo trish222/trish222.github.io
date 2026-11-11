@@ -1,5 +1,74 @@
 # Frame rate, and what holds it at 60
 
+## Startup profiling
+
+Use the existing Playwright dependency to collect Chrome CPU profiles,
+WebGL call counts, resource timings, startup phase marks, and screenshots.
+No profiling library or browser extension is shipped to visitors.
+
+Build and start a production preview in one terminal:
+
+```sh
+npm run build
+npm run preview -- --host 127.0.0.1 --port 4320
+```
+
+In another terminal:
+
+```sh
+npm run profile:startup
+```
+
+Results go to the gitignored `.startup-profiles/` directory. Import the
+`.cpuprofile` files into Chrome DevTools' Performance panel; the JSON files
+include the measured phases, graphics renderer, and resource sizes.
+For readable function names when investigating a hotspot, build with
+`npm run build -- --minify false` first. Use the same build settings for
+both sides of a comparison, then restore the ordinary production build.
+Pass a separate destination to retain comparisons:
+`npm run profile:startup -- /tmp/portfolio-startup-before`.
+`PROFILE_URL` can override the default preview URL.
+If Chromium is missing, install it with `npx playwright install chromium`.
+
+### November 11, 2026 investigation
+
+The largest sampled startup cost was Three.js's `onFirstUse`, which
+performs synchronous shader diagnostic queries. Production now disables
+`renderer.debug.checkShaderErrors`; development retains the checks.
+The renderer is also created directly, replacing a capability test that
+created a second, disposable WebGL context. Renderer-construction failure
+still enters the existing no-WebGL login. The desk textures now preload
+from HTML, and the temporary room-image placeholder has been removed.
+
+A local diagnostic A/B used the same unminified production build settings,
+Chrome CPU sampling, cache-disabled requests, DPR 1, and the Mac's Apple M1
+Metal renderer:
+
+| Viewport | Before: interactive | After production shader checks and context fix |
+| --- | --- | --- |
+| Desktop, 1440×900 | 7.37 s | 2.68 s |
+| Mobile-sized, 390×844 | 6.98 s | 2.13 s |
+
+The final minified build without placeholder images measured 2.00 s and
+1.03 s to interactive respectively in a separate run. These are individual
+local observations, not phone benchmarks or guaranteed visitor timings.
+Browser/driver warming, network, and machine load affect results; the
+profile disables HTTP caching but cannot reset the operating system's GPU
+driver caches. Do not attribute every millisecond of the difference to a
+single setting.
+
+`room:first-frame` marks the return from the first render call, not the
+instant pixels physically appear on the display. `room:interactive` follows
+the monitor, orbit, and lamp handler setup. Both can be inspected as User
+Timing marks in DevTools without installing anything.
+
+An explicit `compileAsync` prewarm was tested and omitted: it moved work
+out of the first draw but did not improve total startup in this run.
+No geometry, lighting, shadow resolution, or camera framing changed.
+Production browser checks covered both viewports, normal/reduced motion,
+lamp keyboard control, monitor fly-in, Escape back to the room, and the
+no-WebGL fallback.
+
 Read this before optimising anything, and before calling a frame time a
 regression.
 

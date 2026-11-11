@@ -1346,17 +1346,6 @@ function perfWanted() {
   }
 }
 
-/* WebGL may be absent (old browser, blocklisted driver, or _review.mjs
-   stubbing getContext). Caller falls back to the plain CSS desktop. */
-function supportsWebGL() {
-  try {
-    const probe = document.createElement("canvas");
-    return !!(probe.getContext("webgl2") || probe.getContext("webgl"));
-  } catch {
-    return false;
-  }
-}
-
 function prefersReducedMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
@@ -4011,12 +4000,22 @@ function initScreenOverlay() {
    LIFECYCLE
    ========================================== */
 export async function initScene(canvas) {
-  if (!canvas || !supportsWebGL()) return false;
+  performance.mark('room:start');
+  if (!canvas) return false;
 
   canvasEl = canvas;
   const { clientWidth: w, clientHeight: h } = canvas;
 
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  // Construct the actual renderer once; a throwaway capability probe
+  // initializes a second graphics context and cannot test this canvas.
+  try {
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  } catch {
+    return false;
+  }
+  // Shader diagnostics force synchronous driver queries on first use.
+  // Keep them in development; production uses the same compiled shaders.
+  renderer.debug.checkShaderErrors = import.meta.env.DEV;
   /* three's default since r152, so this is a statement of intent
      rather than a change: every texture authored here is sRGB and the
      canvas is written in sRGB. It is spelled out because the composer
@@ -4083,9 +4082,12 @@ export async function initScene(canvas) {
      to Georgia — a canvas does not re-draw itself when a face arrives
      later. This used to be the rug wordmark's await; the rug no longer
      sets any type, and the screen is what keeps it alive. */
+  performance.mark('room:renderer-ready');
   await Promise.all([loadScreenFont(), resolveDesk(), resolveLamp()]);
+  performance.mark('room:assets-ready');
   seatToDesk();
   scene = buildScene();
+  performance.mark('room:geometry-ready');
   camera = buildCamera();
   /* The machine never moves, so one update pins the screen plane's
      world matrix for the overlay projection and for SCREEN_TARGET. */
@@ -4850,7 +4852,9 @@ export async function initScene(canvas) {
   };
   window.addEventListener("resize", onResize);
 
+  performance.mark('room:before-first-frame');
   render();
+  performance.mark('room:first-frame');
   initScreenOverlay();
   buildFlyTimeline();
   buildDiveTimeline();
@@ -4865,6 +4869,7 @@ export async function initScene(canvas) {
      `initOrbit` only so that everything a press can reach exists
      before anything is unhidden. */
   initLampButton();
+  performance.mark('room:interactive');
   loadEnvironment().then((ok) => {
     if (ok && !frame) render();
   });
