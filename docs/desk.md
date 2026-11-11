@@ -355,17 +355,23 @@ Three things worth knowing before touching it:
   same material so the environment, grain and roughness cannot drift.
 
 The engraving is a pair of 1024-wide canvases drawn in one pass: the
-colour, and a height field used as a `bumpMap`. The colour carries a
-lit lower lip two pixels below the letters, a thin burnished rim
-stroked round them, and the near-black cut over both; the height field
-carries the same rim as white and the same letters as near-black, so
-the groove is genuinely recessed and keeps reading as a groove from
-poses the painted rim was not drawn for. The rim is a stroke rather
-than the blurred halo it replaced — a blur that wide lifted the field
-around the name and cost the letters their contrast once the brass
-went gold.
-The field is deliberately below white (`FIELD`, 0.84) so the halo has
-headroom above it, and the face material's colour is lifted by the same
+colour, and a packed linear texture used for both `bumpMap` (red) and
+`metalnessMap` (blue). The height drops inside the letters with no raised
+ring. The sheet keeps its original metalness; the cuts are fully metallic
+so their dark colour also tints reflections, avoiding the white dielectric
+glints that washed out fine strokes. A shallow `bumpScale` of 0.0015 gives
+the cut an edge that responds to lighting without overwhelming the letters.
+
+Playfair stays at weight 500. Tracking is 0.025em and the line fits within
+92% of the face width, giving the name more room without enlarging the
+object. Matching, very fine dark strokes in both maps protect the hairlines
+at small sizes. The colour has one restrained lower-edge glint instead of
+a bright all-around outline, which blended into the strokes in small mip
+levels. Normal mipmapping and anisotropy remain enabled for stable edges
+while orbiting; no global pixel-ratio increase or extra texture is needed.
+
+The field is deliberately below white (`FIELD`, 0.84) to leave room for
+the brass sheen, and the face material's colour is lifted by the same
 figure **converted to the working space** — 0.84 sRGB is 0.68 linear,
 and compensating by the sRGB figure would leave the plate a fifth dark.
 Playfair is the face, the same one the CRT's greeting is set in;

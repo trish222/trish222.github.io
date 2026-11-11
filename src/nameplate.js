@@ -116,12 +116,11 @@ const PLATE_METAL = 0.76;
    screen pixels the plate is wide at home — it is still a *tint* of
    the brass rather than a neutral, so the groove is the same metal in
    shadow rather than paint poured into the letters. */
-const ENGRAVE_INK = "#17110a";
+const ENGRAVE_INK = "#100c07";
 /* The field the letters sit in, and it is deliberately *not* white.
    The map multiplies the material's `color`, so white is "the brass
-   exactly" and there would be no headroom left above it for the
-   highlight around each letter. Keeping the field at 0.84 buys that
-   headroom; the material's own colour is lifted by the same figure in
+   exactly". Keeping the field at 0.84 leaves room for the brass sheen;
+   the material's own colour is lifted by the same figure in
    `brassFace` so the plate still lands on the brass the lamp is made
    of. */
 const FIELD = 0.84;
@@ -253,9 +252,11 @@ function engraving(name, aspect, anisotropy) {
   g.addColorStop(1, f(FIELD * 0.9));
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, h);
-  /* Mid grey is the surface of the sheet; the letters go below it and
-     their rims above. */
-  bctx.fillStyle = "#808080";
+  /* Pack two linear masks in the same texture: red is the height
+     field; blue is metalness. The sheet keeps its original metalness,
+     while the cuts are bare metal so their dark colour also tints
+     the reflections instead of picking up a white dielectric glint. */
+  bctx.fillStyle = `rgb(255,255,${Math.round(PLATE_METAL * 255)})`;
   bctx.fillRect(0, 0, w, h);
 
   /* **Fitted, not assumed.** The name is whatever it is set to and
@@ -278,11 +279,11 @@ function engraving(name, aspect, anisotropy) {
   const setFont = (px) => {
     for (const x of [ctx, bctx]) {
       x.font = PLATE_FONT(px);
-      x.letterSpacing = "0.07em";
+      x.letterSpacing = "0.025em";
     }
   };
   setFont(size);
-  while (size > 8 && ctx.measureText(name).width > w * 0.86) {
+  while (size > 8 && ctx.measureText(name).width > w * 0.92) {
     size -= 2;
     setFont(size);
   }
@@ -291,41 +292,31 @@ function engraving(name, aspect, anisotropy) {
   /* Optical centre: a line of mixed caps and descenders sits a hair
      high of the geometric middle on a `middle` baseline. */
   const cy = h * 0.52;
-  /* The burnished rim, as a stroke rather than as a blur. A cut this
-     size throws up a lip a few thousandths of an inch wide, and the
-     blurred halo this replaced spread that over a tenth of the cap
-     height — which lifted the whole field around the name and cost
-     the letters most of their contrast once the brass went gold. A
-     stroke is a *thin light edge*: it sits on the boundary, where the
-     lip is. */
-  const rim = Math.max(1.5, h * 0.0075);
+  /* A single lower-edge glint, not a bright outline around every
+     stroke. Opposing light/dark outlines merge in the mip levels
+     on phones, turning fine serifs into a soft, doubled silhouette. */
+  ctx.fillStyle = "rgba(255,246,222,0.48)";
+  ctx.fillText(name, cx, cy + 1);
 
-  /* 1 — the lit lower wall of the groove. The room's light comes from
-     above (the moon through the window, the lamp's shade), so the far
-     wall of a cut catches it and shows as a bright lip under each
-     letter. One pixel at this resolution would vanish in the mips;
-     three is a hairline on screen. */
-  ctx.fillStyle = "rgba(255,246,222,0.95)";
-  ctx.fillText(name, cx, cy + Math.max(2, Math.round(h * 0.014)));
-
-  /* 2 — the rim all the way round, then the cut over the top of both.
-     The stroke is drawn first and the fill covers all of it but its
-     outer half, which is how a stroke centred on the path leaves an
-     edge rather than an outline. */
-  ctx.strokeStyle = "rgba(255,248,228,0.9)";
-  ctx.lineWidth = rim * 2;
+  /* Keep Playfair at medium weight. A fraction of a screen pixel of
+     extra coverage protects its hairlines when this 1024px texture
+     is reduced to the small plate, without switching to a bold font.
+     The colour and recess use exactly the same letter silhouette. */
+  const cutStroke = size * 0.012;
+  ctx.strokeStyle = ENGRAVE_INK;
+  ctx.lineWidth = cutStroke;
   ctx.lineJoin = "round";
   ctx.strokeText(name, cx, cy);
   ctx.fillStyle = ENGRAVE_INK;
   ctx.fillText(name, cx, cy);
 
-  /* 3 — the same two moves as height. White rim, near-black floor:
-     the letter sinks and its edge stands proud of the sheet. */
-  bctx.strokeStyle = "#f2f2f2";
-  bctx.lineWidth = rim * 2;
+  /* Red goes down into the cut, blue goes up to pure metal. There
+     is no raised ring to blur the edges in the smaller mip levels. */
+  bctx.strokeStyle = "#1414ff";
+  bctx.lineWidth = cutStroke;
   bctx.lineJoin = "round";
   bctx.strokeText(name, cx, cy);
-  bctx.fillStyle = "#141414";
+  bctx.fillStyle = "#1414ff";
   bctx.fillText(name, cx, cy);
 
   const map = track(new THREE.CanvasTexture(c));
@@ -509,7 +500,9 @@ export function buildNameplate(name, anisotropy = 1) {
      the letters stop being cut into a flat sheet and start being
      moulded out of it. */
   brassFace.bumpMap = cut.bump;
-  brassFace.bumpScale = 0.0035;
+  brassFace.bumpScale = 0.0015;
+  brassFace.metalness = 1;
+  brassFace.metalnessMap = cut.bump;
 
   const face = new THREE.Mesh(
     track(
