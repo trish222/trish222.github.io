@@ -281,7 +281,7 @@ const AZIMUTH = THREE.MathUtils.degToRad(37);
      rather than as the thing that hides an edge — see `buildFog` in
      src/room.js, whose range is still an offset from the camera's
      distance for the same reason CAM_DIST is gone. */
-const FOV_DEFAULT = 20;
+const FOV_DEFAULT = 28;
 let fov = FOV_DEFAULT;
 let tanHalfFov = Math.tan(THREE.MathUtils.degToRad(fov) / 2);
 
@@ -892,8 +892,8 @@ function syncRenderQuality() {
 
    OrbitControls (three/addons, MIT) on a short leash. The visitor can
    swing the establishing shot a little either way to see round the
-   machine, and it eases back to the home isometric pose on its own
-   once they stop. The point is to let the room be looked at, not to
+   machine, and it eases back to the neutral pose immediately on
+   release. The point is to let the room be looked at, not to
    hand the camera over: there is no pan, no wheel zoom, and both
    angles are clamped either side of home rather than being free.
 
@@ -917,124 +917,20 @@ function syncRenderQuality() {
      on the glass stands aside for the same stretch (see the CSS), so a
      drag that starts over the picture rotates like any other.
    ========================================== */
-/* --- The azimuth leash is the room, and nothing else ---------
-   **There is no longer a monitor-relative cap.** The azimuth used to be
-   clamped to `ORBIT_SWING` either side of the machine's front — ±90°,
-   then ±60° once the diorama's two walls had a fade to protect — and
-   that constant is gone. It was asymmetric against the walls in a way
-   that showed: home sits 37° round from the front, so ±60° let the
-   visitor reach the -X wall's own limit going one way and stopped them
-   23° short of anything on the other, at a diagonal of the monitor with
-   the -Z wall still 37° off. Both ends come off the walls now and the
-   two sides behave the same way.
-
-   What that costs is `FACE_MIN`, and it is worth stating where the
-   trade is. The -Z wall does not come in until about +88°, and the
-   glass is edge-on well before that, so the live login stands down over
-   the last few degrees of the right-hand swing and the baked still
-   underneath carries the picture. That guard went back to being a
-   working part rather than a formality; see `updateScreenOverlay`.
-
-   **`_orbit.mjs` asserts the old ±90° behaviour and will fail until it
-   is updated** — and so will `_roomshots.mjs` and `_winshots.mjs`,
-   which read a `window.__walls` that went with the fade. */
-/* --- The walls' own limit, which is now the only one --------
-   **The azimuth is clamped so the camera never leaves the room.** It
-   replaces the cutaway outright: the two walls used to fade as the
-   camera came round behind them, and now they stay opaque and there is
-   nowhere behind them to get. Both ends of the leash are this; the
-   margin below is the same on each side, so the two walls are reached
-   the same way.
-
-   Both inner faces are planes — `ROOM_PLAN.X0` with normal +X and
-   `ROOM_PLAN.Z0` with normal +Z — and the camera rides a circle about
-   the target. Where that circle crosses each plane is one `asin` or
-   `acos` of room.js's own figures, which is the whole reason the limits
-   are derived rather than typed in: move a wall and the leash moves
-   with it.
-
-   **`AZ_WALL_MARGIN` is how far short of each plane the camera comes to
-   rest.** At the plane itself a wall is exactly edge-on — a grazing
-   sliver of field filling that side of the frame — and 9° off it reads
-   as a wall again.
-
-   **The two sides are not symmetric, and the room is why, not the
-   leash.** The -X wall's plane passes 13 units from the pivot while the
-   camera stands 75 out, so the circle crosses it only 10° short of the
-   monitor's front; the -Z wall's is 9 units out on the other axis and
-   almost parallel to the circle there, so it is not crossed until 97°.
-   Off the front, that is about -1°..+88° on desktop and +2.5°..+85° on
-   a phone — 89° and 83° of swing, most of it to the right of home at
-   37°. **The camera cannot get in front of the machine**, and that is
-   not a tuning choice: there is a wall in the way. */
+/* Small head turns measured from the actual neutral camera pose. Room
+   walls remain a secondary safety constraint, never the interaction range. */
 const AZ_WALL_MARGIN = THREE.MathUtils.degToRad(9);
-/* How far a drag may pull past that resting limit while the spring in
-   `easeAzimuthLimits` pulls back. Deliberately less than the margin:
-   at full stretch there are still 3° of clearance before the plane, so
-   the stretch can only ever spend margin — it cannot show the back of
-   a wall. OrbitControls' own clamp sits at the stretched figure and is
-   what makes that a guarantee rather than a hope. */
-const AZ_WALL_STRETCH = THREE.MathUtils.degToRad(6);
-/* The spring's rate, per second — the same exponential form as the
-   hover ease, so it is frame-rate independent. At 9 the overshoot is
-   90% spent in a quarter of a second: slow enough to read as a pull
-   rather than a snap, quick enough that letting go at the end of the
-   swing does not feel like waiting. */
-const AZ_EASE_RATE = 9;
-/* Elevation is still measured off home, and is still asymmetric — but
-   the flat end now goes all the way down to **2° above the floor**, so
-   the visitor can drop to the desk's own height and look at the screen
-   and the drawer fronts square on. Home is 20°, so this is 18° of drop
-   against 10° of rise.
-
-   Flatter used to be the expensive direction, and the reason is worth
-   keeping — though the perspective camera has changed what it costs.
-   Under the orthographic one the frame read `frustum / sin(elevation)`
-   of floor depth, about 690 world units on a desktop frame at 2° and
-   1060 on a portrait one, against the 70 the establishing shot sees;
-   under a perspective one the frame reaches the *horizon* instead, and
-   what used to be a very long floor is now a fade into the backdrop
-   that the fog was already doing. Of the three things that had to grow
-   for the flat view, two are now belt-and-braces and the third has
-   reversed:
-
-   - **The floor's size**, which has stopped being a question: the room
-     is a finite diorama now (see src/room.js), its own edges are in
-     frame deliberately, and what lies past them is the void rather
-     than more ground. The endless 1700-unit plane is gone.
-   - **The camera's near plane**, which is *positive again*. Under the
-     orthographic camera the view volume was a box and the bottom of
-     the frame at 2° was ground *behind* the eye — 270 units of it on a
-     portrait viewport — which a positive near plane clipped away. A
-     perspective frustum is a pyramid in front of the eye: the bottom
-     edge of the flat frame is now floor about 40 units ahead, and
-     there is no ground behind the camera in shot anywhere on the
-     leash. See `buildCamera`.
-   - **The camera's far plane**, which still reaches the far edge of
-     the plane rather than the old 160-unit one — though everything
-     past the fog's far end is already the background colour, so it is
-     the fog and not this that decides where the ground stops.
-
-   The key light's shadow box did *not* need to grow, which is not
-   obvious: a shadow map lives in the light's space, and the light has
-   not moved. See the measurement where the box is set up. */
-const ORBIT_DOWN = THREE.MathUtils.degToRad(18); // flatter than home
-const ORBIT_UP = THREE.MathUtils.degToRad(10); // steeper than home
-/* Weighted rather than sticky: the drag keeps gliding for a few frames
-   after the pointer stops. */
+const ORBIT_HORIZONTAL = THREE.MathUtils.degToRad(7);
+const ORBIT_DOWN = THREE.MathUtils.degToRad(4);
+const ORBIT_UP = THREE.MathUtils.degToRad(4);
 const ORBIT_DAMPING = 0.075;
-/* Under 1 so the swing is not twitchy. OrbitControls scales a drag by
-   viewport *height*, so at 0.55 the full 180° takes about 0.57 of the
-   frame's height dragged sideways — half the width of a 16:9 desktop
-   frame, a comfortable single gesture. At the library default it is
-   half that, which on a leash this wide is a flick straight into the
-   clamp. */
-const ORBIT_SPEED = 0.55;
+const ORBIT_SPEED = 0.16;
 
-/* Quiet before the camera takes itself home, and how long that takes. */
-const IDLE_MS = 3000;
-const RETURN_S = 1.1;
-const RETURN_EASE = "power2.inOut";
+/* Release hands ownership to the return tween on the next animation
+   frame, after the click handler has had a chance to start a flight. */
+const IDLE_MS = 0;
+const RETURN_S = 0.8;
+const RETURN_EASE = "power2.out";
 /* Walking home as the first half of a click — brisker than the idle
    return, because there is a flight waiting behind it. */
 const RETURN_FAST_S = 0.45;
@@ -1308,6 +1204,64 @@ let lights = null;
    the value, and dispose puts it back. */
 let screenGlowBase = SCREEN_GLOW;
 let onPointerMove = null;
+let onPointerLeave = null;
+// World units at the viewport edges, with a radial cap for diagonals.
+// Smoothness is a time constant in seconds: smaller values respond faster.
+// Controls and GSAP retain the base pose throughout the presentation pass.
+const parallaxStrengthX = 0.36;
+const parallaxStrengthY = 0.30;
+const parallaxSmoothness = 0.09;
+const maxParallaxOffset = 0.42;
+const parallaxPointer = new THREE.Vector2();
+const parallaxOffset = new THREE.Vector2();
+const parallaxPosition = new THREE.Vector3();
+const parallaxQuaternion = new THREE.Quaternion();
+const parallaxRight = new THREE.Vector3();
+const parallaxUp = new THREE.Vector3();
+let parallaxPresented = false;
+let parallaxMedia = null;
+
+function parallaxAllowed() {
+  return seatedHome && orbitAllowed() && !orbitDragging && !orbitTween &&
+    !orbitOffHome() && !prefersReducedMotion() &&
+    navigator.maxTouchPoints === 0 && !!parallaxMedia?.matches;
+}
+
+function tickParallax(dt) {
+  const active = parallaxAllowed();
+  let targetX = active ? -parallaxPointer.x * parallaxStrengthX : 0;
+  let targetY = active ? -parallaxPointer.y * parallaxStrengthY : 0;
+  const distance = Math.hypot(targetX, targetY);
+  if (distance > maxParallaxOffset) {
+    const scale = maxParallaxOffset / distance;
+    targetX *= scale;
+    targetY *= scale;
+  }
+  const k = 1 - Math.exp(-dt / parallaxSmoothness);
+  parallaxOffset.x += (targetX - parallaxOffset.x) * k;
+  parallaxOffset.y += (targetY - parallaxOffset.y) * k;
+  if (Math.abs(parallaxOffset.x) < 0.00001) parallaxOffset.x = 0;
+  if (Math.abs(parallaxOffset.y) < 0.00001) parallaxOffset.y = 0;
+}
+
+function beginParallax() {
+  if (!parallaxAllowed() || parallaxOffset.lengthSq() === 0) return false;
+  parallaxPosition.copy(camera.position);
+  parallaxQuaternion.copy(camera.quaternion);
+  parallaxRight.set(1, 0, 0).applyQuaternion(camera.quaternion);
+  parallaxUp.set(0, 1, 0).applyQuaternion(camera.quaternion);
+  camera.position.addScaledVector(parallaxRight, parallaxOffset.x)
+    .addScaledVector(parallaxUp, parallaxOffset.y);
+  camera.lookAt(controls.target);
+  camera.updateMatrixWorld();
+  return true;
+}
+
+function endParallax() {
+  camera.position.copy(parallaxPosition);
+  camera.quaternion.copy(parallaxQuaternion);
+  camera.updateMatrixWorld();
+}
 let frame = null;
 let disposables = [];
 let onResize = null;
@@ -1379,8 +1333,10 @@ function perfWanted() {
   }
 }
 
+let reducedMotionMedia = null;
 function prefersReducedMotion() {
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  reducedMotionMedia ??= window.matchMedia("(prefers-reduced-motion: reduce)");
+  return reducedMotionMedia.matches;
 }
 
 function isMobile() {
@@ -1963,9 +1919,16 @@ function applyCameraSize(cam, width, height) {
 const ISO_TARGET = new THREE.Vector3(0, 7.05, 0);
 // Start at the desk; the existing return-to-room action restores the overview.
 let seatedHome = true;
-const SEATED_FRAME = 1.35;
+// A seated eye line: enough downward pitch and lateral offset to reveal
+// the CRT casing and desk, without turning the opening into an overview.
+const SEATED_FRAME = 2.02;
+const SEATED_ELEVATION = THREE.MathUtils.degToRad(12);
+const SEATED_AZIMUTH = FACING + THREE.MathUtils.degToRad(10);
+// Aim below the glass so the keyboard and desk foreground share the
+// composition, with the monitor centered horizontally above them.
+const seatedTarget = new THREE.Vector3();
 function homeTarget() {
-  return seatedHome ? SCREEN_TARGET : ISO_TARGET;
+  return seatedHome ? seatedTarget.copy(SCREEN_TARGET).addScaledVector(THREE.Object3D.DEFAULT_UP, -1.7) : ISO_TARGET;
 }
 /* The whole monitor, square to the camera — the turn's resting place.
    MON_Y is in the machine's own space, which now starts at the desk
@@ -2072,8 +2035,8 @@ function samplePose(p, aspect) {
 
   legacyPose.target.lerpVectors(homeTarget(), seatedHome ? SCREEN_TARGET : MONITOR_TARGET, turn);
   legacyPose.target.lerp(SCREEN_TARGET, zoom);
-  const azimuth = (seatedHome ? FACING : AZIMUTH) * (1 - turn);
-  const elevation = (seatedHome ? 0 : ELEVATION) * (1 - turn);
+  const azimuth = (seatedHome ? SEATED_AZIMUTH : AZIMUTH) * (1 - turn);
+  const elevation = (seatedHome ? SEATED_ELEVATION : ELEVATION) * (1 - turn);
   legacyPose.frustum = Math.exp(
     lerp(
       lerp(Math.log(seatedHome ? monitorFrustum(aspect) * SEATED_FRAME : frustumFor()), Math.log(monitorFrustum(aspect)), turn),
@@ -2372,71 +2335,25 @@ function wallAzimuthRange(radius, phi) {
   return { lo, hi };
 }
 
-/* The leash in force: where the camera rests, and where OrbitControls'
-   own hard clamp sits a stretch beyond it. */
+/* The resting and hard limits are identical for these small head turns. */
 const orbitLeash = { min: 0, max: 0, softMin: 0, softMax: 0 };
 
-/* Both clamps, from the room and from home. Called wherever the radius
-   or the home pose is (re-)seeded — initOrbit and reframeHome — because
-   the azimuth half depends on the radius now, which the viewport
-   decides.
-
-   Reduced motion gets no stretch, so the hard clamp *is* the resting
-   limit: the spring is motion, there is no render loop to run it in,
-   and a visitor who asked for less of it should not be the one who
-   finds the camera parked inside the margin. */
+/* Both angle limits are offsets from applyFly(0)'s measured pose.
+   Re-derived after a resize or a programmed move changes the home view.
+   The hard clamp equals the resting clamp: no extra overshoot is allowed. */
 function applyOrbitLimits() {
   const wall = wallAzimuthRange(orbitHome.radius, orbitHome.phi + ORBIT_DOWN);
-  orbitLeash.softMin = wall.lo + AZ_WALL_MARGIN;
-  orbitLeash.softMax = wall.hi - AZ_WALL_MARGIN;
-  /* A room small enough for the two to cross would leave no leash at
-     all; collapse to home rather than hand OrbitControls an inverted
-     pair, which it would resolve by dragging the camera to one end. */
-  if (orbitLeash.softMin > orbitLeash.softMax) {
+  orbitLeash.softMin = Math.max(orbitHome.theta - ORBIT_HORIZONTAL, wall.lo + AZ_WALL_MARGIN);
+  orbitLeash.softMax = Math.min(orbitHome.theta + ORBIT_HORIZONTAL, wall.hi - AZ_WALL_MARGIN);
+  if (orbitLeash.softMin > orbitHome.theta || orbitLeash.softMax < orbitHome.theta) {
     orbitLeash.softMin = orbitLeash.softMax = orbitHome.theta;
   }
-  const stretch = controls.enableDamping ? AZ_WALL_STRETCH : 0;
-  orbitLeash.min = orbitLeash.softMin - stretch;
-  orbitLeash.max = orbitLeash.softMax + stretch;
+  orbitLeash.min = orbitLeash.softMin;
+  orbitLeash.max = orbitLeash.softMax;
   controls.minAzimuthAngle = orbitLeash.min;
   controls.maxAzimuthAngle = orbitLeash.max;
   controls.minPolarAngle = orbitHome.phi - ORBIT_UP;
   controls.maxPolarAngle = orbitHome.phi + ORBIT_DOWN;
-}
-
-/* **The soft end of the leash.** OrbitControls' clamp is hard and it is
-   still there — it is what makes the wall a guarantee — but it sits
-   AZ_WALL_STRETCH past where the camera is meant to come to rest, and
-   this takes a share of the overshoot back every frame.
-
-   One exponential does both halves of the feel. Pushing into the band
-   meets a resistance that grows the further it goes, because the drag
-   adds a fixed delta per frame while this takes a fraction of the
-   *whole* overshoot, and the two balance short of the stop. Letting go
-   leaves only the pull, so the camera eases out of the band instead of
-   sitting against a wall it hit.
-
-   Writing the camera here needs nothing kept in sync: `update()`
-   re-derives its angles from the camera position on every call, which
-   is the same reason the walk home can tween it. */
-function easeAzimuthLimits(dt) {
-  const theta = controls.getAzimuthalAngle();
-  const over =
-    theta < orbitLeash.softMin
-      ? theta - orbitLeash.softMin
-      : theta > orbitLeash.softMax
-        ? theta - orbitLeash.softMax
-        : 0;
-  if (!over) return;
-  setOrbitAngles(
-    theta - over * (1 - Math.exp(-AZ_EASE_RATE * dt)),
-    controls.getPolarAngle(),
-  );
-  /* The spring moves the camera without going through the controls, so
-     no `change` fires for it — without this `cameraMoving()` would read
-     at rest while the band is still unwinding, and the CRT would take a
-     raster per frame of it. */
-  orbitChangedAt = performance.now();
 }
 
 function orbitOffHome() {
@@ -2480,13 +2397,16 @@ function spendGlide() {
    nothing to fight. The next drag kills it — see the `start` handler. */
 function returnHome(duration = RETURN_S, onDone = null) {
   killReturn();
-  /* `from` is read *after* this, so the tween starts from the pose the
-     glide actually leaves rather than jumping on its first frame. */
-  spendGlide();
+  // Clear the controls' pending inertia, then restore the visible release
+  // pose so the return begins without applying the rest of a flick at once.
+  orbitSpherical.setFromVector3(flyOffset.copy(camera.position).sub(controls.target));
   const from = {
-    theta: controls.getAzimuthalAngle(),
-    phi: controls.getPolarAngle(),
+    theta: orbitSpherical.theta,
+    phi: orbitSpherical.phi,
   };
+  spendGlide();
+  setOrbitAngles(from.theta, from.phi);
+  controls.update();
   orbitTween = gsap.to(from, {
     theta: orbitHome.theta,
     phi: orbitHome.phi,
@@ -2496,6 +2416,7 @@ function returnHome(duration = RETURN_S, onDone = null) {
     onComplete: () => {
       orbitTween = null;
       setOrbitAngles(orbitHome.theta, orbitHome.phi);
+      controls.update();
       onDone?.();
     },
   });
@@ -2506,9 +2427,13 @@ function setOrbitEnabled(on) {
   controls.enabled = on;
   document.body.classList.toggle("orbit-live", on);
   if (on) {
-    orbitIdleAt = performance.now();
+    orbitIdleAt = 0;
   } else {
+    const returning = !!orbitTween;
     killReturn();
+    if (returning) controls.update();
+    parallaxOffset.set(0, 0);
+    parallaxPointer.set(0, 0);
     orbitDragging = false;
     orbitIdleAt = 0;
     press.id = -1;
@@ -2522,20 +2447,16 @@ function setOrbitEnabled(on) {
    `change` handler covers drawing in that case. */
 function tickOrbit(dt) {
   if (!orbitAllowed()) return;
-  /* Damping glides on for a few frames after the pointer stops, which
-     is the whole of the "weighted" feel; that needs update() every
-     frame, not just on input. The soft limit rides immediately behind
-     it, on the same condition: the walk home writes angles of its own
-     and neither of these may argue with it. */
+  /* Controls advance only while they own the pose. The return tween
+     writes angles itself, with the controls' residual inertia cleared. */
   if (!orbitTween) {
     controls.update(dt);
-    easeAzimuthLimits(dt);
   }
 
   if (!orbitDragging && !orbitTween && orbitIdleAt &&
       performance.now() - orbitIdleAt > IDLE_MS) {
     orbitIdleAt = 0;
-    if (orbitOffHome()) returnHome();
+    returnHome();
   }
 
   if (orbitDirty) {
@@ -2567,7 +2488,9 @@ function pickTarget(e) {
   if (!r.width || !r.height) return null;
   pickNdc.x = ((e.clientX - r.left) / r.width) * 2 - 1;
   pickNdc.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+  const shifted = beginParallax();
   pickRay.setFromCamera(pickNdc, camera);
+  if (shifted) endParallax();
   /* The lamp is listed first so three's stable sort leaves it ahead of
      the machine at equal distance. */
   const roots = lamp ? [lamp.root, computer.root] : [computer.root];
@@ -2737,29 +2660,34 @@ function initOrbit() {
   controls.enableDamping = !prefersReducedMotion();
   controls.dampingFactor = ORBIT_DAMPING;
 
-  /* Home is whatever applyFly(0) just produced, and nothing here moves
-     it: it is the opening framing, and it is where the walk home goes.
-     The *elevation* leash is still expressed against it, so it follows
-     ELEVATION; the azimuth leash is not — it is the room's, and comes
-     off the two wall planes. */
+  /* Read both neutral angles from applyFly(0), including the seated
+     target and eye line, rather than assuming world-facing angles. */
   orbitHome.theta = controls.getAzimuthalAngle();
   orbitHome.phi = controls.getPolarAngle();
   orbitHome.radius = camera.position.distanceTo(controls.target);
-  /* Azimuth off the room's own two walls, elevation off home.
-     orbitHome.theta sits inside the azimuth range
-     rather than in the middle of it, which is the whole point — and it
-     has to sit inside it, or the walk home would be tugging against
-     the leash. See applyOrbitLimits. */
+  /* Clamp both axes around this view's actual neutral orientation. */
   applyOrbitLimits();
 
   controls.addEventListener("start", () => {
+    parallaxOffset.set(0, 0);
+    parallaxPointer.set(0, 0);
     orbitDragging = true;
+    const returning = !!orbitTween;
     killReturn();
+    if (returning) controls.update();
     orbitIdleAt = 0;
   });
   controls.addEventListener("end", () => {
     orbitDragging = false;
-    orbitIdleAt = performance.now();
+    if (prefersReducedMotion()) {
+      // No animation loop for reduced motion; settle in the release event.
+      setOrbitAngles(orbitHome.theta, orbitHome.phi);
+      controls.update();
+      updateScreenOverlay();
+      render();
+    } else {
+      orbitIdleAt = performance.now();
+    }
   });
   controls.addEventListener("change", () => {
     orbitChangedAt = performance.now();
@@ -2850,6 +2778,8 @@ function reframeHome() {
        home. */
     controls.minPolarAngle = 0;
     controls.maxPolarAngle = Math.PI;
+    controls.minAzimuthAngle = -Infinity;
+    controls.maxAzimuthAngle = Infinity;
     spendGlide();
     orbitHome.theta = controls.getAzimuthalAngle();
     orbitHome.phi = controls.getPolarAngle();
@@ -3008,7 +2938,7 @@ function syncScreenVisibility() {
   screenEl.style.visibility = v;
 }
 
-function updateScreenOverlay() {
+function updateScreenOverlay(transformOnly = false) {
   if (!screenEl || !camera || !computer) return;
   const width = canvasEl.clientWidth;
   const height = canvasEl.clientHeight;
@@ -3059,6 +2989,9 @@ function updateScreenOverlay() {
     return;
   }
   setScreenTransform(transform);
+  // Passive head movement changes the quad by a fraction of a pixel;
+  // retain the CRT raster settings instead of repeatedly repainting it.
+  if (transformOnly) return;
 
   /* Scanline pitch and CRT softness are authored in the box's own
      pixels but want to be constant in *device* pixels, so both are
@@ -3214,7 +3147,15 @@ function buildMotionComposer() {
    are in front of the scene.
    ========================================== */
 function initPointer(canvas) {
+  parallaxMedia = window.matchMedia('(hover: hover) and (pointer: fine)');
   onPointerMove = (e) => {
+    if (e.pointerType === 'mouse') {
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width && rect.height) parallaxPointer.set(
+        THREE.MathUtils.clamp(2 * (e.clientX - rect.left) / rect.width - 1, -1, 1),
+        THREE.MathUtils.clamp(1 - 2 * (e.clientY - rect.top) / rect.height, -1, 1),
+      );
+    }
     /* Once the camera is on its way in, the picture is the live page
        rather than the texture, and the hover feedback has nothing left
        to say. */
@@ -3246,6 +3187,9 @@ function initPointer(canvas) {
         : "grab";
   };
   window.addEventListener("pointermove", onPointerMove, { passive: true });
+  onPointerLeave = () => parallaxPointer.set(0, 0);
+  document.documentElement.addEventListener('pointerleave', onPointerLeave);
+  window.addEventListener('blur', onPointerLeave);
 }
 
 /* ==========================================
@@ -3263,9 +3207,17 @@ function initPointer(canvas) {
    ========================================== */
 function render() {
   syncRenderQuality();
+  const shifted = beginParallax();
+  // HTML and WebGL share the same presentation pose, never the base pose.
+  if (shifted || parallaxPresented) updateScreenOverlay(true);
+  parallaxPresented = shifted;
   const activeComposer = motionQuality && motionComposer ? motionComposer : composer;
-  if (activeComposer) activeComposer.render();
-  else renderer.render(scene, camera);
+  try {
+    if (activeComposer) activeComposer.render();
+    else renderer.render(scene, camera);
+  } finally {
+    if (shifted) endParallax();
+  }
 }
 
 function setFly(p) {
@@ -4263,11 +4215,14 @@ export async function initScene(canvas) {
       render();
     }
     const deg = THREE.MathUtils.radToDeg;
-    const theta = controls.getAzimuthalAngle();
+    // During a return tween the controls intentionally stand down; read
+    // the real camera pose rather than their last cached spherical angles.
+    orbitSpherical.setFromVector3(flyOffset.copy(camera.position).sub(controls.target));
+    const theta = orbitSpherical.theta;
     return {
       swing: deg(theta - orbitHome.theta), // off home
       front: deg(theta - FACING), // off the monitor's front
-      rise: deg(orbitHome.phi - controls.getPolarAngle()),
+      rise: deg(orbitHome.phi - orbitSpherical.phi),
       enabled: controls.enabled,
       facing: screenFacing(),
       limits: {
@@ -5026,6 +4981,7 @@ export async function initScene(canvas) {
     /* The controls own the camera at the establishing shot and nowhere
        else, so this is a no-op from the moment a flight starts. */
     tickOrbit(dt);
+    tickParallax(dt);
     /* The lamp's fade. A no-op once the light has
        settled, which it is for all but 0.4s per press. */
     tickLamp(dt);
@@ -5085,6 +5041,15 @@ export function disposeScene() {
   if (onVisibility)
     document.removeEventListener("visibilitychange", onVisibility);
   if (onPointerMove) window.removeEventListener("pointermove", onPointerMove);
+  if (onPointerLeave) {
+    document.documentElement.removeEventListener('pointerleave', onPointerLeave);
+    window.removeEventListener('blur', onPointerLeave);
+  }
+  onPointerLeave = null;
+  parallaxMedia = null;
+  parallaxPointer.set(0, 0);
+  parallaxOffset.set(0, 0);
+  parallaxPresented = false;
   killReturn();
   if (canvasEl && onCanvasDown) {
     canvasEl.removeEventListener("pointerdown", onCanvasDown);
