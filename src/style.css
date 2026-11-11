@@ -820,7 +820,7 @@ body {
 }
 
 .resume-role { color: #333; }
-.resume-meta { color: var(--dark); font-size: 12px; margin-top: 2px; }
+.resume-meta { color: #595959; font-size: 12px; margin-top: 2px; overflow-wrap: anywhere; }
 
 /* The rule under a heading is a border rather than a row of dashes, so
    it stretches with the window instead of wrapping at a fixed count. */
@@ -846,7 +846,7 @@ body {
   gap: 2px 12px;
 }
 
-.resume-when  { color: var(--dark); font-size: 12px; white-space: nowrap; }
+.resume-when  { color: #595959; font-size: 12px; white-space: nowrap; }
 .resume-where { color: #333; font-size: 12px; }
 
 .resume ul {

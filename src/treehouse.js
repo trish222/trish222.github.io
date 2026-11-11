@@ -38,19 +38,10 @@ const BH = STUD * 1.2;        // one brick course, at the usual 6:5 ratio
 const PH = BH / 3;            // one plate: a third of a brick, as it should be
 const STUD_R = STUD * 0.3;    // the stud itself
 const STUD_H = STUD * 0.2;
-/* The moulding bevel. It is here because the key rakes in almost
-   horizontally: without it two stacked bricks of the same colour share
-   one unbroken face and the course line vanishes. These bricks carry
-   flat colour and no noise map, so the fillet's collapsed UVs — the
-   thing that made RoundedBoxGeometry unusable on the desk — cost
-   nothing here.
-
-   It was STUD * 0.055 and is now 0.09, which at the home framing is
-   about a pixel and a half of lit edge per seam. That is the whole
-   mechanism by which a stack of same-coloured bricks reads as a stack:
-   the bevel catches the key and draws a bright line where two pieces
-   meet. Pushed much past this a 1x1 starts to read as a pebble. */
-const BEVEL = STUD * 0.09;
+/* Small moulding radii preserve flat faces. A separate assembly gap
+   defines the seams without rounding thin canopy plates into pillows. */
+const BEVEL = STUD * 0.045;
+const BRICK_GAP = STUD * 0.035;
 
 /* Moulded ABS catches the light; sprayed enamel and aged plastic do
    not. The two numbers that make the model read as a toy standing on
@@ -59,13 +50,13 @@ const BEVEL = STUD * 0.09;
    - **GLOSS multiplies every roughness the kit is asked for**, rather
      than each call site being retuned. The relative spread stays —
      bark duller than petal, grass between them — and the whole model
-     moves together. 0.55 takes the kit's 0.42 default to 0.23, which
-     is a hard small highlight on a 0.3-unit face.
+     moves together. 0.78 takes the kit's 0.42 default to 0.33:
+     a readable plastic sheen without tiny shimmering highlights.
    - **BRICK_ENV is above the furniture's 0.34.** The studio HDRI is
      ambient from every direction, so on a matt surface it only
      flattens; on a glossy one it is what puts a sheen on the faces the
      key never reaches, which is most of the underside of a canopy. */
-const GLOSS = 0.55;
+const GLOSS = 0.78;
 const BRICK_ENV = 0.55;
 
 /* --- Palette ---------------------------------------------
@@ -296,6 +287,39 @@ function rng(seed) {
 const UNIT = new THREE.Vector3(1, 1, 1);
 const UP = new THREE.Vector3(0, 1, 0);
 
+function brickGeometry(w, h, d) {
+  return new RoundedBoxGeometry(
+    w - BRICK_GAP, h - BRICK_GAP, d - BRICK_GAP, 1, BEVEL);
+}
+
+/* A flat-topped stud with a small moulded rim, rather than a sharp
+   low-sided cylinder. Shared by every instance, including spare bricks. */
+function studGeometry() {
+  const r = STUD_R, half = STUD_H / 2, lip = STUD * 0.018;
+  return new THREE.LatheGeometry([
+    new THREE.Vector2(0, -half),
+    new THREE.Vector2(r, -half),
+    new THREE.Vector2(r, half - lip),
+    new THREE.Vector2(r - lip, half),
+    new THREE.Vector2(0, half),
+  ], 12);
+}
+
+/* Subtle baked cavity shading on each moulded part. It follows the
+   piece's local normals, so undersides and sidewalls stay distinct on
+   phones too, where the expensive screen-space AO pass is disabled. */
+function shadePiece(geometry) {
+  const normals = geometry.getAttribute('normal');
+  const colours = new Float32Array(normals.count * 3);
+  for (let i = 0; i < normals.count; i++) {
+    const y = normals.getY(i);
+    const light = y >= 0 ? 0.86 + y * 0.14 : 0.86 + y * 0.12;
+    colours.fill(light, i * 3, i * 3 + 3);
+  }
+  geometry.setAttribute('color', new THREE.BufferAttribute(colours, 3));
+  return geometry;
+}
+
 function createKit() {
   const batches = new Map();
   const mats = new Map();
@@ -309,7 +333,7 @@ function createKit() {
     if (!m) {
       m = track(new THREE.MeshStandardMaterial({
         color: colour, roughness: Math.max(0.1, roughness * GLOSS),
-        metalness: 0, envMapIntensity: BRICK_ENV,
+        metalness: 0, envMapIntensity: BRICK_ENV, vertexColors: true,
       }));
       m.userData.key = key;
       mats.set(key, m);
@@ -342,7 +366,7 @@ function createKit() {
       let bw = w, bd = d, yaw = ry;
       if (bw > bd) { bw = d; bd = w; yaw += Math.PI / 2; }
       put(`box|${bw}x${bd}x${h.toFixed(3)}|${material.userData.key}`,
-        () => new RoundedBoxGeometry(bw * STUD, h, bd * STUD, 1, BEVEL),
+        () => brickGeometry(bw * STUD, h, bd * STUD),
         material, compose(x, y + h / 2, z, yawQ(yaw)));
       if (studs) kit.studGrid(material, w, d, x, y + h, z, ry);
     },
@@ -362,7 +386,7 @@ function createKit() {
 
     stud(material, x, y, z) {
       put(`stud|${material.userData.key}`,
-        () => new THREE.CylinderGeometry(STUD_R, STUD_R, STUD_H, 10),
+        studGeometry,
         material, compose(x, y + STUD_H / 2, z, new THREE.Quaternion()));
     },
 
@@ -374,7 +398,7 @@ function createKit() {
 
     bake(parent) {
       for (const b of batches.values()) {
-        const geo = track(b.make());
+        const geo = track(shadePiece(b.make()));
         let mesh;
         if (b.xf.length === 1) {
           mesh = new THREE.Mesh(geo, b.material);
@@ -416,12 +440,15 @@ function flowerGeometry() {
   const ring = STUD * 0.44;
   const h = PH * 0.62;
 
-  const hub = new THREE.CylinderGeometry(hubR, hubR * 0.92, h, 8);
+  const hub = new THREE.CylinderGeometry(hubR, hubR * 0.92, h, 10);
   parts.push(hub);
 
   for (let i = 0; i < 5; i++) {
     const a = (i / 5) * Math.PI * 2;
-    const p = new THREE.CylinderGeometry(petalR, petalR * 0.86, h * 0.86, 7);
+    const p = new THREE.CylinderGeometry(petalR, petalR * 0.86, h * 0.86, 8);
+    // A shallow cup catches a rim highlight and exposes the petal's side.
+    p.rotateZ(0.16);
+    p.rotateY(-a);
     p.translate(Math.cos(a) * ring, -h * 0.07, Math.sin(a) * ring);
     parts.push(p);
   }
@@ -805,7 +832,7 @@ function buildBranch(kit, material, curve, {
     const m = shade && i % 3 === 1 ? shade : material;
     const [w, d] = sizeAt(sizes, bands, t);
     kit.piece(`branch|${w}x${d}|${m.userData.key}`,
-      () => new RoundedBoxGeometry(w * STUD, h, d * STUD, 1, BEVEL),
+      () => brickGeometry(w * STUD, h, d * STUD),
       m, p, q.clone());
     if (i === n - 1) { tip = p; tipQ = q.clone(); tipMat = m; }
   }
@@ -815,7 +842,7 @@ function buildBranch(kit, material, curve, {
   /* The stud on the end, pointing along the branch. */
   const o = tip.clone().add(new THREE.Vector3(0, h / 2, 0).applyQuaternion(tipQ));
   kit.put(`tipstud|${tipMat.userData.key}`,
-    () => new THREE.CylinderGeometry(STUD_R, STUD_R, STUD_H, 10),
+    studGeometry,
     tipMat, new THREE.Matrix4().compose(
       o.add(new THREE.Vector3(0, STUD_H / 2, 0).applyQuaternion(tipQ)),
       tipQ, UNIT));
@@ -1481,21 +1508,21 @@ const INNER_SCALE = 1.12;              // the fork lobes run a little larger
    RUN_MAX is the longest plate laid in one piece. It is a batching
    figure as much as a modelling one: each distinct footprint is its
    own geometry, so an uncapped run would mint a 1x11 nobody can see
-   the far end of. Six is the longest plate in the bin. */
+   the far end of. Three is the longest run, keeping seams visible. */
 const CELL = STUD;
 const LAYER = PH;
-const RUN_MAX = 6;
+const RUN_MAX = 3;
 
 /* How much blossom goes on. A flower is *clipped to a stud*, so these
    are shares of the exposed studs rather than densities in a volume —
    the structure decides where blossom may go and these decide how much
    of it is taken. Where a flower is not taken the stud is left bare,
    which is what puts studs on the upward-facing surfaces. */
-const TOP_BLOOM = 0.52;                // of the up-facing plates in the mass
-const EDGE_BLOOM = 0.78;               // ...and out on the loose clumps
-const SIDE_BLOOM = 0.24;               // of the outward-facing vertical faces
-const BLOOM_TOP_SIZE = 0.86;
-const BLOOM_SIDE_SIZE = 0.74;
+const TOP_BLOOM = 0.40;                // leave studs and plate seams visible
+const EDGE_BLOOM = 0.66;
+const SIDE_BLOOM = 0.20;
+const BLOOM_TOP_SIZE = 0.70;           // one flower fits within one stud cell
+const BLOOM_SIDE_SIZE = 0.66;
 /* The loose single plates stepped off the mass. They are what the old
    scattered fringe was for — an outline you can see the sky through —
    except that each one is a 1x1 with a flower on it, on the grid, in
@@ -1954,7 +1981,7 @@ function looseBrick(kit, material, w, d, pos, quat) {
   const s3 = new THREE.Vector3(SPARE_SCALE, SPARE_SCALE, SPARE_SCALE);
 
   kit.put(`box|${bw}x${bd}x${BH.toFixed(3)}|${material.userData.key}`,
-    () => new RoundedBoxGeometry(bw * STUD, BH, bd * STUD, 1, BEVEL),
+    () => brickGeometry(bw * STUD, BH, bd * STUD),
     material, new THREE.Matrix4().compose(pos, q, s3));
 
   /* The stud offsets are in the brick's own space, so they take the
@@ -1967,7 +1994,7 @@ function looseBrick(kit, material, w, d, pos, quat) {
         (j - (bd - 1) / 2) * STUD)
         .multiplyScalar(SPARE_SCALE).applyQuaternion(q).add(pos);
       kit.put(`stud|${material.userData.key}`,
-        () => new THREE.CylinderGeometry(STUD_R, STUD_R, STUD_H, 10),
+        studGeometry,
         material, new THREE.Matrix4().compose(o.clone(), q, s3));
     }
   }
