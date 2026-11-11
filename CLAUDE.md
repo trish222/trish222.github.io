@@ -21,8 +21,8 @@ one to use and what to take from it.
   models. A shade is an open-ended cone; a stud is a cylinder; a brick
   is a bevelled box.
 - Keep the site mobile responsive.
-- Work happens on theme branches (`theme/windows98`); only `main`
-  deploys.
+- Work happens on theme branches (`theme/windows98`). Both `main` and
+  `theme/windows98` deploy to the same Pages site; the latest deployment wins.
 
 ### Third-party inventory
 
@@ -61,9 +61,11 @@ model.
 - **Also:** `npm run icons` regenerates the desktop icons;
   `npm run vendor:98` regenerates `src/vendor/98.scoped.css`.
 - **Deploy:** GitHub Pages via `.github/workflows/deploy.yml`, on push
-  to `main` only. Runs `npm install && npm run build`, publishes
-  `dist/`. `base: '/'` in `vite.config.js` — this is a user site, so
-  don't change it.
+  to `main` or `theme/windows98`, or manual dispatch. Runs `npm ci`,
+  `npm run build`, and `npm run check:build`, then publishes `dist/`.
+  Pages must use **GitHub Actions** as its source, not the source branch.
+  See [docs/deployment.md](docs/deployment.md). `base: '/'` in
+  `vite.config.js` — this is a user site, so don't change it.
 
 ## Layout
 

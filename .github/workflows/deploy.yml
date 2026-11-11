@@ -2,13 +2,18 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: "main"
+    branches: [main, theme/windows98]
   workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
   id-token: write
+
+# Both branches publish to the same Pages site; avoid overlapping deploys.
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
 
 jobs:
   build_site:
@@ -20,14 +25,20 @@ jobs:
       - name: Install Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
 
       - name: Build
         run: npm run build
+
+      - name: Verify deployment files
+        run: npm run check:build
 
       - name: Upload Artifacts
         uses: actions/upload-pages-artifact@v3
