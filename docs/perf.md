@@ -1,5 +1,11 @@
 # Frame rate, and what holds it at 60
 
+For the matched local/Pages investigation, browser-launch diagnosis and
+motion-resize fix, see [performance-investigation.md](performance-investigation.md).
+The hardware-accelerated headless Chromium used in that investigation does
+not support the older blanket assumption below that headless always means
+SwiftShader; read the actual WebGL renderer for every run.
+
 ## Startup profiling
 
 Use the existing Playwright dependency to collect Chrome CPU profiles,

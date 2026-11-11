@@ -860,17 +860,28 @@ function scenePixelRatio() {
   return Math.min(window.devicePixelRatio || 1, isMobile() ? MOBILE_MAX_DPR : MAX_DPR);
 }
 
-// Change buffers only when motion starts/stops, never on every pointer event.
+// Keep drawing buffers allocated across camera motion. Even a single canvas
+// resize can synchronize with the GPU (100ms+ on the measured Metal path),
+// and damping / the return home used to bounce between two resolutions.
+// Desktop keeps a second, small composer for the existing motion resolution,
+// so switching quality does not dispose/reallocate render targets either.
 let motionQuality = false;
-function syncRenderQuality(force = false) {
+function syncRenderQuality() {
   const moving = cameraMoving() && !prefersReducedMotion();
-  const ratio = moving
-    ? Math.min(scenePixelRatio(), isMobile() ? 1.5 : 1)
-    : scenePixelRatio();
-  if (!force && moving === motionQuality && renderer.getPixelRatio() === ratio) return;
+  const ratio = scenePixelRatio();
+  if (moving === motionQuality && renderer.getPixelRatio() === ratio) return;
   motionQuality = moving;
-  renderer.setPixelRatio(ratio);
-  if (composer) composer.setPixelRatio(ratio);
+  // setPixelRatio calls setSize even for an unchanged value. Only a real DPR
+  // or viewport breakpoint change should resize the canvas and composer.
+  if (renderer.getPixelRatio() !== ratio) {
+    renderer.setPixelRatio(ratio);
+    composer?.setPixelRatio(ratio);
+    if (composer && ratio > 1 && !motionComposer) {
+      motionComposer = buildMotionComposer();
+      motionComposer.render(); // a real DPR change, before the next gesture
+    }
+    motionComposer?.setPixelRatio(Math.min(ratio, 1));
+  }
   // AO redraws the entire room for its depth/normal pass. Keep the real
   // light/shadow rendering during motion and restore contact detail at rest.
   if (gtaoPass) gtaoPass.enabled = !moving;
@@ -1236,6 +1247,7 @@ let fly = { value: 0, dir: 0 };
 let dive = { value: 0, dir: 0 };
 let camera = null;
 let composer = null;
+let motionComposer = null;
 let computer = null;
 let desk = null;
 let treehouse = null;
@@ -3167,6 +3179,20 @@ function buildComposer(width, height) {
   return c;
 }
 
+function buildMotionComposer() {
+  const c = new EffectComposer(renderer);
+  // Same RenderPass -> OutputPass path and motion resolution as before,
+  // with its buffers retained while the full-resolution AO composer rests.
+  c.setPixelRatio(Math.min(scenePixelRatio(), 1));
+  c.addPass(new RenderPass(scene, camera));
+  const output = new OutputPass();
+  // The final pass writes straight to the canvas. Keep reading the same
+  // target instead of allocating the unused ping-pong target on frame two.
+  output.needsSwap = false;
+  c.addPass(output);
+  return c;
+}
+
 /* ==========================================
    HOVER, AND THE CURSOR
 
@@ -3231,7 +3257,8 @@ function initPointer(canvas) {
    ========================================== */
 function render() {
   syncRenderQuality();
-  if (composer) composer.render();
+  const activeComposer = motionQuality && motionComposer ? motionComposer : composer;
+  if (activeComposer) activeComposer.render();
   else renderer.render(scene, camera);
 }
 
@@ -4132,8 +4159,11 @@ export async function initScene(canvas) {
   if (!isMobile() && !prefersReducedMotion()) {
     try {
       composer = buildComposer(w, h);
+      if (scenePixelRatio() > 1) motionComposer = buildMotionComposer();
     } catch {
-      composer = null; // fall back to a straight render
+      composer?.dispose();
+      motionComposer?.dispose();
+      composer = motionComposer = null; // fall back to a straight render
     }
   }
 
@@ -4836,10 +4866,10 @@ export async function initScene(canvas) {
     const width = canvas.clientWidth;
     const height = canvas.clientHeight;
     if (!width || !height) return;
-    renderer.setPixelRatio(scenePixelRatio());
+    syncRenderQuality();
     renderer.setSize(width, height, false);
     composer?.setSize(width, height);
-    syncRenderQuality(true);
+    motionComposer?.setSize(width, height);
     /* The camera's distance is derived from the frustum, which crosses
        the mobile breakpoint — so the fog, whose range is an offset from
        that distance, crosses with it. near/far are plain uniforms; this
@@ -4882,6 +4912,9 @@ export async function initScene(canvas) {
   window.addEventListener("resize", onResize);
 
   performance.mark('room:before-first-frame');
+  // Allocate/upload the small motion targets before interaction, not on the
+  // first drag. The following full-resolution draw reuses programs/shadows.
+  motionComposer?.render();
   render();
   performance.mark('room:first-frame');
   initScreenOverlay();
@@ -5120,6 +5153,9 @@ export function disposeScene() {
   gtaoPass = null;
   canvasEl = null;
   envMap?.dispose();
+  motionComposer?.passes.forEach((pass) => pass.dispose());
+  motionComposer?.dispose();
+  motionComposer = null;
   composer?.dispose();
   renderer?.dispose();
   hover = { target: 0, value: 0 };

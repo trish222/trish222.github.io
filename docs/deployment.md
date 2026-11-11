@@ -43,3 +43,14 @@ After deployment, hard-refresh the live page. Its HTML should reference
 `/assets/index-*.js` and `/assets/index-*.css`, never `/src/main.js`.
 If it still references `/src/`, check the Pages source and the most recent
 deployment's branch and commit in GitHub Actions.
+
+New builds also emit `/build-info.json`: source revision, branch, local-edit
+flag, build timestamp and hashes of the generated assets. `check:build`
+verifies those hashes before CI uploads the artifact. A build with
+`dirty: true` includes edits beyond the listed commit. This metadata is a
+separate static file and adds no runtime request to the site.
+
+With the production preview running, `npm run check:deployment` compares
+live entry assets with `dist/` and reads public GitHub deployment history.
+Before this metadata first ships, its live endpoint correctly returns 404.
+An intentional local change also correctly makes the JS comparison false.

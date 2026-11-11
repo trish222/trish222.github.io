@@ -325,7 +325,10 @@ function updateClock() {
   const h = now.getHours();
   const m = String(now.getMinutes()).padStart(2, '0');
   const ampm = h >= 12 ? 'PM' : 'AM';
-  el.textContent = `${(h % 12) || 12}:${m} ${ampm}`;
+  const text = `${(h % 12) || 12}:${m} ${ampm}`;
+  // The display has minute precision. Avoid replacing its text node on
+  // every one-second poll and invalidating the transformed desktop.
+  if (el.textContent !== text) el.textContent = text;
 }
 
 /* ==========================================

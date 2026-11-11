@@ -1,5 +1,6 @@
 import { readFile, readdir, access } from 'node:fs/promises';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 
 // Pages must receive Vite's output, including every stable public asset.
 const output = path.resolve('dist');
@@ -25,4 +26,12 @@ async function checkPublic(directory = 'public') {
   }
 }
 await checkPublic();
-console.log('Build verified: compiled entry assets and all public assets exist in dist/.');
+const info = JSON.parse(await readFile(path.join(output, 'build-info.json'), 'utf8'));
+if (!info.revision || !info.branch || !Object.keys(info.assets).length) {
+  throw new Error('Build provenance must identify the source revision, branch, and assets.');
+}
+for (const [file, expected] of Object.entries(info.assets)) {
+  const actual = createHash('sha256').update(await readFile(path.join(output, file))).digest('hex');
+  if (actual !== expected) throw new Error(`Build provenance hash mismatch: ${file}`);
+}
+console.log('Build verified: compiled entry, public assets, and source provenance with matching asset hashes.');

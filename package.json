@@ -8,6 +8,10 @@
     "build": "vite build",
     "check:build": "node scripts/check-build.mjs",
     "profile:startup": "node scripts/profile-startup.mjs",
+    "check:browser": "node scripts/check-browser.mjs",
+    "check:deployment": "node scripts/check-deployment.mjs",
+    "test:interaction": "node scripts/test-interaction.mjs",
+    "profile:interaction": "node scripts/profile-interaction.mjs",
     "preview": "vite preview --port 4317",
     "vendor:98": "node scripts/vendor-98css.mjs",
     "icons": "node scripts/make-icons.mjs"
