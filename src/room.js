@@ -16,7 +16,7 @@ import {
    THE ROOM
 
    The corner of a room — plank floor, two walls, wainscot, skirting,
-   crown and a rug — standing in a flat #1C1A2A void that is only ever
+   and crown — standing in a flat #1C1A2A void that is only ever
    seen past the open sides. It replaces src/floor.js, whose job was
    the opposite: an effectively endless grey plane whose edges were
    hidden by fog in its own colour.
@@ -32,7 +32,7 @@ import {
 
    **Nothing here is typeset.** floor.js tiled the name across the
    ground and the first version of this module set it once on the rug;
-   both are gone, on request. The rug is a woven field now. Playfair is
+   both are gone, on request, along with the rug itself. Playfair is
    still loaded, but for the CRT's greeting rather than for anything on
    the ground — see computer.js.
 
@@ -83,8 +83,6 @@ const TRIM_LIT = "#4b4368";
    which is what keeps it *wood*: the planks are the one large warm
    surface in a picture whose walls, fog and moonlight are all cool. */
 const PLANK = "#644c3d";
-const RUG_FIELD = "#5a3e52";
-const RUG_EDGE = "#83607a";
 
 /* --- Plan ------------------------------------------------
    The desk is 19 x 12.6 centred on the origin, so it spans x -9.5..9.5
@@ -271,25 +269,6 @@ const WINDOW_Z = 0.0;
    leaves 1.14 clear of the cap rail. */
 const WINDOW_SILL_Y = 10.0;
 
-/* --- The rug ---------------------------------------------
-   In the open floor in front of the desk (whose front edge is z 6.3).
-   The plan is unchanged from when it carried the wordmark and was
-   sized to set the name across: a smaller rug would read as a mat, and
-   at the home framing its front edge is already off the bottom of the
-   picture. */
-const RUG_X0 = -6.5;
-const RUG_X1 = 12.5;
-const RUG_Z0 = 7.6;
-const RUG_Z1 = 18.2;
-const RUG_Y = 0.045; // off the planks, not in them
-const RUG_INSET = 0.055; // the border's own width, as a share of the whole
-/* Corner radius, in world units. The rug is 19 x 10.6, so 1.1 reads as
-   a rounded rectangle rather than as a stadium — and it is one number
-   for both the silhouette and the drawn border, which is the point:
-   the texture's border band has to follow the geometry's corners or
-   the two disagree exactly where the eye goes. */
-const RUG_RADIUS = 1.1;
-
 /* --- No cutaway ------------------------------------------
    **Both walls are opaque at every pose and nothing here fades.**
    There used to be a cutaway: each wall dimmed on the angle between
@@ -325,7 +304,6 @@ const RUG_RADIUS = 1.1;
    figure drawFloor draws in pixels — see the grain below. */
 const FLOOR_TEX_W = 2048;
 const WALL_TEX = 512; // value noise only, tiled
-const RUG_TEX_W = 1024;
 
 /* --- State ----------------------------------------------- */
 let disposables = [];
@@ -791,107 +769,6 @@ function buildWallPanel(width, colour, opening = null, cast = null) {
   return { group: g };
 }
 
-/* A rounded rectangle, traced into whatever accepts the four calls
-   below — a canvas 2D context or a THREE.Path, which share enough of
-   an interface for one function to drive both. That sharing is the
-   reason this exists rather than two `roundRect` calls: the drawn
-   border and the cut silhouette have to agree on the corner, and the
-   only way to guarantee that is for one piece of code to describe it.
-   Traced counter-clockwise from the left edge, which is the winding
-   THREE.Shape wants for an outer contour. */
-function traceRoundedRect(p, x, y, w, h, r) {
-  const rad = Math.min(r, w / 2, h / 2);
-  p.moveTo(x, y + rad);
-  p.lineTo(x, y + h - rad);
-  p.quadraticCurveTo(x, y + h, x + rad, y + h);
-  p.lineTo(x + w - rad, y + h);
-  p.quadraticCurveTo(x + w, y + h, x + w, y + h - rad);
-  p.lineTo(x + w, y + rad);
-  p.quadraticCurveTo(x + w, y, x + w - rad, y);
-  p.lineTo(x + rad, y);
-  p.quadraticCurveTo(x, y, x, y + rad);
-}
-
-/* ==========================================
-   THE RUG
-
-   A bound field: border, keyline, pile. No wordmark — it set one
-   "Trish Nguyen" in cream across the middle and that is gone on
-   request, so the rug is now the one large plain surface in front of
-   the desk rather than a label lying on the floor.
-   ========================================== */
-function drawRug() {
-  const w = RUG_TEX_W;
-  const h = Math.round((w * (RUG_Z1 - RUG_Z0)) / (RUG_X1 - RUG_X0));
-  const c = document.createElement("canvas");
-  c.width = w;
-  c.height = h;
-  const ctx = c.getContext("2d");
-  const rnd = rand(0x2bd1);
-
-  /* Border, then field inset into it — both rounded, and the radius
-     comes off the same world figure the geometry is cut to. The
-     texture is drawn at a uniform scale (w / rug width equals
-     h / rug depth to the pixel), so one radius in pixels is correct on
-     both axes. The field's corner is tightened by its own inset, which
-     is what keeps the band an even width round the turn instead of
-     fattening at the corners. */
-  const pxPerUnit = w / (RUG_X1 - RUG_X0);
-  const radius = RUG_RADIUS * pxPerUnit;
-  ctx.fillStyle = RUG_EDGE;
-  ctx.beginPath();
-  traceRoundedRect(ctx, 0, 0, w, h, radius);
-  ctx.fill();
-
-  const inset = Math.round(Math.min(w, h) * RUG_INSET);
-  ctx.beginPath();
-  traceRoundedRect(ctx, inset, inset, w - 2 * inset, h - 2 * inset, radius - inset);
-  ctx.fillStyle = RUG_FIELD;
-  ctx.fill();
-  /* A keyline between the two, a touch darker than either, so the
-     border reads as bound rather than as a painted margin. */
-  ctx.strokeStyle = shade(RUG_FIELD, 0.74);
-  ctx.lineWidth = Math.max(1.5, inset * 0.12);
-  ctx.stroke();
-
-  /* Pile: fine noise over the border and the field alike, so the two
-     read as one woven piece rather than as two flat fills. It is the
-     only thing giving the rug any surface now the type has gone. */
-  ctx.globalAlpha = 0.07;
-  for (let i = 0; i < 24000; i++) {
-    const x = rnd() * w;
-    const y = rnd() * h;
-    ctx.fillStyle = rnd() > 0.5 ? "#000000" : "#ffffff";
-    ctx.fillRect(x, y, 1.4, 1.4);
-  }
-  ctx.globalAlpha = 1;
-
-  return makeTexture(c);
-}
-
-/* The rug's silhouette. Built in the XY plane so the mesh can be
-   rotated flat the way the old PlaneGeometry was, and with UVs
-   rewritten to the 0..1 box PlaneGeometry would have produced —
-   ShapeGeometry's own are in shape coordinates, which here are world
-   units, so the texture would tile nineteen times across. */
-function rugGeometry() {
-  const w = RUG_X1 - RUG_X0;
-  const d = RUG_Z1 - RUG_Z0;
-  const shape = new THREE.Shape();
-  traceRoundedRect(shape, -w / 2, -d / 2, w, d, RUG_RADIUS);
-  /* 16 segments a corner: at the home framing the rug's corner spans
-     about 60 screen pixels, where 12 (the default) still shows as
-     facets along the curve. */
-  const g = new THREE.ShapeGeometry(shape, 16);
-  const pos = g.attributes.position;
-  const uv = g.attributes.uv;
-  for (let i = 0; i < pos.count; i++) {
-    uv.setXY(i, (pos.getX(i) + w / 2) / w, (pos.getY(i) + d / 2) / d);
-  }
-  uv.needsUpdate = true;
-  return g;
-}
-
 /* ==========================================
    BUILD
    ========================================== */
@@ -919,35 +796,6 @@ export function buildRoom(maxAnisotropy = 1, reduced = false) {
   floor.receiveShadow = true;
   floor.castShadow = false;
   root.add(floor);
-
-  /* --- the rug ---
-     A real rounded silhouette, not a rectangle with rounded paint on
-     it: the corner has to survive being seen against the dark planks,
-     and the flat view (2 degrees above the floor) looks straight along
-     the rug's own front edge, where a painted corner would show its
-     square geometry as a hard notch either side.
-
-     ShapeGeometry rather than a plane, which costs the UVs: it writes
-     the shape's own coordinates into `uv`, so the texture would be
-     mapped in world units. `rugGeometry` normalises them back to 0..1
-     over the bounding box, reproducing exactly what PlaneGeometry
-     would have given — which is what lets drawRug stay unchanged. */
-  const rug = new THREE.Mesh(
-    track(rugGeometry()),
-    track(
-      new THREE.MeshStandardMaterial({
-        map: drawRug(),
-        roughness: 0.95,
-        metalness: 0,
-      }),
-    ),
-  );
-  rug.name = "rug";
-  rug.rotation.x = -Math.PI / 2;
-  rug.position.set((RUG_X0 + RUG_X1) / 2, RUG_Y, (RUG_Z0 + RUG_Z1) / 2);
-  rug.receiveShadow = true;
-  rug.castShadow = false;
-  root.add(rug);
 
   /* --- the two walls ---
      Each is built facing local +Z and then placed on its own inner

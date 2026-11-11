@@ -860,6 +860,22 @@ function scenePixelRatio() {
   return Math.min(window.devicePixelRatio || 1, isMobile() ? MOBILE_MAX_DPR : MAX_DPR);
 }
 
+// Change buffers only when motion starts/stops, never on every pointer event.
+let motionQuality = false;
+function syncRenderQuality(force = false) {
+  const moving = cameraMoving() && !prefersReducedMotion();
+  const ratio = moving
+    ? Math.min(scenePixelRatio(), isMobile() ? 1.5 : 1)
+    : scenePixelRatio();
+  if (!force && moving === motionQuality && renderer.getPixelRatio() === ratio) return;
+  motionQuality = moving;
+  renderer.setPixelRatio(ratio);
+  if (composer) composer.setPixelRatio(ratio);
+  // AO redraws the entire room for its depth/normal pass. Keep the real
+  // light/shadow rendering during motion and restore contact detail at rest.
+  if (gtaoPass) gtaoPass.enabled = !moving;
+}
+
 /* ==========================================
    LOOKING AROUND
 
@@ -3174,6 +3190,13 @@ function initPointer(canvas) {
       hover.target = 0;
       return;
     }
+    // A drag already owns the gesture; raycasting every coalesced move
+    // cannot change its action and competes with drawing the next frame.
+    if (orbitDragging) {
+      hover.target = 0;
+      canvas.style.cursor = "grabbing";
+      return;
+    }
     if (e.target?.closest?.(".window, #taskbar, #start-menu")) {
       hover.target = 0;
       return;
@@ -3207,6 +3230,7 @@ function initPointer(canvas) {
    moving, `screen-focused` once it has arrived.
    ========================================== */
 function render() {
+  syncRenderQuality();
   if (composer) composer.render();
   else renderer.render(scene, camera);
 }
@@ -4550,7 +4574,6 @@ export async function initScene(canvas) {
       "floor pool": [-4.0, 0.02, 12.0],
       "floor dark": [9.0, 0.02, 13.5],
       "floor bare": [14.0, 0.02, 2.0],
-      "rug": [2.0, 0.08, 14.0],
       "wall far": [6.0, 13.0, -8.85],
       "wall left": [-12.9, 13.0, 6.0],
       "desk pool": [-6.0, DESK_TOP_Y + 0.02, 0.0],
@@ -4816,6 +4839,7 @@ export async function initScene(canvas) {
     renderer.setPixelRatio(scenePixelRatio());
     renderer.setSize(width, height, false);
     composer?.setSize(width, height);
+    syncRenderQuality(true);
     /* The camera's distance is derived from the frustum, which crosses
        the mobile breakpoint — so the fog, whose range is an offset from
        that distance, crosses with it. near/far are plain uniforms; this
@@ -4915,12 +4939,23 @@ export async function initScene(canvas) {
   const screenGlow = computer.screenGlow;
   const clock = new THREE.Clock();
   let elapsed = 0;
+  let hoverStyle = "";
   const tick = () => {
     frame = requestAnimationFrame(tick);
     perf?.begin();
     /* Time-based easing, so the picture settles at the same speed
        whatever the frame rate. */
     const dt = clock.getDelta();
+    // The canvas is frozen behind the live desktop. Leave native scrolling
+    // alone instead of updating invisible rain, textures and inherited CSS.
+    // Keep the lamp ramp live for its keyboard control.
+    if (fly.value === 1 && fly.dir === 0 && dive.dir === 0) {
+      const lampMoving = lamp && lampP !== (lampOn ? 1 : 0);
+      tickLamp(dt);
+      if (lampMoving || motionQuality) render();
+      perf?.end(1 - dive.value);
+      return;
+    }
     elapsed += dt;
     /* The rain. One float write — the streaks are computed in the
        fragment shader from the pane's own coordinates, so there is
@@ -4935,7 +4970,11 @@ export async function initScene(canvas) {
     const k = 1 - Math.exp(-HOVER_RATE * dt);
     hover.value += (hover.target - hover.value) * k;
     computer.setScreen(hover.value);
-    screenEl?.style.setProperty("--hover", hover.value.toFixed(3));
+    const nextHoverStyle = hover.value.toFixed(3);
+    if (nextHoverStyle !== hoverStyle) {
+      hoverStyle = nextHoverStyle;
+      screenEl?.style.setProperty("--hover", hoverStyle);
+    }
     /* A real tube never sits perfectly still — a shallow beat on the
        brightness, well under what reads as a flash. */
     const flicker =
@@ -5085,5 +5124,6 @@ export function disposeScene() {
   renderer?.dispose();
   hover = { target: 0, value: 0 };
   renderer = scene = camera = composer = computer = envMap = null;
+  motionQuality = false;
   onResize = onVisibility = onPointerMove = onScreenInput = null;
 }
