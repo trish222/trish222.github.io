@@ -14,6 +14,7 @@ Use production preview on port 4320 for browser checks. Run `npm run build` firs
 | `npm run check:deployment` | Read-only local/live asset/provenance comparison; does not deploy |
 | `npm run review -- URL OUTPUT` | Home/monitor screenshots at 1440, 390 and 650px |
 | `node scripts/review/nameplate.mjs OUTPUT URL` | Focused nameplate visual/geometry inspection |
+| `node scripts/review/render-quality.mjs URL OUTPUT` | Fixed-camera DPR/AO/MSAA comparisons, renderer inventory, screenshots and frame cadence; run separately from other browser work |
 | `npm run profile:startup` | Browser startup timings and CPU profiles |
 | `npm run profile:interaction -- URL --trials=3` | Matched interaction measurements; explicit URLs should include `?diagnostics=1` |
 | `npm run icons`, `npm run vendor:98` | Regenerate original icons and scoped vendor CSS |
