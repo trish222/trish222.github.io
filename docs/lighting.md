@@ -1,3 +1,5 @@
+> Calibration background. [architecture.md](architecture.md) is authoritative for current behavior, ownership, and module paths. Some historical script names below refer to the external recovery archive.
+
 # The night lighting
 
 Read this when touching the moon, the fill, the tube's spill, the

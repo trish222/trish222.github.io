@@ -1,3 +1,5 @@
+> Calibration background. [architecture.md](architecture.md) is authoritative for current behavior, ownership, and module paths. Some historical script names below refer to the external recovery archive.
+
 # The Win98 desktop: windows, touch, typography, 98.css
 
 Read this when touching `index.html`, `src/main.js`, `src/style.css`,

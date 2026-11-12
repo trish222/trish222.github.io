@@ -1,7 +1,1 @@
-# Copilot / AI agent instructions — trish222.github.io
-
-See [`CLAUDE.md`](../CLAUDE.md) in the repo root. It is the maintained source of
-truth for the stack, file layout, conventions, and the 3D (Three.js) decision.
-
-This file previously described a `src/counter.js` and a `tailwind.config.js` that
-do not exist, plus Tailwind v3 `content` globs that Tailwind v4 does not use.
+Follow [AGENTS.md](../AGENTS.md) and the authoritative [experience and architecture specification](../docs/architecture.md). Use [README.md](../README.md) for commands and current structure. Historical documents are not active instructions.

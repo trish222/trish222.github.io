@@ -1,3 +1,5 @@
+> Calibration background. [architecture.md](architecture.md) is authoritative for current behavior, ownership, and module paths. Some historical script names below refer to the external recovery archive.
+
 # The screen: the live page on the glass, the fly-in, the sign-in
 
 Read this when touching the CRT's picture, the overlay transform, the

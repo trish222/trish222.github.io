@@ -238,7 +238,7 @@ plus five desktop/mobile interaction configurations. Visual review was
 for comparison, so these checks establish the implemented silhouette and
 interaction behaviour, not exact fidelity to that attachment.
 
-Review captures: [desktop](../.impeccable/review/desktop.png),
-[angled](../.impeccable/review/angled.png),
-[mobile](../.impeccable/review/mobile.png) and
-[focused](../.impeccable/review/focused.png).
+Review captures: [desktop](../references/monitor/desktop.png),
+[angled](../references/monitor/angled.png),
+[mobile](../references/monitor/mobile.png) and
+[focused](../references/monitor/focused.png).

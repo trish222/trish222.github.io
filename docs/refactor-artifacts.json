@@ -1,0 +1,3500 @@
+{
+  "recoveryArchive": "/tmp/portfolio-refactor-checkpoint/local-artifacts.tgz",
+  "files": [
+    {
+      "path": "_backfit.mjs",
+      "sha256": "37051bbaa9f6787cf11ccefbbb4a7cb5703527f22f600ea5b065c9b47575c381",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_backout.mjs",
+      "sha256": "5e05dc3ff0303a42e1592ee5671fa4f5e29cd69aa52b5fe7712db0ff0514c7b5",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_bisolate.mjs",
+      "sha256": "c451d095f35ee432317f0772440da41d1bc73b937898b1a97d338c486f72096b",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_boxfit.mjs",
+      "sha256": "5706e247ffb7696f960aa40d4928ad7ccb1ba8fb9efb0e1c372869f5934d7355",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_canopyfit.mjs",
+      "sha256": "c013a32eb05ccf2cb1b1e7c7b8b6f7454f5df339afbefffdee2d2adb319e81cb",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_cast.mjs",
+      "sha256": "06276ed90424b25c0cc8dfae187e4a782fca43962a2b465bedc1cf5b324ed59d",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_castfit.mjs",
+      "sha256": "71a404c909528943c3571e8e5ad6c77537043775be90a7c4f910ae59127e23ba",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_castread.py",
+      "sha256": "030e924fa6a0641c479785c638a919fc838403b1ae20cc869c23c2ef8e2fe4a0",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_castsweep.mjs",
+      "sha256": "2c41babf3763ecb570633a9a7c1f920d0d0e69160aa1912952d0f40352cf6677",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_closeup.mjs",
+      "sha256": "c3a2229a8c090b9e58f97fd10dc7dd56f527a7c9b9859278d535fb60cc581a02",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_deskfit.mjs",
+      "sha256": "226c6bfbbc659896a000c12b288ff7511958c292b3b63a8b091b11c1edfc71fa",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_deskglass.mjs",
+      "sha256": "78b37c2c8c9eacdcb5cf926f475773005fccea797f252a380ed6bfccc77912e1",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_deskshots.mjs",
+      "sha256": "a1047d6afd038f4aac8cce5b730849c595db5ef370d23a1f16cf6a4eab914c3e",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_diff-all.png",
+      "sha256": "15c6ca8bbff8f4c9741b1744fe2023c98d82b7a3e297bed89ead77c14d698ac2",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_diff-arm-only.png",
+      "sha256": "e18304b72f1d27f78778190a13aaa2941b3bc227497e4be80895fa11d6c9c49b",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_diff-base-only.png",
+      "sha256": "834ff300ee84c4fc0cf2b4616ebd53b0b6c09e8b0f2570bc54355e50ea00e49d",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_diff-rim-only.png",
+      "sha256": "441cfc264eb658ce01f42d648c6bc076b157e7f8888ceb71fbe69905df8357da",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_finalshots.mjs",
+      "sha256": "4281b7d44b4ad3e7b345f6ba2e8f12c48e0dcc9adf4ace6167680723d4103d73",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_fitdesk.mjs",
+      "sha256": "6fc641617de52b636356ec2235d86127183e94972154146592090ce01282592d",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_fly.mjs",
+      "sha256": "ed7ee572f14d6318feaa0f505b808d50d35b07034a4b27294a576df4456aacdc",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_flycheck.mjs",
+      "sha256": "e18438e0d1ad03d62b953f703c91aa02528677b356d4acc287eca4cdb632c9c2",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_flyfrom.mjs",
+      "sha256": "0a313d18fb80d95dae84745c1235d3ac9523045b4b7120eeb65e6a4fd297dc5a",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_flysteps.mjs",
+      "sha256": "a68c33e2ded401777bd3fc4099e302a9c02f7ce9643d190b7cc5d62822e48358",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_helpshot.mjs",
+      "sha256": "124f948087f6cfed3519d97599d87b20542dd6f75560fb8c8661c0378eaa530a",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_homeab.mjs",
+      "sha256": "30e7969f6eb3e612223289d1432c2d3d01965d4cc6aa38ee255e467c29e7330c",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_hover.mjs",
+      "sha256": "a920715d70426229dacfc15db7679e88d95f92acb59c36db66e5cf73d2510c15",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_lampbig.mjs",
+      "sha256": "6ddfc7a26d46cb589492c6f92d156023dee6b933afb5cdf433c9148fbf49b4e7",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_lampparts.mjs",
+      "sha256": "ebdfbd5caaa23ca5d75ea74b0778900e934ce69fe3aff29eef0052f5d35f2ca9",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_lampshot.mjs",
+      "sha256": "1465d1a432da672018b8283d973e5a1932ea20a905853e4bd8af59310b1553ca",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_lampshots.mjs",
+      "sha256": "c21222d02e709a067cee2a14647496dc6a8b18eb8cc46ae0615c996e55abd077",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_layerview.mjs",
+      "sha256": "cc59a66b88f8aecf7a05fe17a65b05a016b22108e6e0a5e34d8d0db4995e4d87",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_lightshots.mjs",
+      "sha256": "4e1a6f0c92125ba8b5e2c34b2129bc20c3161c959d7bfda1a323e36b797d487a",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_lowshots.mjs",
+      "sha256": "026cdc3162a1dc360691ffa7e61977ecdc3cbe75067c20be4fb18f70aafde650",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_menu.mjs",
+      "sha256": "34da00b66ed997bf85f870ae377d063490d15b919df7a6c12c455b4165e74be7",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_mobcheck.mjs",
+      "sha256": "9cdc7a6f8925ecd96bec656eb3d2294a133c43a2b35feeac978feed15518c572",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_nameplate-review.mjs",
+      "sha256": "db05dc194f87c58ae6a996b9323b0047332aa938543d3427f9caa2669cd82ede",
+      "action": "retained"
+    },
+    {
+      "path": "_one.mjs",
+      "sha256": "84ebbed4dbee15c6fa1d2a67b11b024ad6b0719cc7f22893e56f3ccbbf5edbeb",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_orbit.mjs",
+      "sha256": "7585e544d003315231cb5e4454aa220f5345935ba753156a7998b9b277b4e52a",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_orbitshots.mjs",
+      "sha256": "ebbf1a871b7eba9044a62ec691e1fc5f75a328a4f55da8f755d1bf067abddec2",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_parallaxfit.mjs",
+      "sha256": "b875bef9e8f32cd91b1cc70e2a2301048fad2ec58c8d75fbf909f89b5af42e8f",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_pedfit.mjs",
+      "sha256": "0fe0f9a0edaa29bcc7fa9f254875cd754048d0d043db705af2c62dadad86e7a7",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_perfcheck.mjs",
+      "sha256": "8100a24aee35e339ef06d25c0c09bd641801f04be7f53150b60e641bf0ac621b",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_persp.mjs",
+      "sha256": "ee254fc9f30b85ad2116133442138ba3736c9180b551a5a82f132dbf421876df",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_pickab.mjs",
+      "sha256": "430635ee6da92ccaf517c8c4e00463f8ba57c0df308071f17d424d15cd2832e0",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_plate.mjs",
+      "sha256": "9d2b9d56fdac3f061e4290376d21f894fc0ec67cd7840f509a157be9f165c8e8",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_platepick.mjs",
+      "sha256": "e02dd54a33cd42e0bfa39152f337916c08b1936ea48ccbbc7bc9552da02f28ec",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_platesweep.mjs",
+      "sha256": "d786748d8ec5fd642bffdba6874f9c613236beb8ef902334252fe00f2c764cbd",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_pool.mjs",
+      "sha256": "c79d66f194fbbd61f115a0c4e2bb2ee24422a23a3501da80b2fca6a28dfcc112",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_poolcentre.mjs",
+      "sha256": "946d9d4e334acbd739ec250e14d2367a7e102cab8bd509536c3d8340e9b5a72e",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_poolw.mjs",
+      "sha256": "9c38e605bcff36abd017c8d32aeb0281f91bf297bdb2304414d0e9a308c68ee8",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_probe-room.mjs",
+      "sha256": "1194ba61bb5281ffe19ba497b8bb33732403405f5156c38eb5bbda2d4ab2368b",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_probe-win.mjs",
+      "sha256": "cd059c1f4884cc9ef0b577f1791765139c0802792dda5537490eea2f0fa1847b",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_probe.mjs",
+      "sha256": "5c8df54093b66e7da1f81db79d97fda725164de437b5dcae55f213c7e9b05b95",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_realshots.mjs",
+      "sha256": "f69b533a30398c8da713d2714a6d5eb8013a3ffc681bf696d158346aae34ee02",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_review.mjs",
+      "sha256": "f2cb17476aba42956fb0ae422f330a5d53d14d93a82c9a39cffedb4ca7b24bf0",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_rim-off.png",
+      "sha256": "e214ecb2fe2ee890837fe182f204bb24637a6b2beb99e30363a0f34664e982f8",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_rim-on.png",
+      "sha256": "36a2c979e1c8c095a38640e8d37743a43fe79382ccb16625d4b17cb039975974",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_rimlook.mjs",
+      "sha256": "954afebdfd3a6031da2127fe1d230e9c491c20c1d35583c3491f658a55f99f80",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_roomshots.mjs",
+      "sha256": "d03265cb33e405ce1169447faeb4cd137cb3cc534d6a9f7a6c22a35141af90d9",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_scene-shot.mjs",
+      "sha256": "9f4e731420af898313536c660f490f2f8de078ee7787100cfcf68c2a8b58d499",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_screenfit.mjs",
+      "sha256": "a847a52d9fe155f4e8f1676eea48e768fe2f47a1da600ad43437458dc7a918e8",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_screenpos.mjs",
+      "sha256": "49b5ec649267f8a4d403ba35c87dfa0cab8cd622b8d79a6a051fcc32c58e1f8c",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_shadowrefit.mjs",
+      "sha256": "95ab67eeda8cf75ee2f70984578930ebee79226b2fcf1cc4e37cd8d2bb425217",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_shot.mjs",
+      "sha256": "28c44cad51bd303fd78c9cac5e72975e6d9b4a3aa7645455a4fdcac263cbdb2b",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_sideshot.mjs",
+      "sha256": "26aa2838c44d5ecfb55c4c9c3910ec0f4b1952817135c7d7923ca47f124724a3",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_spares.mjs",
+      "sha256": "8a7d06032d1b61b1b74dad186c850ca8bddbab4173867786fcc2a5b2c1474f9d",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_spill-off.png",
+      "sha256": "b82cfca9c1ea571e9403477ad5ced7025f19cb7edb320d3a9e7ec6dd52d4fe4b",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_spill-on.png",
+      "sha256": "4a4993d86ec247a63f1b42608311bacf49b58e6983eeb47d22a470cc126daee8",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_spillab.mjs",
+      "sha256": "98954e6f6c6d34a1f8280721b0f688f73a4a6ed80216eacb15647c1e559fedc1",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_spillmap.mjs",
+      "sha256": "a138f16b2e4e65be980734d1f0670c82f9a6ba065f97c4ce871dbf5af6c8972a",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_spillsweep.mjs",
+      "sha256": "d41ee496696d2d1a4630abb63172eb9f330ed19f191b0bc2958bb0affbd22afe",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_startup-capture.mjs",
+      "sha256": "1990757a22c1bb526991f6dc95428071b26311e22a36eda821eb2e6b5de434a5",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_startup-check.mjs",
+      "sha256": "5420fc54b7694cf762c68567408b2565c8cb196edb9ba69f3e49755237c21384",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_startup-verify.mjs",
+      "sha256": "322c15716bda64ade0bc6f1fe07f8cdf8dc6e183fb1cac81f06c733d9953657a",
+      "action": "retained"
+    },
+    {
+      "path": "_step1.mjs",
+      "sha256": "6220526acfda40daa069a7a56f586d15966a00c36bc671c6606bd5cd2e473cea",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_step3.mjs",
+      "sha256": "398f95bc7ae7550a9f01d2a736c2d1c8b548d34c87f895dfe188185900c47121",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_still.mjs",
+      "sha256": "c2db7fcb6d6475e52c41a2ce95b12dc581879dcace69309ca4557a266b48675a",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_thdebug.mjs",
+      "sha256": "21931ac1e5f6a95007f69232da022f41b12c5c0c93a8724841bcd6f10e910a8c",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_thshot.mjs",
+      "sha256": "e0695b84c957d0c8a13bf840daee33820c1ebb19ef08c0b0857a6ab8da705c84",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_tightfit.mjs",
+      "sha256": "2b28b4f26982c08fafd9b4f7a0229c16e10f7edb33bc7c1ee4f742706533b068",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_tmp_cf.mjs",
+      "sha256": "6cb45fc734c7a275c298ae5c8e2db0f7c0b1cf268bd1cd18a4912f044ffa0a39",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_tmp_fn.mjs",
+      "sha256": "5c8398544e498accc21c38adb8c245e6734f3ff8c0b83e8a60bfef6f3022f4d8",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_treeshot.mjs",
+      "sha256": "b7a269fa689d6e58269a31c8061dd19990383a71caf8dfe6c51551e10ab755a9",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_wallline6.mjs",
+      "sha256": "ae1069d8dfde20b67ff4b172e6272e759fcb2ab020fc27151599714ba27a01b5",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_wallseams.mjs",
+      "sha256": "3927295eaa860ea235a3d53ff4c39ad2191efb2c071a2a4686c64e4e98154f02",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_wincrop.mjs",
+      "sha256": "24e8217612b6db6fbd5e70cce81edbfb47bc9db30d5d66138f0abe7ce23cf4ba",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_winhead.mjs",
+      "sha256": "02507a281d261f1a0f6f0cfffc35683792e18a7fe2e9093754aea231a422bc85",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_winhome.mjs",
+      "sha256": "cb42e670692b9e1b8318b469365afd7b8b6f6db7916aceeb80e29eea54431130",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_winposes.mjs",
+      "sha256": "c06aaec6e6818740a8d85ac2e3f546a464366f20b31f435439a1266e2fe9752d",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_winposes2.mjs",
+      "sha256": "c2d338c50c102f92e52d7498e35595a5a8da6e0ee51234cd1c76827e5be4efc1",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_winshot1.mjs",
+      "sha256": "db0e1d15f7368e901e450490ca5b9a8013b1253c2aa445fe690eccaec9169810",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_winshots.mjs",
+      "sha256": "a4a5c4c33e2d56f066592d92d21cb93d4c24bcbb35456f122d35bb166ca5b3bc",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": "_zoomshots.mjs",
+      "sha256": "7c52460b9e90499ce5cccd7b03d339f83f71ca5ba17a65183006036ff762f882",
+      "action": "retired to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/A-current.png",
+      "sha256": "7827388f5e16c840406098cc4912c99adc47345897cfdb2529a145cf173c3b8f",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/B-front.png",
+      "sha256": "8ca202b1a493385e1b5368eb7f693103c8c0f591591e3f6f3cb8249162301bd9",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/C-rug.png",
+      "sha256": "7caf6186f0c9e22e8e1e247652b8531b3f9561df6d0b41615cee02f22d50b9bf",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/D-desk.png",
+      "sha256": "942e7296620f7bc072db24af9a0de537e8f157a3bb7a5308456dba247e830c7d",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/E-deskmid.png",
+      "sha256": "cfbc0b26b6e3720f0d7ea823c0882bdb245f46e85ace8b9812ab37ee74cfa956",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/F-frontfar.png",
+      "sha256": "cb5f8fa3aaef457ef47461c86759cd56bae8c04b7832931115f9d8380efbcbae",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/F1.png",
+      "sha256": "79ae7829aa53efb317ceab397ab30182a318290862bb548e9f4d09c31ee7cdb0",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/F2.png",
+      "sha256": "5565a8cb8414ecb3ed274b8090956e8cbda873790bf81f2ad1ec47caf719c5ee",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/F3.png",
+      "sha256": "025a1d603a3d1efb4e4351a1cd67286291bea43bf445cd6b5c3a1b85427d9b92",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/F4.png",
+      "sha256": "9b32b6202329a1c6aec4f6634b4b94dea3e373204db1e6e55f19e1316783c15f",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/P-e1.1-h2.5.png",
+      "sha256": "fb92bd55d179854b27fe94bd041c4b0010d3cf335353315d583d9307ee03b9f9",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/Q-e1.3-h2.5.png",
+      "sha256": "a0aafd0db70d7081ab1ff155bd285c9c90034aa6dbcc4ee2f6f56e6bf3c69fa7",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/R-e1.3-h4.5.png",
+      "sha256": "a8bcc3bddf11f465c94934469f5d881ddf933552e4b254e43a0d9fc913147c08",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/S-e1.5-h4.5.png",
+      "sha256": "20d274bf8f9d3bda7903ee21fb499afe486be3d3dd21a1cdf9015d7dac7d6364",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/T-e1.5-h7.png",
+      "sha256": "10de24e2f424724d9876e0d1b0564c86eb61be2edcaad2c24311f0ad129d55bd",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/U-agx-h4.5.png",
+      "sha256": "c490c36e8cf1276ab4adee00d6b2d2fbbaf0d96c51dea9cb7ea6b37b73b1b881",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/V-agx-h7.png",
+      "sha256": "5f871e3d5a9a73ae2595983b6ec882ae38db403028db57be086c8fc37c9adac9",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/agx-h3.png",
+      "sha256": "14a869e122af83d367192bb9e5ec91ce0144cb3b3e2963c4a837d01b2fd25ac5",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/agx-h8.png",
+      "sha256": "8f208dbff356d21b0490f29235a9a303772d03159c191ddafc49f8d12ee047a4",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/agx-h8m5.png",
+      "sha256": "d05c0caf0613ebefe4a4c8e507a220107e0adebe00ee7f995912081f9800ee30",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/aim-a.png",
+      "sha256": "8488b7c180e5b6bf38e430867c1d00b1d8c7ac2382245b1d594b600b3b264991",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/aim-b.png",
+      "sha256": "28d244719d305bb5a15b25bc5e370d12572445e099ca19783b4d01be4c18c6f5",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/aim-c.png",
+      "sha256": "c11ef50c3445ec381867ce2218215de779ea6c99ae520d17731901d302c1c160",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/base    e0.95 h1.2 m3.1.png",
+      "sha256": "4a71c1842707f74079cebb8be3c6a90751109938da88d54b4ed19bb6ea8e8e9e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/cand-A.png",
+      "sha256": "0b27d11bab1b27a214a559f715c68985788f69502c430e8c908cb87a0769f6a1",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/cand-B.png",
+      "sha256": "9e74400e0a90be62fe645a9ad7d1befa8c8b1f2ca0486a54d4c7235d917c87d2",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/cand-C.png",
+      "sha256": "2050076e2a526958c648a1d492b249035bcadc614ac858e239d526df217917dc",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/cand-D.png",
+      "sha256": "d800d256c3bcddd74a8818055fed7ca505913514033e7e9f88db1dcdef02ccd7",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/e0.95-h16.png",
+      "sha256": "6dab602ff8f4c1423a37db4a947032fc9fa1dd89bb882bd1086d2eb48f07b567",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/e0.95-h3.png",
+      "sha256": "d5dceb8da0f3051babed8797d22d2ff3b0ee16c37940ebd0dd8cbb321b28751d",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/e0.95-h32.png",
+      "sha256": "f679e781a043e413b82a12766e15ab99e191f418c4c1dc1d4ca4c82d6df2cd92",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/e1.4 h4  m3.1         .png",
+      "sha256": "499f767aacef297bf5bdab760da74ed0048e7dc9392d45ec04f514cc2f7d5ca2",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/e1.4-h3.png",
+      "sha256": "cae39e085a99aacf55bb130a71aad14772f719737ab3f098f24d04457150f59e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/e1.7 h14 m3.1         .png",
+      "sha256": "b4a2fb6cf90a7c6e319fbb3e5cbd24479bedbf22460c3c234025544859044a1c",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/e1.7 h14 m5.0         .png",
+      "sha256": "13fbfc37b5b015d2c6c977044ba331cfcc06f8654cd0655100d04cf1c550b855",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/e1.7 h8  m3.1         .png",
+      "sha256": "354f7249b6b44bf7f281fa4244bb3c882fee15614fad20354abfe2ad785eaa41",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/e1.9-h16.png",
+      "sha256": "a63e1628ea68cf6f796cea24e81a9618508e89277c5bdd5896941aff1283d3f2",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/e1.9-h3.png",
+      "sha256": "a6cfbcd4ccbe0cde8d70564cd5c077bfee375b52c1eb66e56132adc6e75baf80",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/e1.9-h8.png",
+      "sha256": "ccae79da0f619acd0f495c5feb89b4aa1caad0079741a5fe8c04274f89217f42",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/e2.1 h14 m5.0         .png",
+      "sha256": "59fa6230b6070d5feed5c03f74428c8c0d7b0786fd65255f55502e8023573919",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/e2.1 h22 m5.0         .png",
+      "sha256": "2297e3aff3dcdd99c56aae8649924a7c5f42a35504cd46f6832fa24bfba11380",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/e2.4 h22 m6.5         .png",
+      "sha256": "c08c8e34f68dac91ed8c60343d6f615df966b5c724a9c5a05b7412c869933eeb",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/env0.00.png",
+      "sha256": "ca4a86c0ba711b52816bd9a613d8085fc203a30dea64fa9b70de411da6003421",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/env0.10.png",
+      "sha256": "913332c3a375a6202a9b07640718632d3800f96cf4191517fcc958558ad9901f",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/env0.30.png",
+      "sha256": "574ffc9553229d2bdf2b90b8852ab3adae0d63ba2103edc736862a652785ed9a",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/gtao0.0-h3.png",
+      "sha256": "0ae832e3ccdcdc892b4d5e36e9152521a8afbf5fb21df8a42b3a129535a7cb31",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/gtao0.0-h7.png",
+      "sha256": "9e4bfdb99dfabc4e1ec865537d7223a6e4be961008c7570c78f99c3f0c175cab",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/gtao0.5-h7.png",
+      "sha256": "8f02c55dd06f131541c8ec731ad771a4c3506eac4ed611effacdb0d3c0711f63",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/gtao1.0-h7.png",
+      "sha256": "36de90ed63680e18c3f7b300747eb0c1ae8e9ddcb25f0d4daf003bcd15755bcc",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/h1.2.png",
+      "sha256": "27f19957cd7f99488f782a931cdd57cf8fe224ff8d2b4663963ac3ae848c89aa",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/h14-e1.25.png",
+      "sha256": "bb96e863749d722426bf6b262679bfd6257b5dd251aac8682c149b3968188b46",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/h2.2.png",
+      "sha256": "02034cc9825d452ebf38936ac92df2dc7af707bc3365650b8d7fceb73e97218a",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/h20-e1.10.png",
+      "sha256": "c131dc82c7e3eb9f9f107dbe353c046b34a80c2897e6a70302a9e60fabc9ad30",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/h20-e1.3.png",
+      "sha256": "0f3d88c891f58250c73531a3d58e731a251594021cb3093414b602cd89275702",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/h22-e1.30.png",
+      "sha256": "c1e23a39c9155309380f28814870469369b2183953962b58bb41adb1d0f9e213",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/h28-e1.00.png",
+      "sha256": "c304827f342704e7c8fbfe6331f8eae19daf3ebd7c1f83d71018d19b8ed03725",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/h3-e1.3.png",
+      "sha256": "a6aeadb347b2a47c867676c9413edcc8f62d0f33d6b8bd40e464be167d9b0d99",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/h3.2.png",
+      "sha256": "8d35693256fff84b22f5d501f1910e308c7f8f5b4ca566212dc77709b9133fbe",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/h3.2m5.png",
+      "sha256": "7519b7e6b302d073e11f99bd8ae67e31a31ab9a8e40772dc0e08146e26e36307",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/h3.2m7.png",
+      "sha256": "22e3ad4fbc13766b3a3a02d5c41cedccf8483c24619e5fc216347f972cfc547e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/h30-e1.30.png",
+      "sha256": "43acabef1cf88c6bd07535015fbcf975d4688b0947575ae8f4279a5fc3a14693",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/h30-e1.45.png",
+      "sha256": "db4bf45ce364e2f23e35522b8cc594f6311bf83d06e6bad9289111fad4b86670",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/h30.png",
+      "sha256": "4fb524aba0d8cbe9997c6e6db07269d5af1805eb6fb533b24800981a3122deae",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/h4.5.png",
+      "sha256": "5681f8c0f9242483bbdccd5c58adc16d863dccb6ecb94df357462a70619c30f0",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/h40-e0.90.png",
+      "sha256": "3f9c3168abf7dc3024d2caad526ed95965964ba5256388c67aaac7eb79df56f9",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/h40-e1.30.png",
+      "sha256": "f7c31d8e17431b543f2ddbef9003ef460772724070533920a51ccf66614337b4",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/h60-e1.3.png",
+      "sha256": "30ade455c321322fb293ca72151756824abf0fb50bd398a6045c9b2c00dfc629",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/h7-e1.3.png",
+      "sha256": "ad0659a494079bf04cc0a91d22301d476727d7a77f1dd05b20d2d8350ca498e1",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/h7-e1.50.png",
+      "sha256": "28e7578d461a091f0f5bf74a4ee099b1de8aca7b082ee9c8f06070ebe078c0eb",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/h8-noaces.png",
+      "sha256": "9a9d7d96fcfa01985320c7c4574fcd56058e2dd1066f1b62e58fa3741829366f",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/h8.png",
+      "sha256": "153c9abd8a52456e265e83e10f3dc4d515870c86f65a09de2303b770f2ada772",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/h90-noaces.png",
+      "sha256": "3156a7700a76ab9fd8c4dcc78c1a3c755dd298098b89665f279281ac039c1cc1",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/aim/h90.png",
+      "sha256": "ee163b35770bff2987ae457ae96f6388b621ed52a14d00e2a0d0a86f6ec99312",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/az/before-desktop.png",
+      "sha256": "9de6c800ebab310197a415826da77002c53c2834f3d2618ca6e9fbd1511a2e52",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/az/before-mobile.png",
+      "sha256": "5fb93c65a76155628a633d9969578f3042b82aacc7b5126697e2327b3800377c",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/az/scene-desktop.png",
+      "sha256": "00245d5ecbc93d6fcd256cb68dbf98541840a6e64cad2d894d086426fee8afb9",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/az/scene-mobile.png",
+      "sha256": "8b1886efb7c428d76340ec6fc626e5894c981efcbcb406a79997fb312edbea46",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/desk/after-mobile.png",
+      "sha256": "6cc866d8e4726fd510b771391053aabb894d5e104bfbd223b263559d9d2b42fd",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/desk/after.png",
+      "sha256": "373800efb91fb5a7b537fac93c7959babff58ddbbf5cdf9ed8deec3acd4273aa",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/desk/before-mobile.png",
+      "sha256": "ae8cb3e925ff118315e5a55d75e0cdcb64f4d057f3423a46117b5e7b9c666305",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/desk/before.png",
+      "sha256": "62ca0fef3a8413615cb9d5b09b9925608bdb7a66043dbe76cbd9b2b720a94b8e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/desk/home-after.png",
+      "sha256": "3dbe45aa0f5699f4521044331e0e9f89486d800a23204a0267dee7b0f3d51c8e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/desk/home-mobile.png",
+      "sha256": "79f244d443d8c2b7fb34aef70c6acc546764b04c6bdda4eae58ccbe7704058b5",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/desk/home.png",
+      "sha256": "f813de9df544a51aefeeee33438524d85e71e1213fe390cd904aeaf6636ec920",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/desk/side-left-BEFORE.png",
+      "sha256": "476dd74a117d3763f123a400bb0bb9e7ea6f0497829bf717f91ee96d537f4342",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/desk/side-left-mobile.png",
+      "sha256": "26119d2f61e0cde8d6aad9732ef83f3d816612d1f9b397d29ba960c0b548d5d0",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/desk/side-left.png",
+      "sha256": "7713c4322003c9b0499bfeb5606241281dc4526653d1e1c1c2d6665ebc96d2a3",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/desk/side-right-mobile.png",
+      "sha256": "d459433b267d40b2fefd31ad12875332d98852297e202440f769d1f0d3f939a5",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/desk/side-right.png",
+      "sha256": "6e48b81f60214f8b3247e58362a712e73129d24ce44defbbe0edf48df9d3f996",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/aim-45-18.png",
+      "sha256": "dab45f26d943f93ee6812e9b5903ff8bb9ed444d3f250bd1481ad9459659a080",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/aim-45-45.png",
+      "sha256": "50ffd3c810133b64230cc496038c375bcf1e084d66fa54341f8b52adb295cc70",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/aim-48-32.png",
+      "sha256": "5b2c8431ef838a3ef79b37a41df49297257dec0571837bdc14564696a35a6614",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/aim-50-24.png",
+      "sha256": "5ee21b94027f3eca58fd839de90cb0fc1c1e56d26821aeb3cb1b85537ca3b7d5",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/aim-52-28.png",
+      "sha256": "b7abc7a12a82606caf8bd8da598ae624b20b38d70c24bcc225dc5b78c102fb4c",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/aim-55-30.png",
+      "sha256": "443c5a2833a6c76615affa7fe7a5852669d38a2976741df9792b65810782fd01",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/aim-cast.png",
+      "sha256": "22e5b20be6dcd4a615c5e6a91c7dd0152c52787112490badbea2eec212e7ce7b",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/aim-crop-45-18.png",
+      "sha256": "abae2555489651ea406b92c5019220a3683b7749e01928369044b871cb91eabd",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/aim-crop-45-45.png",
+      "sha256": "ef83846c1a4de40bc19a079aa068a5fc1877e2bab79b9241debe46fdd23d6610",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/aim-crop-48-32.png",
+      "sha256": "3fd479bd5b941b6ff819632addc1a66473385542ca76ff4a3d5b6ac5f90a73f1",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/aim-crop-50-24.png",
+      "sha256": "0f13ec87df32782c91f10e36a9a19e72c51f5514ad8877a27a7d68ad4ff47265",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/aim-crop-52-28.png",
+      "sha256": "234be9da4b2eaaaf3334c76098f61ab0e81ecdb1c74891010cc2f4ac128b40f0",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/aim-crop-55-30.png",
+      "sha256": "efb91c6b9c6220ccc602fbb0569b071a3dee149a35420957cd5a15431b24cc9e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/aim-nocast.png",
+      "sha256": "42505a13bffcf87f4dc23676b7cd8928ea3315620530c80c65231680d708b3e4",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/crop-off-desktop.png",
+      "sha256": "ba6688bfcd5b64f4875a0d6f8e4d9405a31d63f45637b07d0ca04541be6b88cf",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/crop-off-mobile.png",
+      "sha256": "fef76517e87d345809bf42d727e189194958a40d2138cd506a2db5079497a9a1",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/crop-on-desktop.png",
+      "sha256": "2010ea056e086b1908a7c07f2fcd4148f858aa5e164d3e29e70dba7708995b6c",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/crop-on-mobile.png",
+      "sha256": "24d050be411879cbdb40f9a011df232fb8d271524587a21198c9fe1bc6eca6ce",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/edge-home.png",
+      "sha256": "8226683656e9eccd30fbc7c3d938def73d23eb3fb7d29c92e51a4cda97e9c797",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/edge-side.png",
+      "sha256": "225ff072a7df54dd6b4a281562ca2fb1768caca4d6061cdf0aae087725882b6c",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/edge-under.png",
+      "sha256": "b724b9caa9bdfce3f35d4cc9e7adcf85e025f14ccd1b5e57666c19f551cf1b20",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/flank-crop.png",
+      "sha256": "16f3db75b9e30a28c26bf2c586d236fc543ce66273f043801cfc7d6e9afd3ab6",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/flat-on-desktop.png",
+      "sha256": "52d114243dc8116651f2620ae19a08ee5b4374d78ff00bb6a0889e4d8a4c948e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/flat-on-mobile.png",
+      "sha256": "9e04fa70d4486815b183da18895d09530de5b583f392ef53efd4a3fe1ccf8b5d",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/greenlamp-front.png",
+      "sha256": "ead7eadb91d4cc407aa92d6dc61203af524a694ccef942d3338087e674b3b374",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/greenlamp-home-clean.png",
+      "sha256": "27c0689b58e29d5df4b213f19d28c15823a3a04eb2d096feaa5aba1feb9d0512",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/greenlamp-home-off.png",
+      "sha256": "49acdd9cc80924651e639a616d7928847e9a9821dede29aa7a657711e67a6059",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/greenlamp-home.png",
+      "sha256": "49a585e7d945d41eabf2d4842892e05eb09956a573196523ba6b2113ccc38c4e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/greenlamp-off.png",
+      "sha256": "05e6c4331f3126476613643d8d54f7b79212d5f05eab722cb5c01ee764ab967f",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/greenlamp-on.png",
+      "sha256": "0d69a74e536e48a70cba4c07d2fe2dec7af400637d0783ec3459ae72545cd479",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/greenlamp-side.png",
+      "sha256": "51bcb06e5f02898c7f5324978fd526be8c009413bd3dcafba7f15dc83cef0043",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/greenlamp-under-clean.png",
+      "sha256": "a214dc198acc12d658d443c9c4899ae1bb064d941acdd91893e7aeaa6989eb01",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/greenlamp-under.png",
+      "sha256": "0ed3d57cc0ac2c151c3635e57bb387e32dcd711d1f3b0a35fa96cdd8c14262b0",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/helpers-front.png",
+      "sha256": "5ddfc15a42c2c3f00175713c4bc810c2115eadaa8dafa464f1ccc71b7a76039f",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/helpers-side.png",
+      "sha256": "4f69843d7b5e89568f26e871364187e3fd3019b5e381b87f6ba686c356daded1",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/home-off-desktop.png",
+      "sha256": "e95651fff2ca14d4d00162b4cbe299909f173fa1142f76be15302506ab9fdf50",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/home-off-mobile.png",
+      "sha256": "7a0c425203d201d125ec7294bb5396d53d2ffa0f11ee29d26b14895b2c8f5a58",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/home-on-desktop.png",
+      "sha256": "4efd7df667ec833ac52f2a423ad44b9080e7bae416557c45ee744b303b71baad",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/home-on-mobile.png",
+      "sha256": "341c34aa006f9c8124ddb748fdb935321b19192d9ab355fcd29c0d5017a56586",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/left-flank-on-desktop.png",
+      "sha256": "4475d3b4c3ed5397381a049fbdd9cb9a1f2e8a1dbc2b135aec5c830c3097ba7b",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/left-flank-on-mobile.png",
+      "sha256": "7c0c7d9f021ce49266334bcbc36a2cab9c3b938e2e83a223c885c55b18eb6002",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/reduced-off-crop.png",
+      "sha256": "ba3494f4e05c51138407a579066f1880d4c4bd0b0da85971f729821fd0cbcf61",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/reduced-off.png",
+      "sha256": "708c14aa1126cbf663b988bf38772fbb0c5b32328d65e757b4c3a2dceb3b7c18",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/reduced-on.png",
+      "sha256": "8c69febbfed82b42704f42075b5a71331a641091c37536cf259efd777fc5a4ff",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/revert-home.png",
+      "sha256": "744ea119d2b952c8196c3aa4f609df75e1af9ddabd1231b65f2fe94685c59cbf",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/scene-home-off.png",
+      "sha256": "41badede9fbfded713e275d554fc0167e1c6e779cc7ca95ec768d738ce27715f",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/scene-home-on.png",
+      "sha256": "24d1f08c20b86f68ab44c4c1ba9fe0694b0517ee60200b691b3abb879e80d746",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/yoke-front.png",
+      "sha256": "6c1fcbf7078464050bf34dcb5852681b643b36132391bc841d57bc9e8cfd8bbf",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/yoke-home.png",
+      "sha256": "fe8227673000c9eba7c885f9e6ddd38fff2b461af49ac09a2cc708aca2d008de",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/yoke-side.png",
+      "sha256": "c9109c4f681d9615778ee712f9213d247fb43ed5e09b6ee6819531234c9ebdae",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/lamp/yoke-under.png",
+      "sha256": "52b3e8e730dc161cd7739c97507ec4b5fdf6bcb4ce2471d229fe382d3ce707d7",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/light/acne-base.png",
+      "sha256": "02936d25ee206654daefc0af6e3041a95403b48633cd6dff3222f52b53861020",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/light/acne-drawers.png",
+      "sha256": "c7084da0953bb26aa7101dc6fc0b666f6e08b0b914cb93205aba7994b90346f0",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/light/acne-sash.png",
+      "sha256": "1987a84a0aecbe2694f1c1377cb8536eb6c84eb39503f9f9f2b729f84e265a06",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/light/flat-desktop.png",
+      "sha256": "ada042fafd4ec5cfd961125dea6167fa495cf055ffd586c3535942067e009614",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/light/flat-mobile.png",
+      "sha256": "9bf421f4190d223ecdc218d863d12be4f1c1966c991decb3a887e7021fe41085",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/light/home-desktop.png",
+      "sha256": "07ac661f9c65478948ada1fe1dfac555f939b57b8457f72a79562a21db1d9463",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/light/home-mobile.png",
+      "sha256": "773744637ae7bc872e108f3e7744a5f26e42dde313542e8cff7c6fd38897f14d",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/light/right-clamp-desktop.png",
+      "sha256": "b3b65bdf60c4b8f39671d7e1be4d683473f2927781ddf4d1957a04352b3a0a26",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/light/right-clamp-mobile.png",
+      "sha256": "b6cad321547f9df965df75d949de36974233ec24de7e8ac3203fc9cc63cb3fb4",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/light/sweep-aim-A.png",
+      "sha256": "6b76630db06cdbd015c3a3199883522b72185ac21a5ff6b2b4bc0418c849c28e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/light/sweep-aim-B.png",
+      "sha256": "6312c1a1c20f1ad775dbf6949405934717821fa3f5d3b48ccafe98ea2c953a16",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/light/sweep-aim-C.png",
+      "sha256": "539a1609e66645c57267828c9520ca90fe2d6edac123bbf8f3520b451f60218f",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/light/sweep-aim-D.png",
+      "sha256": "f5459b8e126b6f847d9cbccd59edd324ce37f1f538b4a7b2ef3ad8925b23c203",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/light/sweep-aim-E.png",
+      "sha256": "1bcf7bb9ab3be15527f7f58f081b66a2c6b6a42cc093b2208c8bed2ba759ab30",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/light/sweep-aim-F.png",
+      "sha256": "fabb90854e7dbb9f62909b38e80666cee1022c89acdecb68c6db35778b323932",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/light/sweep-level-env-0-1-rejected-.png",
+      "sha256": "ab607a570e26c9fd476ca87a0f9a26a3f3c8b883b4c47aef0ac54f77522e6d75",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/light/sweep-level-exposure-only.png",
+      "sha256": "9da8fc419ce0136a459be1fce4be17e7595aff9b37df5b794b2c03654fbcad91",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/light/sweep-level-hemi-only.png",
+      "sha256": "60756d3a1a0452472ddb5683596aec41aaeac79b6264cd9d72cf345853fd7e67",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/light/sweep-level-shipped.png",
+      "sha256": "f52c28f1a3182d8b3082014b91fe8e37171e93c2204f812762dab708d2c68b50",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/light/sweep-level-too-hot.png",
+      "sha256": "0675a8074311aec842e8047e2381d4f65f49067bf86c62198d0f4da2a82d8646",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/light/sweep-level-was-daylight-trim-.png",
+      "sha256": "2eb97a2dd6a200205285046c58a14a9f39b75e1e1a913356b0e04d57481ccdda",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/low/front-02-mobile.png",
+      "sha256": "8bd7fccfd2e55b643d217697af30021928e9baa20b6c2649d103e9b22821a351",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/low/front-02.png",
+      "sha256": "8ceb012eed904a9778de27c2c5945a2ed0a2b2909565edd1deaa2700e41a1827",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/low/front-10-mobile.png",
+      "sha256": "9c50dcf72c3abcff98021f4b7cc9be458409e749858946a7d023243713f343b0",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/low/front-10.png",
+      "sha256": "870d55962809887dd69db02378c6379b0ce17527ca448056100092b8bd34c630",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/low/front-20-mobile.png",
+      "sha256": "44fb664141c737914fef3dba9e560109fe38f220d2320da51db17c35ee7d2359",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/low/front-20.png",
+      "sha256": "1d3f196bf8e2f08e40ad1a56742b7c00d63e06e95cd3ada90c6d2866a95400a8",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/low/front-30-mobile.png",
+      "sha256": "5076d15f802d2581e28bf3119127940d1881b8ff34cc26e9aafaee82732b1fba",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/low/front-30.png",
+      "sha256": "6df302b907dd736cb7a90c991342b35d291d8e8ce7ec0aefc127d8638e01bad8",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/low/home-02-mobile.png",
+      "sha256": "fc9940878850ec26446988eb8958552d17b30e6ad9c2f1389e469c1108d7b1ec",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/low/home-02.png",
+      "sha256": "0934ff5063350424dce497e94311ea1f86d867698e1d977bf1aef5f6a9ab701b",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/compare-home-mobile.png",
+      "sha256": "c7fb23a8fcde4cafd93e52a4e2db4c137f4628ad0aef836fad6adfbe80c8afd8",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/compare-home.png",
+      "sha256": "e32ef1b34efc53556dced439bd51ba99d903bf40e50a8958a39e0a33c35f4a6d",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/compare-low-front-mobile.png",
+      "sha256": "c763ebeeca1b270cff1d6db0ad27e021dfa289139befecdb816adec89acb114d",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/compare-low-front.png",
+      "sha256": "60cf5360f4d1b52503b47b240d6fc0b64d1062dba59bca5b9fab4d295faaba8e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/compare-low-home-mobile.png",
+      "sha256": "4b7b360ee3412f65345cef92c8288501386ea5a59d32a2c4ea3fdb661ad18982",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/compare-low-home.png",
+      "sha256": "157a52440c93176511619e1fb4fdabacb6022769340fa52176be11c305a47959",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/fov15-home-mobile.png",
+      "sha256": "4b93b1ae903e38acd8989bd5d12bd143cb8502720fd1eb77ec450595b4da18b4",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/fov15-home.png",
+      "sha256": "fec3d68edb09044961a2e71ece1e00c1fd705587b108f90904d3d13fbe7e86bd",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/fov15-low-front-mobile.png",
+      "sha256": "01d82b452ee42733cc16f441a0b6cf56864af5253ae9d9ef168b95586d674338",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/fov15-low-front.png",
+      "sha256": "f031c15419560ac2abab9f2a6f855985961761159af801040c03107ce1f1ad80",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/fov15-low-home-mobile.png",
+      "sha256": "34bc80040110e97d38ac0c0f7a0fb17e679ee815f29a5141975cae76b49bd1ae",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/fov15-low-home.png",
+      "sha256": "2e7a848dbe6addfd39e0c56302547d9e6ec29a1382d7777530b23bc0d2754735",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/fov20-home-mobile.png",
+      "sha256": "fa4bf6a97c5e738994fa37889ac7bd48e0d13797889ab75e6ea5b319c0b5f1e0",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/fov20-home.png",
+      "sha256": "78fc74f040a1deb12f7ffdbf099813b1a50a69b709b787155e78de301fe06c62",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/fov20-low-front-mobile.png",
+      "sha256": "1c4d7867eb692d5dcecaad8b8ef15222ebc90a87abf7eb058f2f9141f9949cd5",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/fov20-low-front.png",
+      "sha256": "7f4487837ae64348e5adef64ae775fc94c87dd27ec91bc74b939ee9b8f9a390a",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/fov20-low-home-mobile.png",
+      "sha256": "f2f0cbe4b2e3ffcfb7375bc0384014535b7e94c65f540cd7f6b5c5aa7bb5d7de",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/fov20-low-home.png",
+      "sha256": "1f03cd5b29479558952600a316c71ba18c40ca0002a1c196c6f9fcd23429d278",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/fov25-home-mobile.png",
+      "sha256": "7af01bf620084d936c96a859f7e9e37b622f25cba3156ef3e3114e2f2f6bf64b",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/fov25-home.png",
+      "sha256": "f91373a4990cbf6deeca6c5412ccd019acaca55b0e4a83d676faa556399ba1c2",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/fov25-low-front-mobile.png",
+      "sha256": "7d9ff51dc694c87c6dab0016df81c2d62d1dc785b5004f56357dea3972a98969",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/fov25-low-front.png",
+      "sha256": "f24ff86ff3b0d43c5105b9ded6e36f939752256e8fd8718389b8ba5dfb2cd722",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/fov25-low-home-mobile.png",
+      "sha256": "1bd42b888df2f3062bb778fad7f1f1199eb1537fd317ef0dab19a670f656d69c",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/fov25-low-home.png",
+      "sha256": "e1330547d74b19be8a2062be307de2028f4a14bc15073ee38150521a6d759c36",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/ortho-drift-home-mobile.png",
+      "sha256": "2a4f458ffb7e4a05ed783919acd97054ca82a6b68127064937002c13fbe70a6a",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/ortho-drift-home.png",
+      "sha256": "42ad92fa192543edae1c654b67d917a4311b0805c20d1e40348a59f9eea2d4fb",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/ortho-drift-low-front-mobile.png",
+      "sha256": "cc74bbbda73a2aca23b19069aa49232866bde9312a0e06f79d449aad8efdcb11",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/ortho-drift-low-front.png",
+      "sha256": "62a2f9d8a15694ba51d82a41c9eb7df982a245b0cab47eed6da622393cdc5cd4",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/ortho-drift-low-home-mobile.png",
+      "sha256": "5213bffb253d40044d319e7fc4de9ed8a254234a7d06dcfde310a79e6e56ec55",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/ortho-drift-low-home.png",
+      "sha256": "8fe2c83a2a32e4ad7b13d2f5058519eb06302ae50992e1df1c75c5d6c2583066",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/ortho-home-mobile.png",
+      "sha256": "c9736ad5420a0126386da8ed52163b65d2ccdc770d077de4c928d265c3858672",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/ortho-home.png",
+      "sha256": "45f4f3b01107d4fb650ad742042d9f25c1f5fbdf6cf2d593a44c97e299aca58e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/ortho-low-front-mobile.png",
+      "sha256": "ad99f667368aa77663efdc3e3f5466aa819e7eb4833e90d5830a72156885b75b",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/ortho-low-front.png",
+      "sha256": "5f13b20aa583b83ed031da95fc94be5eaeed146a4c5ebd8071e96a157099cf26",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/ortho-low-home-mobile.png",
+      "sha256": "d97b5b64a90a567f4ff93d849c19285ed1535ca22287783ea57d62c47191f356",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/persp/ortho-low-home.png",
+      "sha256": "9202b296a5753c1e50f6d1a084c3200d039d2b73dca770eff8b075844832028b",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/angled.png",
+      "sha256": "b131a568d4889d724cdc2501e2f259351224a61e600bd6342a3d4713b2ad8560",
+      "action": "retained as references/monitor/angled.png"
+    },
+    {
+      "path": ".impeccable/review/closeup-after.png",
+      "sha256": "be35fb7b96fff1eb5ef067f170350642920ca31b877fe3aadf73c9b9fa9b262e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/closeup-ao2.png",
+      "sha256": "346d662c8e5b0181a14bea04b4dc59bb0520da03ff408d31ba082d2573aea2a1",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/closeup-ao3.png",
+      "sha256": "b271d8e7264ffb484fdd17b0909ffe862910ac0264d8524380cf213977b1d6c0",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/closeup-ao4.png",
+      "sha256": "d955a446559f00728ffbdece86457dd337b2398e0ac4ecd369ef674d28692af7",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/closeup-before.png",
+      "sha256": "93f35f8199f321fe43d4a28109d8f23848204d47f265195f66f3641f2982438a",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/closeup-final.png",
+      "sha256": "90788549c9088af357dfe7896c93e0a5de1fdef59e044b2f8177fa9fc3657498",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/closeup-flat2.png",
+      "sha256": "2c71a49c249b66c063cf8fd07dd741051677c27a5d1aff890c525c19e7b296fb",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/closeup-flat3.png",
+      "sha256": "f1e3233c20f848a1cd45ef0b006d9dc2b11dc5e331b7a40d631b54111a8cba1a",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/closeup-grey.png",
+      "sha256": "ba3d97585994cf48a1084525320879ddbdc57f0c4a6d5850ca2c8bc6ddbbe22b",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/closeup-hi.png",
+      "sha256": "6c7e88193391917c6ee27e3f318d30bc91983a73094462d6c8055fa24f2f3d40",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/closeup-hi2.png",
+      "sha256": "3ab0b1e739d8600a058466da114e84ccacb8fd159e755239f5aa8d6322f6df90",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/closeup-new.png",
+      "sha256": "40ca5cc178bc46aae2f376d23480770f73dde21cedfb1bc73c17e65891b8130d",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/closeup-noao.png",
+      "sha256": "8af6dd21b75e64f905918844414268b7589fe658673deb8c156707a98ced0dcb",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/closeup-old.png",
+      "sha256": "09d0540513774f315b17f28e162e9ecbf9f217594691d448226fdf851ae2c0eb",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/desktop-fold.png",
+      "sha256": "d95a0dc62eec238d57586eef683ded31a8db7b4e6757e33c3f04d5a97abddd7d",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/desktop-light.png",
+      "sha256": "979928a0f430886bd9d77c86466e7b2536e00fbf2a92682b8c179939d2e8dd48",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/desktop.png",
+      "sha256": "2a36cccc74cf9a91b330b9f2f440481c06315e9d8fed7a095f38db08aab9caab",
+      "action": "retained as references/monitor/desktop.png"
+    },
+    {
+      "path": ".impeccable/review/dive-d-q0.png",
+      "sha256": "02402a715b1238b2e83cbb08194ad5794e2d7009190c2b4bcd5b489adf9adb85",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/dive-d-q05.png",
+      "sha256": "81d8c2e706205ac53e34a76d77dd8218e21b3ba4d664cde37573ac1cab6c1949",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/dive-d-q1.png",
+      "sha256": "8fd6413a12caea3f5f2b5f146aaea813d8d4d04679f317adfdcda378f9619260",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/dive-desktop-desk.png",
+      "sha256": "30f31972ef908dee181a219c708f9ab28681edc7f73c80e7ec3a0e63974a1c96",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/dive-desktop-loggedoff.png",
+      "sha256": "e055e8dd56f593c0ae3c47a64de3c41d48a766d4a73201802c9a748b26c430b2",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/dive-desktop-signedin.png",
+      "sha256": "c86f13981c21eaeac232a40ee034f00e48b173a6e26c4f2c86eee50df8e72674",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/dive-m-q0.png",
+      "sha256": "4a9064ed22ccd8e9ab16d190ae1a97d1f7306f7658e0eb695cd15cf60429ddf9",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/dive-m-q05.png",
+      "sha256": "3a30e6a2d1ded15232e5917049405387a3f6d0e37846b5e06e01c85b945595bf",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/dive-m-q1.png",
+      "sha256": "5627b962120587d24aa0f77a4c51d947e69caf4649c998a693a94993e0eb013f",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/dive-mobile-desk.png",
+      "sha256": "16ab409d42bc98123fcea64f86f463c1e65d120a23f64ed847a5a91b022af3e7",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/dive-mobile-loggedoff.png",
+      "sha256": "9dcbcaad145448234e2c721f585e6b6ae40f2b67995d47f434a41cfbc25ff4c2",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/dive-mobile-signedin.png",
+      "sha256": "8d6d1fd45924a1192f99246697484b7fd9f3f93d70552dce37feacdb9c4b5e8d",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/fly-0-iso.png",
+      "sha256": "86cb000134fe3385846ca97252053a45e7016bd6c5e31e88aee257f3cb23fa25",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/fly-1-375.png",
+      "sha256": "5ea499661aa0e61bd29bbaae74f0f1e8ba259467e1839ffcbac50d0230fada1b",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/fly-2-750.png",
+      "sha256": "ccee9a748846b462823b2859f49532cdca6e7e470f4979a6197d15f28ec1abde",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/fly-3-1125.png",
+      "sha256": "ccee9a748846b462823b2859f49532cdca6e7e470f4979a6197d15f28ec1abde",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/fly-4-final.png",
+      "sha256": "ccee9a748846b462823b2859f49532cdca6e7e470f4979a6197d15f28ec1abde",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/fly-5-back-mid.png",
+      "sha256": "86787da9b19d274ef4564e5f739155208faeefd9a8c3a991d868fd9ce8aee60c",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/fly-6-back-done.png",
+      "sha256": "3ced1472a346fcb46d1a1ee3fd9138f4c4dafcd5bef4c20a20e87bd795a68bf8",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/current-000.png",
+      "sha256": "3f467546f1f0720e7ebe8d2458eccc992a2e730ddea7dcf9537c830817243214",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/current-025.png",
+      "sha256": "d19b33e26bf9faeff03ceb781bdd4eacf9cd5a1ede66af9dd1b4a9da94942b51",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/current-050.png",
+      "sha256": "f978ba495116ccbb163c4ee5a02bbda1b85e88b4e29c0bb59bdd3c71f317062f",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/current-080.png",
+      "sha256": "39647a2302574dca16f80497c8b1a605aeb04d2c569cb44fe900e00226fbfe70",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/current-110.png",
+      "sha256": "e5e6a0f581cf711f89ef205f0c732238ae93a87d647f8b682bd1fb72d42a4809",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/current-145.png",
+      "sha256": "0ac656aace1788f7af48777df40a679150fcfbe46ff3604a8b76c2a99ef385b5",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/current-180.png",
+      "sha256": "d098d74fb5dd555435de3301eae9d9eeacf8caccbfccb1671d286017bd83f1e3",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/current-205.png",
+      "sha256": "d098d74fb5dd555435de3301eae9d9eeacf8caccbfccb1671d286017bd83f1e3",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/home-000.png",
+      "sha256": "19b9000cff02b979cd86531b2dcf02eb1ec77c66479888d87e11412efa608a23",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/home-025.png",
+      "sha256": "bdf22bb8c02023a3ea2d5cd840b8acd418790a5a59c38da81d09842c323f4574",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/home-050.png",
+      "sha256": "60b97a3ec8871a784c023c9d4fd451963ebfa8bf2ae52dbb4a3df0517eda5f6a",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/home-080.png",
+      "sha256": "0ea471f690b76b95956cf44923cb1fa159ff6357de50bdc1616cee31bb436bfb",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/home-110.png",
+      "sha256": "11c4ed070420bec80821706566c70185102e7327269192aeb4af40336ba727c3",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/home-145.png",
+      "sha256": "b6b7a48753bb69b3aa3e24093b20a650f83305392efbb530e420b50aa25ff0f5",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/home-180.png",
+      "sha256": "a9c9c821842efbe9c447572c4b62271059728c6be457e871f60ec7ff66a786a7",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/home-205.png",
+      "sha256": "983c41782c4996b0c1a8d8d7dad41fcd0a547e8a4986f48eae5ea5ed51b80e72",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/focused.png",
+      "sha256": "4a89756c4fb6d6b4b7b79f149cdf159611de0c40e9a3db068b83bd9c8cc8f2f4",
+      "action": "retained as references/monitor/focused.png"
+    },
+    {
+      "path": ".impeccable/review/m-back.png",
+      "sha256": "8a25aa1ea49cd8ee1e47131ff784cbae887c0bed105ed7f6190f4819d2f6be80",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/m-final.png",
+      "sha256": "e0e9fe56c72ea32dd40ac7745704f3f5f37f2406bfc5b520245a95d0dcfc5a44",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/m-mid.png",
+      "sha256": "97ee576b7f2a75025b25a25aef89a12a34230659f04db1c9b5528467d50a6f3e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/m-signed-in.png",
+      "sha256": "9989cb147d3befd095dfbf091fcbf97247d5a35ef959aae3d93edb5b49e606ce",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/menu-desktop.png",
+      "sha256": "c9634e5aa623b8dda861a0e723e50e4d4ace6970121db2cbbb52f04ea087182f",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/menu-mobile.png",
+      "sha256": "b4ce258717533d11db5f718da4dd60bb3ac1a29cad120db2ba19fed363d3c2d7",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/mobile-fold.png",
+      "sha256": "16a9bd4b5b08112f2ae7e85b971825547109bccfacf95849aa9fb9b93d505485",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/mobile.png",
+      "sha256": "876a8c45313fda216a192f284506d4e5bdd059a42d3f082d027f0e1b71aae26a",
+      "action": "retained as references/monitor/mobile.png"
+    },
+    {
+      "path": ".impeccable/review/no-webgl.png",
+      "sha256": "73318ad20212e6d0f0d8c7ab77e900a57d6797ccddbda7964fbb8ca141587e7b",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/ob-down4.png",
+      "sha256": "c283576cd9ac4a5f9576077e41eb26b2f394423be8697b672c35e05780d9e972",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/ob-home.png",
+      "sha256": "e04a17c7ecce91e77beb0f7d9b5b92b1f2535a2c25287066c9f38d396c5b8ad5",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/ob-l35.png",
+      "sha256": "86246b0cfea3cbe6c26a9b4f0680f5dfe3b220262af99c61ad595106ed7fe760",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/ob-l35down.png",
+      "sha256": "578a5382cb66bfaf8d8bf5c4beba312f1182114d094fb1aa0f5c687e1185a937",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/ob-r35.png",
+      "sha256": "c4b2459170c13adfc6e9816e7b7d8350c483bbdfa87fb89b5b9215734256fef0",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/ob-r35up.png",
+      "sha256": "b7c227f1559ca07b93c74a3419e8884a6ab3555b0fa916a7544ed6890fbe9aff",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/ob-up10.png",
+      "sha256": "25df05378b2c0209ae55dc07037d88b0f18f7587501c84e93b6650da34e2ebd1",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/open-huge-1.png",
+      "sha256": "438329169af7b89fdb57637fbfb103392186e7f8766964dd405e0656536bf7bf",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/open-huge-2.png",
+      "sha256": "43a23a599f7c120f47db8cebdba1cb82416e176a6d74805f8f1b9e3d3bce3984",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/open-huge-3.png",
+      "sha256": "ca3bc2f6281d6576c86f46b8385caa9461bd924168882ea304d0d03d540408e5",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/open-phone-1.png",
+      "sha256": "a759ea7fe487d64b562c62ace992173fb7648cb6ca0296380a15b6be1cab1ca9",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/open-phone-2.png",
+      "sha256": "5c96fd07701728edf06e46060c06d4e5b7628e137efbd2874818a0fe862e27c8",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/open-phone-3.png",
+      "sha256": "9cb9a369bc72ef2f94ad693ecf7fa4c58ef023b1d508c0085b4c0ff20576320f",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/open-small-1.png",
+      "sha256": "f94d5059208a397e2d9f83c32a5f72b0ad1c6be4d062790f6eec46276fb4099e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/open-small-2.png",
+      "sha256": "8786ec2daf25f8a81fed68065ccc3814b195f5f6e35929bd64df745fcacc8e05",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/open-small-3.png",
+      "sha256": "cf293406d0e3d0b48e36c3723d5654d98508163a0baffc56bbd35754f9088db7",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/open-std-1.png",
+      "sha256": "9f440efbf6b2e05567e57e64c945248c22f6afc49daa478009b0318aa9776683",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/open-std-2.png",
+      "sha256": "bef1c600fd69dfbc098581c6019286145a62df4f572304c742da3513f619c5f9",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/open-std-3.png",
+      "sha256": "258cad057a84a6780e0b8f87792255585fd8c0b7ed5d6ffc461b10a5951b981f",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/open-wide-1.png",
+      "sha256": "5f931f06cf5a42014197e45425e09232a832be24090c9d1f48db4d2e58eff1eb",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/open-wide-2.png",
+      "sha256": "9511fb6e44a5e645a806fca2c4316a3c0e2687c8096ca1fcb632af85057f98bd",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/open-wide-3.png",
+      "sha256": "008435e01d20db62ca7bb17194363ca07468e91e3f4a63569ad63ea68ffe9ae3",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/orbit-desktop-arrived.png",
+      "sha256": "5b9c0f64cfc58184ed58fba61d902162c56cd0c79a637b72ff0f7656ae7a0d3e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/orbit-desktop-swing-left.png",
+      "sha256": "60651b7e2d29b52ed1e1afc8baf9f74eef9e0b2be687199320f0328b061054b0",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/orbit-desktop-swing-mid.png",
+      "sha256": "1e18487376da1de86b81b9ed22d1e0c80ff96f0fc8e4eded1283e8165245791a",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/orbit-desktop-swing-right.png",
+      "sha256": "0e34bc19a438a220d0ebcb063ffe18199cbe8296d23fd0f49a75d3c44f9563d9",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/orbit-mobile-arrived.png",
+      "sha256": "fe01599694f61c764b3ad3549fdea5a7c9172b817dfea121ce4bd1345a8cc1ca",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/orbit-mobile-swing-left.png",
+      "sha256": "46ded3ae1c9a2953666221b22de837358e7ed0e71df57cb94464fa64a3cd040a",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/orbit-mobile-swing-mid.png",
+      "sha256": "a130fd0b5181e48db6fc71ec1fbd16bf93e32f92bdf8b3ca09200d1ff4969ff3",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/orbit-mobile-swing-right.png",
+      "sha256": "74a8cee706e2c1c1e8419510dc0b440377d11d2e2447ec1c36aaf044ede16e4c",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/orbit-reduced-arrived.png",
+      "sha256": "5b9c0f64cfc58184ed58fba61d902162c56cd0c79a637b72ff0f7656ae7a0d3e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/orbit-reduced-swing-left.png",
+      "sha256": "e9b4e7c69d09622c157c288c855f380d370df03a48e8c4cb1f651c988b9b91bd",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/orbit-reduced-swing-mid.png",
+      "sha256": "4f456a1a45ccaf8e2480b5ba2064f7aa22205c98f537c45c670e7ef1451936e6",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/orbit-reduced-swing-right.png",
+      "sha256": "1c8d9662f3067c92ca640d2ad666cd02328d622a15b3a656787924d3cb0b2ce7",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/plate-base-off.png",
+      "sha256": "fed808be953168b65bc9d9aff5ae7e33cecf4bdb0ee85099be9bde5fb0355c5b",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/plate-base-on-home.png",
+      "sha256": "c4188cbef87ede753c92f005d59b220069e57aeeb624a016bd3a823c253ef4ca",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/plate-base-on.png",
+      "sha256": "fe531785ec0db8419713da90de595bee7a3e76b963aa34d3d652b0fe97985c2f",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/plate-v1-off.png",
+      "sha256": "5281c7016d5d989d0b98b09cab4b404faa3acc20e9f0efac18ffadda2007a17a",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/plate-v1-on-home.png",
+      "sha256": "e0bb22cde53dff6608097370143cabf62566227deb4e46ca960acbb3656fd38a",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/plate-v1-on.png",
+      "sha256": "4cd1ef6f1d7487ba21dea1da6b6093ab350ef990634003824c0de3ae3480fa7d",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/plate-v2-off.png",
+      "sha256": "62d4258a2c5994a3eb7b546d3d95845b76b2c642ed076f8996a0dbbd9a7201d6",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/plate-v2-on-home.png",
+      "sha256": "a93022dad4f73c06bf988b438299a3663dc60e9437c00c9fdeabb346f09e097e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/plate-v2-on.png",
+      "sha256": "618180ffdc1d741b6aa9f35cdb6182ff9acba55802e9d95520fe4853dd6d7908",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/plate-v3-off.png",
+      "sha256": "ec06c6029c5b0a6da62dbf9ddcd57fc87bf82a6200ff2b5fe8a248e287d46b5d",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/plate-v3-on-home.png",
+      "sha256": "b9a0c8ec99b36cffe5280af1c8ee4965d889964496c115fdc1d4ffcdb999e6f9",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/plate-v3-on.png",
+      "sha256": "c18b529846660fef5640815b3c987983f5c5e5cc3c18b2067308f2b0347f38ca",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/reduced.png",
+      "sha256": "ba952094c8c9e4074dbba658c9376e5e99813b00568161eef5a90aeb05fa56d8",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/rm-back.png",
+      "sha256": "1db62d0cd5e77df77b893e5c38d3e0a34101f8cc5c63ebfeb1e2f263702cebf5",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/rm-final.png",
+      "sha256": "4c936bc209bb3ac781bcf35cff2f0f57537663a1eba0a021e72a7bd0332cf8e4",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/rm-mid.png",
+      "sha256": "3690bb41ac5827122bf6ff83e426e51f98370b85750da95df1281e0429d85cc1",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/rm-signed-in.png",
+      "sha256": "d1e3bd0a1f3543af8cebad23713b4a8f7971ddabb56bb014f04280e3e555122a",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/scene-desktop.png",
+      "sha256": "7cc25ceb6effee6badd76d12d466273a3267c852d0ee7d07e203d28c54dd305a",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/scene-hover.png",
+      "sha256": "c6bc568c09a4c43d6d6f8d87e101a7cc0eab59ec64858040205fc297777633df",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/scene-idle.png",
+      "sha256": "7f73a92477421e08551e9491a29fdd29f9e654e1c973ed610f777934a9842b40",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/scene-mobile.png",
+      "sha256": "4411b0dfa3fd85990e9c73a278a954cca22bbd4c79b84d7b1bbefd9cb6379aff",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step-0.png",
+      "sha256": "e4379774f0508fa9226252a3c26f8f012f836ff0140fd7b4379c4ab4071f591c",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step-0_2.png",
+      "sha256": "950ed0da94c2f89158dc7f9f381edbdf9232dd3d7ea3c75a9790d4047a2e7afe",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step-0_3.png",
+      "sha256": "89141b65b39ce9251bb3a79efb18157c75c04e101ef0aa342b68148c24aff34e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step-0_4.png",
+      "sha256": "c2935bc09cf4d20c84df157890350399e6b261bf580589f7adbe85e60b6f77df",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step-0_45.png",
+      "sha256": "f8db6409c93072eeb4b96e71073e6068541c90e58150946bd135953a3d13be5f",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step-0_55.png",
+      "sha256": "ff8d33d0527d9152267f95032c4dcf598ab3551f1d4f0c7996e0f44d010c2124",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step-0_6.png",
+      "sha256": "8dbadfbcde898c9507169792ff6e40123555eddf8604816f52d8152500310383",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step-0_7.png",
+      "sha256": "c31d51cafc643178310a1ecdfa8ae0c2f661046abfb31f4be84d927780b5e493",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step-0_78.png",
+      "sha256": "8c147b5ce2be8dcbbe9695447f9ed2fb50b64b11e222d7db9c7706883e04d5a0",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step-0_8.png",
+      "sha256": "ae45638e76634d95b9a488dffbd8fe9a2e903119a8d4b2bf1f10c0324ca50089",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step-0_85.png",
+      "sha256": "12ad79125c5a13d9a5ac240c4941cd8fd836cbd0385b14b76ba68fd71858c9a5",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step-0_9.png",
+      "sha256": "089ca2375928ff274fcb05ad40c24d5877f1caa76fb8b06a5bae2e36222e1c98",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step-0_93.png",
+      "sha256": "c6da0e4ee26c7a6025ca018448c1b5d16b96410e77289fb224b06b22f8f37b4a",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step-1.png",
+      "sha256": "84ebc8d0d784dfbb21376c73300d7fd65145b2cfb8dda0e032ba8cc2e64d274e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step1-desktop-desktop.png",
+      "sha256": "b7db484ecf7d85c147bec76b406c8beae484433ebfbc0ba160229b31af6c925b",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step1-desktop-load.png",
+      "sha256": "f128fec60f6589204c9a11f856a6f4e098beae9be5c1acdb06bd746b44f782ac",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step1-desktop-login.png",
+      "sha256": "5b9c0f64cfc58184ed58fba61d902162c56cd0c79a637b72ff0f7656ae7a0d3e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step1-desktop-logoff.png",
+      "sha256": "5b9c0f64cfc58184ed58fba61d902162c56cd0c79a637b72ff0f7656ae7a0d3e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step1-desktop-window.png",
+      "sha256": "85b47ee626e495c5257661e17a34b379ada7b525ff92e99dd853fd55b722d6e8",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step1-mobile-desktop.png",
+      "sha256": "115fdc5fa73e778e1eea36c99e53e3323d337fc2049207f638b213e582e37742",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step1-mobile-load.png",
+      "sha256": "7bad657e4156cf5130ce38cac648bce61a8da69710bac18c1c43bb3ab2714559",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step1-mobile-login.png",
+      "sha256": "c82ef099ae010a1a64c33f88ceb76a18f8605fa3e9c025086bdc290de391e7bb",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step1-mobile-logoff.png",
+      "sha256": "5f75fbfe4425cb2402a2d53298a33e9600f5c7855bca469f728412ed1e767864",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step1-mobile-window.png",
+      "sha256": "9e06f2c9510ef805fea0c984d9d2ea56fea5033e202cd1df16fcfcbe874094b4",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step1-nogl-desktop.png",
+      "sha256": "02ad784a9d2875b046033d62ff22229215f15b8e09fcff410bc497a55fec5844",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step1-nogl-load.png",
+      "sha256": "73318ad20212e6d0f0d8c7ab77e900a57d6797ccddbda7964fbb8ca141587e7b",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step1-nogl-login.png",
+      "sha256": "73318ad20212e6d0f0d8c7ab77e900a57d6797ccddbda7964fbb8ca141587e7b",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step1-nogl-logoff.png",
+      "sha256": "73318ad20212e6d0f0d8c7ab77e900a57d6797ccddbda7964fbb8ca141587e7b",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step1-nogl-window.png",
+      "sha256": "7eed072c04b62b9e2df7b612bbe669ae219427b6b44a09252a4b41ca57d957c0",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step3-desktop-bin.png",
+      "sha256": "f4f1d8d80e7aefb9d03774ee9cb02ef403a02c923c5d7ebd428e145cb824bf14",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step3-desktop-drag.png",
+      "sha256": "d5320a5bd67c4525df96399d46f4698eef9196e8edccdbc7239aaa6a636c3849",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step3-desktop-emptied.png",
+      "sha256": "d33dd0ee5885a79bce2d7a1f1f365204d13722a23ebbb2bd1ca92220a1e8d600",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step3-desktop-resized.png",
+      "sha256": "cc4fe3b42ed26b047a52aea14107e18b2f6279b2a7edf533862112e482adcf51",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step3-desktop-resume.png",
+      "sha256": "e5df90238200064e22f356847bf8dd63056252ff3ae3592db81965a107b2aeef",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step3-desktop-selected.png",
+      "sha256": "ce7f1aba892991ef264c98e075640cbc89b795453fccb6c19978220fc290e5ae",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step3-mobile-bin.png",
+      "sha256": "43582f214ca0bec0ed2dd41e7ec1d841f21d89135feafd671f00cdeb01b3dd09",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step3-mobile-drag.png",
+      "sha256": "711a0e4af90ddfc05cfbe5552df41464954a385e419f8cb91c7022c0b9402504",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step3-mobile-emptied.png",
+      "sha256": "275b360a9a97ff28f7a5b80d62995251ccb94843b5f022ff655faf68048d1bd4",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step3-mobile-resized.png",
+      "sha256": "e86345c59c15dff5ad3f31a8abea7b5826a65a620f37dfb9cf5dc19a7afbb9c7",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step3-mobile-resume.png",
+      "sha256": "1a71cbffaf990fc9d2f6272ca5d0cb01d4190fab531bb627629168e6dd22494d",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/step3-mobile-selected.png",
+      "sha256": "4434538a17f1e6d05470b27f8a40346ec80efe39d88d9b8232182fc04df643dd",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/still-0.75.png",
+      "sha256": "3e28b729878b5add35968927f25993284a75134dfcce007ef5d66b25d5c1cb1c",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/still-0.9.png",
+      "sha256": "5e308f35f1543408b5a9dcdfc454b92d19f029aabcde3263999fcbf4589d3840",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/sweep-z0.75.png",
+      "sha256": "a87db2e1fb16660111f29d70327aa5c8c9f85ecf31da8791adc680c5a0fde11d",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/sweep-z0.95.png",
+      "sha256": "447c690f3a288c2b976e502ea9b48130da9a55d3f08a115f64e2ed65b9dfad43",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/sweep-z1.20.png",
+      "sha256": "ceb3cb86a47120f54fba13a466cb5532256bbcebdf9f576cf1b91dc4909121c4",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/sweep-z1.50.png",
+      "sha256": "23581a235f97a1721719b6a103b5b9122da9b90f212f134bc9e11e8566741044",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/sweep-z1.80.png",
+      "sha256": "ee1aafed60bf39eb3c5f6b1665cb7cf005036af06d5e34769929be1cb2784ddc",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/sweep-z2.60.png",
+      "sha256": "3aedb6040c7234ab36160fe860429b2eb936bc3b4fcc7260032359158072a8bf",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/sweep-z3.60.png",
+      "sha256": "14774375b238bd0e7eb15c17f8a7fb6a38fa39ef07455f2302451d25b28e32fb",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/sweep-z4.80.png",
+      "sha256": "ab394fcc6113c07ae7e751564775fd0dbe1c77fab1d30973db0601ccf877020c",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/user-1280.png",
+      "sha256": "bbc430f0b5ea11c3ee5ad3651548221a5ecf14d80fdb38267655212b2e6e4886",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/view-after.png",
+      "sha256": "412cc6c992c6cf6e75dae694ed091486f9a9de7496da8f72fe4bde896a8e2a2b",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/view-ao2.png",
+      "sha256": "ab71aad81ca99db7446c30ccf5f6a9d480d82a422bbdb1ae7cda471598de8a2d",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/view-ao3.png",
+      "sha256": "39c93c6e4af4bd1122865f1a9c2dfb699452cf9081c5fe241297f06030ea7260",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/view-ao4.png",
+      "sha256": "31c5d97f3fa9cfae69e750b35ad67aac2a27eeb87d89864708861980bb021757",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/view-before.png",
+      "sha256": "9143095d869e92bc136ad887550680f75873f61d40a6a72b32ffc2629cbc18c2",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/view-final.png",
+      "sha256": "d410e0d59c680050b4274cd9bceab59b4d6f1f34d3b736dbc50309b17f05fa80",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/view-flat2.png",
+      "sha256": "22e347b005c63bc74fc43a0666e474efe0c40f3bcb17b9e529129f8d5656ed91",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/view-flat3.png",
+      "sha256": "4602df8cea9bfbab2ebfc4b1c005a6c4ba88bbb34e8486ab318bd4d4c105b2d2",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/view-grey.png",
+      "sha256": "34c90d88d1131e38a876cfbcc7b749bbebb51288146ddbbdbfa535dda0ae0f6d",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/view-hi.png",
+      "sha256": "5bd6065cfeeedf2b43ccf60452e9abd003e1e8f98008b108482d7f8fbf211cfa",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/view-hi2.png",
+      "sha256": "073af08703df331b546a002e79eca0260151c624a9250b9dd8ca73deee74fe8e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/view-new.png",
+      "sha256": "bd3b51ce368d7aea45c5b1e6f1331bac20e2ec965ab854b40e69d053c1bd1739",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/view-noao.png",
+      "sha256": "eb35e61f21e9f74cf663294a7ad5bc1b20881793ef1a3827141945d260014538",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/view-old.png",
+      "sha256": "ce6275330ce660b800103f48f8fad7f202eafb77572e46b239273adc5c91fe0a",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/room/flat-mobile.png",
+      "sha256": "e9fd4e0ac5a85c136ef0bb2bffdd5706c7c62df529ad3c1be181fd7eb61b7063",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/room/flat.png",
+      "sha256": "506bb93d689cd0c97a19db683ae09704054fd406c1dd077f4b83faa8aae68bae",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/room/front-mobile.png",
+      "sha256": "6751194e8931fa9658bd8c96b12fe445763b05ecbc9888b76cc0f6692864c2d3",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/room/front.png",
+      "sha256": "db33c1b8dafca6b33e13b2059fb30ea54a6ba5ea87ab6096d30e06653a4c1755",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/room/home-mobile.png",
+      "sha256": "bbdfb7c0ad8ee7b83482c47d8e3f12614cc26c36cf3c1c78f5be51ac0259ea52",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/room/home.png",
+      "sha256": "ad37c9088c180802c252fa8e5fc77aee1bfc4135ff2879ff1fad86e6cf9f9564",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/room/left-clamp-mobile.png",
+      "sha256": "ad5733a6368eb281df92e754a06fb068d9dd16b8594df6f6f1601f388a8d4087",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/room/left-clamp.png",
+      "sha256": "e92b979db59190dfa965e06abe662ab62ff17e46212531f35ad1abc8b903ada1",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/room/right-clamp-mobile.png",
+      "sha256": "2c8499fcde4386981f232c15d8eea05405013918af9b6f3c15ce3eaa53b1f16a",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/room/right-clamp.png",
+      "sha256": "8da5f5651c6ff928ec7231f18510fcccfecbca4e5f33e9d94fb5407fc7ccf6b3",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/room/steep-mobile.png",
+      "sha256": "addc1d928769ab5ce61b97b75813189e1c6076e821a85bb2916f7935b2a31b33",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/room/steep.png",
+      "sha256": "a4f1a5bfedb876b95174f1f4f36e716bd2f1dae013bd6a639c08939cde0c3d85",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/room/tm-aces-mobile.png",
+      "sha256": "c4f70c18cbffc135ca9119dc1b3c62d692734feafae7d9778e9e3f10100c8476",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/room/tm-aces.png",
+      "sha256": "9edbc0bed0bb42cf537ad763ce82c7533cbc9a04275e979249d9114a29c7b1d4",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/room/tm-agx-mobile.png",
+      "sha256": "7bb482e7ba46980a9df141fc6086fbc8859b72cc5723cca0b1e946aa417207f9",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/room/tm-agx.png",
+      "sha256": "39c1ccca97276e9666b40e2a377d46ee854cce32d306dbc362e783b7880e44d4",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/room/tm-none-mobile.png",
+      "sha256": "e937ba4e2f9525913378a0194e798bd2777f3a01f3d0ad594ea11c21afd1211a",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/room/tm-none.png",
+      "sha256": "391adad10c2bb62766b4ff92799ba3b8676e67615887270c925b05594893c7a6",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/bare-3q.png",
+      "sha256": "f4966d843fb2ed425f26de6dc65e357223bb3946e20c8f4f064b2c8bcadb298e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/bare-flank.png",
+      "sha256": "39434f37de223f929ed5ce9d946f0c8c01891d0af0f0ec4de77958d6bf9cecae",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/bare-front.png",
+      "sha256": "ab49d2c2c04d841fbce3a5ce4c9724e3d3c5676d9157f00d116ace6b362708a4",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/base-closeup.png",
+      "sha256": "95c10bc4a6355be964c72fa6615e807fef408c87f62d75372f098c05c95870b3",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/base-home.png",
+      "sha256": "181b40c302c3b9759885d729e4d6a2bcbb7516e5f11a390dbe78e5c9cc7f4c34",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/baseline-closeup.png",
+      "sha256": "8b2acb12c7ecfdec929d70208d364084bb1494abca40e155c915d537a6dc805d",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/baseline-home.png",
+      "sha256": "79a55e4521ab85d338c0a1aadbc33c230ebbba8d24734f53d7ead0d45eba2907",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/big-closeup.png",
+      "sha256": "ee7d9ec53685fcb62e40d9688d876a5649e3ec6b309311decaebe56500a6d79e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/big-home.png",
+      "sha256": "fd0e8cdc3efa361ea5b18123a80973a36f98615090bd46bcdde547518f6295f4",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/big15-closeup.png",
+      "sha256": "d433fd23ec9372cff4d283dece0f73dcab45a9e9a206c1b4fa3d1d6373193b09",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/big15-home.png",
+      "sha256": "1dbe52b5f12c318f38558e8ee4de93ba8b30e871d8714cd23786e05c58011b46",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/debug-back.png",
+      "sha256": "803e06db350d95f3b2e3f42320e2754ec42dae97ee7bac6202af5b68073aabdd",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/debug-flank-x.png",
+      "sha256": "995eecb4a0a313f6a838461ec5a448c6f004e99074f56c39f7d109021496b972",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/debug-front.png",
+      "sha256": "fb32805cfb5059024d75a7e183dc4c4f7ee562f002f4151c3245e130a71bab56",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/debug-three-quarter.png",
+      "sha256": "3e0073e34da0479cf8f83febe61ab19241384ef90f10b7d127c6e6fa43fdd58c",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/final-closeup.png",
+      "sha256": "172e28c4668914675a53d09d8fb095cd45f4e869d68131a312e44831b5c67b85",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/final-eye-level-mobile.png",
+      "sha256": "77de83f0c701733b61f02b67cc3103655280db605ccf304baa83378f2067b8da",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/final-eye-level.png",
+      "sha256": "f5e1076a51d0c8c23f69f7ab1a11c98736219436b7c2cc9a39f934207afd66c8",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/final-home-mobile.png",
+      "sha256": "e7fe3f05c9e34950633d3ff8e812ea6cf7d2eba838b309a8746eaa0b90620889",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/final-home.png",
+      "sha256": "0d28d3f0ef50a3b16a4208e6671f447caf0df984f561e7761cb6a476126d7fae",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/final-side-left-mobile.png",
+      "sha256": "585b826da81c295b1bebf5a792cf17ee0b86f6ca51e956d834f103093efd4278",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/final-side-left.png",
+      "sha256": "0287605485fc1a88d21afc29ac7f8676893d231d3dd709f0b9b3246dd9e56774",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/final-side-right-mobile.png",
+      "sha256": "7ed2796d7a40e16a04e21fe2216e7f8fc672047f35f3b8288523d09672233543",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/final-side-right.png",
+      "sha256": "3fbeba186d894e5ad700f8dc6c8aa96749a292c5c39d95c58f55b0703250b870",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/over-closeup.png",
+      "sha256": "3c6fcf024ddeecdff034edb6876ca78fe51fc2cad07346aeba13f8588849f828",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/over-home.png",
+      "sha256": "0d61752595a3269ee93e51d88d42d4b4340d253a6ce49c70f76d6c486e8ab9f5",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/over2-closeup.png",
+      "sha256": "7da3a0cd837f933df29adde878ae5d5f49251fdf0a678b5927d8100cee7b3dad",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/over2-home.png",
+      "sha256": "b6ef2c59478b8af4c24a4ea3281a66f127c6c923713e2e805d623e0107b76125",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/part-closeup.png",
+      "sha256": "b6872baf9aaad47fd75c493853ad6fd34c0564cbf78c4319764991e7e1d9ecd9",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/part-home.png",
+      "sha256": "e2e42d2fda02ffed1d013148bb06de6b75da4bb5f58d5935991080b8eec526c2",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/part1-closeup.png",
+      "sha256": "836d6c4efa32a7ade2276d560c936f81e91bda41b1d0b4810cbcf6caa9a8dd28",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/part1-home.png",
+      "sha256": "259adecd4b3fb979015e501f490d197ed22926dfb8b3f35729b9e8a27217443d",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/part2-closeup.png",
+      "sha256": "35d3aec879107e813fa23a2e1ad91f9e43f4e43c16671e184a776ec843c28fc6",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/part2-home.png",
+      "sha256": "fe0171b0a2036ff1f6ccfb0f7cfd05126929521d01cd6f9378f769b37ec866ec",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/part3-closeup.png",
+      "sha256": "210105952f3c1d467a8288bb7d411120886ba62e595ec6f44ce3180dcaf3f375",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/part3-home.png",
+      "sha256": "73feb1f0506048ec711fa02dc25c8fc24c170288957596917a843ccc71a13e70",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/part4-closeup.png",
+      "sha256": "73aa9701eeb7274f467d75653848eef0d6cf66505c192d2d8f8cfe9b59214199",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/part4-home.png",
+      "sha256": "5fe355991f4de0430e2de5db48005e49f01bfba3de1674f9af61be353005d460",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/scaled-closeup.png",
+      "sha256": "1fb2fc31c682d4b11ea347dfccc94329680926362ed06c3a9178bbafc371d025",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/scaled-home.png",
+      "sha256": "4bd618a4ce381fff6e05ebff8ebfb3fc67cde3716cba688ad5dc83c584d03543",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/step1-closeup.png",
+      "sha256": "fe73d083ded1ccb869b04ccb1d5cde8027fd8c560a7fb614b6cebb0c56c65af3",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/step1-home.png",
+      "sha256": "7bbed11ec9235b8c933e9cf155be219b21caeb66235af3c355ad8495a3b485b1",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/step2-closeup.png",
+      "sha256": "d92ce50511f7e4d4c0a3e13c03b7194f83dce19bba8cc6f565bbf9f68d047e17",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/step2-home.png",
+      "sha256": "73a387ef734afb3949dece8f98b6d1769d40a850be95a584ffac848d6106e475",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/step2a-closeup.png",
+      "sha256": "f1823e4d2862ff77a24de876e0fad4c89350cd3633d2809e85c18f628a4526c4",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/step2a-home.png",
+      "sha256": "0952b52fc61b2327715e1a89e885c6b36b529b0ccc5ec8001452062d072609c4",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/step2b-closeup.png",
+      "sha256": "377363c3528ca27c8e234e990e83c6cf57f28c82b891aa8ebeffb5be6b53fb25",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/step2b-home.png",
+      "sha256": "a28b5aacb389a617cf736a00899f17a4930653bb8eafd1868637925d8c10b8e0",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/step2c-closeup.png",
+      "sha256": "7a23174ada255c58d8830307a1b285f0bdcb805c69ec452d0a184511f22ee22c",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/step2c-home.png",
+      "sha256": "35c0e5f4236cecb777cbcb0f5f41bd69e17ac62942138d403a3ae969af0365c5",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/step3-closeup.png",
+      "sha256": "63e00b8804c894d2c13717eb2b7a4cd4785e83a0bbbe2321af5efbb76266c633",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/step3-home.png",
+      "sha256": "7648e7bb90606e894b4463deccf0b4c2407073506948a1fbc8a3f2a537b305a0",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/step3a-closeup.png",
+      "sha256": "129cdfe39ce1af8107a9af082ff5e2a45c014ebcfecce6980d6c661d05588ecd",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/step3a-home.png",
+      "sha256": "e1419102e8d30ac92657b150bc06f01fad94a01a6951d5cfbd0898b39c36ae3a",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/step3b-closeup.png",
+      "sha256": "6867474d027f75df3c7bffb7b47bf99220d1fca1b250ecff1288e0c3960f420c",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/step3b-home.png",
+      "sha256": "cfe41dff7d9aa77166438d1009da478b76416bd0cdd1571e1f63a85c688c4bd8",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/v1-closeup.png",
+      "sha256": "a9588ffd8944058585911c995161039b163eff186ff801fdd2f380fe098ff016",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/v1-home.png",
+      "sha256": "130381bfe545650190ebbee8265226e71cbebabd2af7e99f8f61bdf970dd429a",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/v2-closeup.png",
+      "sha256": "642f5f706b6e0c2c295a0e3f36e641cc52c59d74a2dde6750c7c20faa1a889d8",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/v2-home.png",
+      "sha256": "13772e248e3434a56e6cfc809c87b80089eaf64134dd832f7750c2d9a90e6256",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/v3-closeup.png",
+      "sha256": "b66dd10dc2664e4b08187271ef9fab8cad6a7eb1fa481a90c28300ef7e8b3ac3",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/v3-home.png",
+      "sha256": "a3025ab6cbd981e20598467fa882458fbdee534a74fc61f7386d62a3b3bb51c5",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/v4-closeup.png",
+      "sha256": "d87b37a4973672a75e6e0506d43589b854da8c7ebf4dc503a332e5633cc7dedb",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/v4-home.png",
+      "sha256": "fe3e9feb00ab0e47ed1bc7411132063fd3524d84f7ea1eadfb1318723263da2e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/v5-closeup.png",
+      "sha256": "14da7de18a0084d486eb7d474bf936bf2eb7c066a6df6a33c66abd398003a12e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/v5-home.png",
+      "sha256": "a801a01a1fe625ad21747852bcd51711bf929fc78f86de5362f4448a7c7728af",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/v6-closeup.png",
+      "sha256": "8ed742403654cd995c897b82343f6242f21664e1a609ffb2d2954a294275081d",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/v6-home.png",
+      "sha256": "b0fb4898ef5e69c3f3dc948c1a9b6439fbf8f62e044fd0af5b9760572be5775b",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/v7-closeup.png",
+      "sha256": "72d0705dd567c3046550ad55c34a33f5364ce7a0ec7f69209b3839df4bf1f9d9",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/treehouse/v7-home.png",
+      "sha256": "1d7f760b1f8d4d848992a7f576939d405eb36ec0c76894c79055340585d08e1d",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/window/flat-desktop-crop.png",
+      "sha256": "579de07f24fca24ba895f93dcc6cdf20f05ac11b783663e99938e02633526735",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/window/flat-desktop.png",
+      "sha256": "926d7a5b45713eae5c10ad932b9bd4cde21c4f1af72667ab1d93d8cf7e4e4f16",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/window/flat-mobile-crop.png",
+      "sha256": "27184ec914d50f5d937ec5b77ace394649d43f81aef0fa2444d14619ee2adbdb",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/window/flat-mobile.png",
+      "sha256": "9aa12d519b2fc7b658c7de3bac70ef87c58936c28d68013e1dc61b6fbed3eddb",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/window/front-desktop-crop.png",
+      "sha256": "ff1643b191399b24047bb49c7543a6a7489bf56ba8818681f1b4d1cde854d768",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/window/front-desktop.png",
+      "sha256": "b6be00f89dc5468c964c9e47e3dd1a07c8b7f4599a0af91a2b25e0491ff7e4f2",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/window/front-mobile.png",
+      "sha256": "c5886fe66a409690167928e4d9b243695c1b0ebda4705e5a43c1a3f81a7d774f",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/window/home-desktop-crop.png",
+      "sha256": "7aab34550a8dd354988aef8ceaea0a2c38acefef7236e2f35e6eab01d19fd488",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/window/home-desktop.png",
+      "sha256": "4069775933c79200f1a2ed8fbb67762e5837f3e7c506e92816aaeab9476719d1",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/window/home-mobile-crop.png",
+      "sha256": "846b3c00e836f36ab09cecf4614f46b5e199753ccf501ebf9059f34ac2c04670",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/window/home-mobile.png",
+      "sha256": "0733087bebcd0ee7dc1d39c9c012752491fb61cb8c93c578c5a81fef5f4aad86",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/window/home-reduced-crop.png",
+      "sha256": "a4e07057f4fc3cf733e245740f42ed79b7822f29edf7d21a5dc87808bd41baf0",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/window/home-reduced.png",
+      "sha256": "8a9ea4551bda23a3058741bd716794ad9fb823277d579eb1ecb267ae64604e9f",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/window/left-clamp-desktop-crop.png",
+      "sha256": "4514e9ccc87ec9b1fb68c7519181922f6f60f89081ca5fb4655183ec1f47635f",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/window/left-clamp-desktop.png",
+      "sha256": "db362292adb81859ec2872e055edbc48b56e9b34423149cec0a07f3ac3fe6342",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/window/left-clamp-mobile-crop.png",
+      "sha256": "fe922301c90a25c3179dfa3ba15f285420fc315575f0fc1d21dcfb36ab12ad24",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/window/left-clamp-mobile.png",
+      "sha256": "a411e740e7686323f81d1d43205c7fd63b634fb5349737bcd3ca1512d117dbde",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/window/right-clamp-desktop-crop.png",
+      "sha256": "763c35f8120a3248be153b89d0a3b895dad15ac523042abc63f169708b574b72",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/window/right-clamp-desktop.png",
+      "sha256": "6e1e624d286633087077f1a51643f4c7e422309d5079ab617227cd3f0f9cc9ff",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/window/right-clamp-mobile-crop.png",
+      "sha256": "a94f7d4ea6fba6b199313cec797d5768d4c97426afe7f0c8109778e2bcf658f1",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/window/right-clamp-mobile.png",
+      "sha256": "46f0b585147ed868b7ddca9fe9559951e55a84ab359f9a274e7103a7c25bad99",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/A-desktop.png",
+      "sha256": "ba33ccaa6f9d0f78b79c18dc2738b447d99fec8a16e59f99b20e3dbf7e474709",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/A-mobile.png",
+      "sha256": "205976d76dbca6fe85fb25dcb07b7f785e7ee6236fbd45f7c5b527b6157c92b1",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/B-desktop.png",
+      "sha256": "84b0f7f2d50b5b1cd23e3a484b4f3a17e1d0922e14f9d0d8154bd01722021402",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/B-mobile.png",
+      "sha256": "6410b79e23365b277e339ad71386a29053c0991f0e3a0d6f49338fef9c57d937",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/C-desktop.png",
+      "sha256": "b84aedf156848014b6dbbc2b58d607b48616e3bd08f4c41a89f489bc26c6cea3",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/C-mobile.png",
+      "sha256": "fbd98934fe0979a0f9bf14021b30e433259220c7429ea36081adbb4c62cd8aad",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/D-desktop.png",
+      "sha256": "8708206a2345719ed286053009b62ecfb17bf4642f9dfa0833cecd5bc2124b51",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/D-mobile.png",
+      "sha256": "bba511d0cb544b2f598c4896ffb204ce79befa8c784da2c244b3023cddede773",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/L1-flat.png",
+      "sha256": "0d45ca9ddefb5f72eaad0439f2a93c9fa48bfc6705846373bb8e5ad079a28916",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/L1-front.png",
+      "sha256": "57f57e0306084c4e01c6068c86dd8cc25d391abc7618f658421494ad9faf9f1a",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/L1-home.png",
+      "sha256": "bc2ff583bb39137ba770c61feb72117c8b4eb5685a2011c62ed9d13a167e4c03",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/L1-pose-flat.png",
+      "sha256": "a1988af2c90eeb50d2793e83196a948ea73c6f7ba04fa92320afcc637d7fa497",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/L1-pose-front.png",
+      "sha256": "ac116ea1f9b96e2c00dcaa39ef213a7df77e6f5d0a038b9fb05925ec49f570f8",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/L1-pose-high.png",
+      "sha256": "8bd89668256e4951c8871990ce168e1eacd4cb0a4ccfbb3e20d7d6240cf40a39",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/L1-pose-rclamp.png",
+      "sha256": "48e8640af1265e63774bfb02a81a1a23c4b8e4172486a5ed39f9963585ef3d1d",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/L1-reduced.png",
+      "sha256": "e8fbe5614e31a6008890aab0eba815c0ad4427fdae70eecb1edd483e5785ffa7",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/L1-right-clamp.png",
+      "sha256": "be010c6a32e4d5a9e639ff8e8a13d07063a2ca2b456762abd60c657a033a62fe",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/L1full-desktop.png",
+      "sha256": "5b80d7e00fe6e9c69e8856ed05b3de4bbeadc8b6154f54940e54d420adfae4b8",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/L1full-mobile.png",
+      "sha256": "17ce4d1224d7c26384bf0ebb570c70de59d3883efca3373610b67f73e475f964",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/after-desktop.png",
+      "sha256": "addbce9dd15b518b872819f8e2ec151a0b0b9cc367dd3f366e6bbc4e0fb93acf",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/after-mobile.png",
+      "sha256": "9db31dc0e25b468fd9ab31c13e2a575ca00a4c9c5e0b054f396049368f9f4654",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/before-desktop.png",
+      "sha256": "17c4d8bbefa8f20f03ff9513fa5cf421896d84745ca6716f70305246a2144fc2",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/before-mobile.png",
+      "sha256": "c6ad57dbceb32b75c554e3c90f8d67b2ea294835042b077d6ad2bdc289df8f75",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/final-desktop.png",
+      "sha256": "a594eaaaf564348b9216625e984c5e29e3df8b95e885f35bd215ba949650faaf",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/final-flat.png",
+      "sha256": "6ba2dadfba504244816808407db02c89c956003e9bb894a1804589f7a0a6b0fb",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/final-front.png",
+      "sha256": "e6f4642bd61b2f5df51b2c164a832e94dfd1a25edc2a2b838eb462354b242d61",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/final-home.png",
+      "sha256": "320ffce78d34224e2414bb9f6381ddd0fff62c4a2e3434fa1dfff1436909d7b6",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/final-mobile.png",
+      "sha256": "fe8d0484e2d78070fc181220083a273a2d8f7c320d4047c8954acf18b4ff74bc",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/final-right-clamp.png",
+      "sha256": "c05506720b26e9554b3699b609ef08c0eb02f235d86d72e733821a8400631717",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/iso/00-window-sky.png",
+      "sha256": "a42c4319cf1c196fccdc73d0d278d975874c86470bbd363a738ccac8621e9f4f",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/iso/01-window-moon.png",
+      "sha256": "b2b9f5e8af2ea40932e4f603e22ba8b7a4b3d7e8588ec0bd73d9ada651d77780",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/iso/02-window-cityFar.png",
+      "sha256": "39f82f3d2a32b5d4e63fd8de30734472ed809cfd8a4db62bfbd1bb66916ca0ab",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/iso/03-window-cityMid.png",
+      "sha256": "8b677ce9def5e79873ba8a3b24c290951c8e4c29b30f6dfe9c805b5baff3e4ba",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/iso/04-window-cityNear.png",
+      "sha256": "5513138564a187e4a176819fca4a395f860f6b3a29ac321f7a5632e7d1ea7ee3",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/iso/05-window-rain-far.png",
+      "sha256": "b8794a26d89d8789af3b8258ac8e79fdb45c155441e3ea6692923ebdbfcfd7ed",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/iso/06-window-glass.png",
+      "sha256": "ef97e74e3c1d2f6e037f3505c1c2e8addaa79f71f150eb70b56a2fbfd9a5146e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/iso/07-window-rain.png",
+      "sha256": "a2fc9f50301adb3893c3daedd11f5bfc87fab19956ce1b16b963dd3bfcd54c2b",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/landscape-flat.png",
+      "sha256": "cc529fbf3f372eb06f1b54c294587ae397e382949801178a378e9f07b9535326",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/landscape-front.png",
+      "sha256": "288b0dd8986c8d00831816dbdccb08dbf6effa0d9d360347d499144005be1f5b",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/landscape-home.png",
+      "sha256": "9803de1941e9fe1e769d96d1bfac585e44141a53681471d5a769e90d7dff1fb4",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/landscape-right-clamp.png",
+      "sha256": "9fed1266dff0e66d7b04f44254b7c30b870fdf0003a7759cc2082d0be28d875a",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/par1-desktop.png",
+      "sha256": "4b25a4e36fe486a03ff015ade544449e7b11f3bd2ea3d1e08d932cfd2aefa314",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/par1-flat.png",
+      "sha256": "ed0447217f6a64a59860411864b9f94706fd00b1e3ab2b60d54c3de3322de42a",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/par1-front.png",
+      "sha256": "492cf2b2edcac76debbe1a8ce8b49ce73f34d6dabd420280b3dcf47841957a16",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/par1-home.png",
+      "sha256": "9dbef3e8dd18ee37b67c7b520bcda6b4b0d9272872aa4472c5049d1f80be8e3f",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/par1-mobile.png",
+      "sha256": "ec85d6a5236a2827b491767641060463f9c35f90bdb8ddc89d709b0f879fd29e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/par1-right-clamp.png",
+      "sha256": "ab996ff8f23d053f4febae0eda012371e2c1b87631dd8c1282699606d8c2d49f",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/par2-flat.png",
+      "sha256": "2d5846229a0df75a8819ca13eb0a5f5d3f7ead97f2a78920485c6024a2d75316",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/par2-front.png",
+      "sha256": "0dfd327294c71b9d5c90d91c2b6bb10b6699ff297fcedb8bbaaca37c5d930b4c",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/par2-home.png",
+      "sha256": "342b3c2e6efdf1ea2b3df944ea3c3a39c2056ef939baa654bca3a9d2ee8f17b9",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/par2-right-clamp.png",
+      "sha256": "beec3cc0fac36bff0968bc531b289ff831bca220f713d76cd779f8ca0a96c6b3",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/par3-flat.png",
+      "sha256": "e0f09247150ef4827af9fda26b78d53ae8a6b919dec8a29f8e9b204ce04ee63c",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/par3-front.png",
+      "sha256": "576e2943f55be4e54bf5c12d9e4613421e2c268ead306a11d6cc985b1f69b742",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/par3-home.png",
+      "sha256": "efc9016e69b78c66d63343e251773aafb5f04bbe61b175ca19532ab9477c6822",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/par3-right-clamp.png",
+      "sha256": "8315e082fd541f26e6f4216e66947b7327fce22fc5719f8fc8e33ac9ea9ded74",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/par4-flat.png",
+      "sha256": "df776ad80bf13ccfaba3f134c37eec12413ceaa415565a94f17aeae8ec99e197",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/par4-front.png",
+      "sha256": "8c48b98ea77dd80125240bb6c4da8a5521b48d6d01b5ad7adc1972a583ed23f8",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/par4-home.png",
+      "sha256": "66dbe5147862bd87f815562f5e51467fca5f33260a3a49f00099ee33b0827deb",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/par4-right-clamp.png",
+      "sha256": "1d07bcf8b5982cadc0689d124d04d99e27cdcfad1abb96681b15b0980dc09c47",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/par5-flat.png",
+      "sha256": "eccb8359ab870f743875230d3015d108b592a391cc3c15c29c64f38068070f73",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/par5-front.png",
+      "sha256": "c1dbbd96fc9b98d400c54a2b4f4103abce46394b467c0d0f53dd5b9ea35c699a",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/par5-home.png",
+      "sha256": "5fda71c7f19f1bf9076e0fdebbb770f68c460661dcee631bfcd580667a4f8b07",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/par5-right-clamp.png",
+      "sha256": "e909b0f884d1d489ca3fb6bc8397adf0f43057ad0761996a0cbc4c66940cde94",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/pose-flat-desktop.png",
+      "sha256": "23bee1949b04f599a857ba4cd4ce49f0af84b9a519d8ef595cb0ab3d7c485e3e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/pose-flat-mobile.png",
+      "sha256": "0349a7e51b6d3b9fb67d047a06316160c765cd85df46f9b5323f8b68335cfc31",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/pose-front-desktop.png",
+      "sha256": "613b8fdfdbd859682c0cbf5c0b695c89b2d2c6890fafa99e856f324db4f5db4b",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/pose-front-mobile.png",
+      "sha256": "37384bbc1d4060b3e4aeb864a3df40d13774c612ee0b408fa7dd689bd41df889",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/pose-high-desktop.png",
+      "sha256": "bc3343aa2420b8ebb5d2351477165f735f1b4a141753905034da40453e067ae8",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/pose-high-mobile.png",
+      "sha256": "7b341712f0fb0ba6626123245b6f9d4c1371f99b5a255d6b0e028f534633d361",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/pose-home-desktop.png",
+      "sha256": "51acb3cf91566ebef951561db01b0889478efded6af835e90d80c7e74002a684",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/pose-home-mobile.png",
+      "sha256": "c62b82efc50df0e48c6445b99bd35cf40375e5f4ffa7ffff81c1df73435be950",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/pose-home-reduced.png",
+      "sha256": "c40fb01a4c8080d087056e441b8df93d22888b52ee1c9ca098e7ce9b4a104dab",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/pose-left-clamp-desktop.png",
+      "sha256": "5e213f1a97dd26ad4d041860cbab5f5bfe353b0f1e409d0f9e055d6eb9c4ba73",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/pose-left-clamp-mobile.png",
+      "sha256": "c6a2737a39ba4cdaf5f86fb66369b8db894920e97ec2fe27e504df2d1351edb9",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/pose-right-clamp-desktop.png",
+      "sha256": "d261e2aa6a5a34d3ce4def4f2497cac4cec99070e5f3d9bcc70edc96cdc36d5b",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/winsize/pose-right-clamp-mobile.png",
+      "sha256": "462771a1cccc15e883018018ff78188ad35b6bf018fc1a839018aa7582dd475c",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/zoom/flat-100-mobile.png",
+      "sha256": "33079c82ec8513140993461344f582034b4b8298904549dc9e918af5229f0cad",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/zoom/flat-100.png",
+      "sha256": "e45ef8b3ab9d1270dba014243837c0b38554dfc8e523daaeb90cf56f6c80558e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/zoom/flat-110-mobile.png",
+      "sha256": "5e9851d6b6e215a086b79c48a46f519bda0e30dccff9f712165eb659024caead",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/zoom/flat-110.png",
+      "sha256": "df4574b96f50b5915d0d74e2806a76e16663d4c9f560913641b0ea1139c388a0",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/zoom/flat-115-mobile.png",
+      "sha256": "2f1f5da945cb6d387906191d96af3c17ef594bcd4e513d30032a6b5ddab9686a",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/zoom/flat-115.png",
+      "sha256": "02748c839baaec6cfcffe5ee25a47108e7aa2e3d66c16a91b2dda3cf4e780fce",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/zoom/home-100-mobile.png",
+      "sha256": "219b4e7bedb3bfb236ae07cfc5e38ca3b15b8ea4f404163d25cf951b4101786a",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/zoom/home-100.png",
+      "sha256": "4a652ce828ce507f96dd6a1dbb97ed657e3df24155389fba0cdcaea96c621dc3",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/zoom/home-110-mobile.png",
+      "sha256": "07adbc785f2b67beab1e23245299af013a6ab4036c121c59560e13207755dab4",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/zoom/home-110.png",
+      "sha256": "43e68c9a35ceb85c7455433578d3e97b623f50f8d3ff2c35075e8b38014f8fc1",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/zoom/home-115-mobile.png",
+      "sha256": "d445f2d40db99967c1b96e33e75280ae4212ff3314878bbb9dd9294bd8a1a252",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/zoom/home-115.png",
+      "sha256": "4f26265601f928fdd38df3e8c6ae2454585d4034ba61acd6c4264c8578565ff1",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/desk/funnel.html",
+      "sha256": "c9e8f74e5197387ab99c2247d9d04b5e4bb4f73d7055798a756ddcf2c9b489e7",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/surfaces/index-html.md",
+      "sha256": "f5680a94efd8e1f915dfa35e5333aadfef8419c82348c10f9c502036185343bf",
+      "action": "historical brief retained in docs/history/legacy-theme-brief.md"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/small/home-080.jpg",
+      "sha256": "8269ff9cf3a988a8c56ad2f29df864227df5906223dbdd90a41d6ea4809e7e0c",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/small/current-110.jpg",
+      "sha256": "926ffa89313ff9d1fca02126a89d486d19cb267cc6906609ee5bb908b4c833c2",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/small/home-050.jpg",
+      "sha256": "f28a377f709acbdacb05d9a2e7e508a88648db8b6f86a9ddaa179dd02d6579ee",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/small/current-205.jpg",
+      "sha256": "2974e7d4a8e35c9ac6a6b22f348d73b41316a00344ab4edeeeb9900f092e91b1",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/small/home-180.jpg",
+      "sha256": "04a9addccbe817d998596791b57db0d5e97312302af866aa595ddcb54fb0d3ec",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/small/current-000.jpg",
+      "sha256": "eda61c13a812fd37f2fd3b19f82293dd2971e6212327d2bce53789b7a15e2c7b",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/small/home-025.jpg",
+      "sha256": "f68effb0e46e2d38e4e3ac938832d94372448cf875ddcff950818eb6328e793e",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/small/home-145.jpg",
+      "sha256": "138ef50999c8af00ef2146c1b23aa900cb767ebd32438157a7d79c700d2c1a30",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/small/home-000.jpg",
+      "sha256": "eeb664cf40970b3adeec88279c90f24f0c5266fb9ab2e1435984aede25c3cfdc",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/small/current-025.jpg",
+      "sha256": "5f6ce46976dfbe8950ffbf19c909baaf4411ed26323dff4ad5c65e79a5288d4b",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/small/current-145.jpg",
+      "sha256": "84bf39bd7fdd06bcd326c56c3361b61b533182ab669bc31549833269492f65d7",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/small/home-205.jpg",
+      "sha256": "058b1d7d762f37ca589090729ca008bb0e7fdc1f9fa42701cc22951b26fdc345",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/small/current-180.jpg",
+      "sha256": "2974e7d4a8e35c9ac6a6b22f348d73b41316a00344ab4edeeeb9900f092e91b1",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/small/current-050.jpg",
+      "sha256": "3a0ffe655780e84ca23454136a31ce1b8b1aa450c776d5f785e4767fd20f4629",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/small/home-110.jpg",
+      "sha256": "0efb6310bf4d9ec3cae990d4aaaf4b736468a968f7524a7693aac0832494ab3d",
+      "action": "retired generated calibration output to external recovery archive"
+    },
+    {
+      "path": ".impeccable/review/flyfrom/small/current-080.jpg",
+      "sha256": "bf720fabac26f5125879f8a7aa660db8eda3932e9d62756da5772809e7d9cd29",
+      "action": "retired generated calibration output to external recovery archive"
+    }
+  ]
+}
