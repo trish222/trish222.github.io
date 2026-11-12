@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
-const url = process.argv[2] || 'http://127.0.0.1:4320/';
+const url = process.argv[2] || 'http://127.0.0.1:4320/?diagnostics=1';
 const browser = await chromium.launch({ channel: 'chromium' });
 try {
   for (const [width, height, dpr, touch, reducedMotion] of [
@@ -229,6 +229,15 @@ try {
       await page.mouse.move(rect.x + 110, rect.y + rect.height / 2 + 15, { steps: 5 });
       await page.mouse.up();
       assert.ok(await page.locator('#window-resume').evaluate(el => el.offsetLeft) > left, 'desktop window drag works');
+      const grip = await page.locator('#window-resume > .window-resize').boundingBox();
+      const beforeResize = await page.locator('#window-resume').evaluate(el => el.offsetWidth);
+      await page.mouse.move(grip.x + grip.width - 3, grip.y + grip.height - 3);
+      await page.mouse.down();
+      await page.mouse.move(grip.x + grip.width - 33, grip.y + grip.height - 23, { steps: 5 });
+      await page.mouse.up();
+      assert.ok(await page.locator('#window-resume').evaluate(el => el.offsetWidth) < beforeResize,
+        'resize grip uses the same transformed coordinates as dragging');
+
     }
     assert.deepEqual(await page.evaluate(() => window.__camera.position.toArray()), desktopCamera,
       'HTML clicking, scrolling, and window dragging leave the camera untouched');
@@ -239,8 +248,8 @@ try {
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => document.body.classList.contains('orbit-live'));
     const back = await page.evaluate(() => window.__camera.position.toArray());
-    assert.ok(Math.abs(await page.evaluate(() => window.__orbit().front) - 37) < .1, 'return navigation restores the isometric room view');
-    assert.ok(back[2] > home[2], 'room overview pulls back from the seated opening');
+    assert.ok(Math.abs(await page.evaluate(() => window.__orbit().front) - 10) < .1, 'return navigation restores the seated desk view');
+    assert.ok(back.every((v, i) => Math.abs(v - home[i]) < .001), 'screen exit restores the seated camera position');
     const overviewLimits = await page.evaluate(() => window.__orbit().limits.swing);
     assert.ok(Math.abs(overviewLimits[0] + 7) < .01 && Math.abs(overviewLimits[1] - 7) < .01,
       'programmed overview navigation reseeds the limited drag range around its own neutral pose');

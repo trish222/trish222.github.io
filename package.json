@@ -10,14 +10,19 @@
     "profile:startup": "node scripts/profile-startup.mjs",
     "check:browser": "node scripts/check-browser.mjs",
     "check:deployment": "node scripts/check-deployment.mjs",
-    "test:interaction": "node scripts/test-interaction.mjs",
+    "test:interaction": "node tests/interaction.mjs",
     "profile:interaction": "node scripts/profile-interaction.mjs",
-    "preview": "vite preview --port 4317",
+    "preview": "vite preview --port 4320",
     "vendor:98": "node scripts/vendor-98css.mjs",
-    "icons": "node scripts/make-icons.mjs"
+    "icons": "node scripts/make-icons.mjs",
+    "test:startup": "node tests/startup.mjs",
+    "check:source": "node scripts/check-source.mjs",
+    "review": "node scripts/review/capture.mjs",
+    "test": "node tests/projection.mjs && node tests/interaction.mjs && node tests/startup.mjs && node tests/responsive.mjs",
+    "test:responsive": "node tests/responsive.mjs",
+    "test:lifecycle": "node tests/lifecycle.mjs"
   },
   "devDependencies": {
-    "@fontsource/atkinson-hyperlegible": "^5.3.0",
     "@tailwindcss/vite": "^4.1.18",
     "98.css": "^0.1.21",
     "playwright": "^1.63.0",
@@ -26,7 +31,6 @@
     "vite": "^5.4.21"
   },
   "dependencies": {
-    "@fontsource/playfair-display": "^5.3.0",
     "gsap": "^3.15.0",
     "three": "^0.186.1"
   }

@@ -29,6 +29,7 @@ const OUT = 'src/vendor/98.scoped.css';
 const SCOPE = '.ui98';
 
 let css = readFileSync(SRC, 'utf8');
+css = css.replace(/@media\s*\(not\(hover\)\)/g, '@media (hover: none)');
 
 /* 0. Strip comments, so the banner cannot glue itself onto the first
    selector when the sheet is re-scoped. */

@@ -6,7 +6,7 @@ import path from 'node:path';
 // External instrumentation works on production and Pages without shipping a meter.
 // Alternate origins each trial to reduce driver warming / machine load bias.
 const urls = process.argv.slice(2).filter(arg => !arg.startsWith('--'));
-if (!urls.length) urls.push('http://127.0.0.1:4320/', 'https://trish222.github.io/');
+if (!urls.length) urls.push('http://127.0.0.1:4320/?diagnostics=1', 'https://trish222.github.io/');
 const option = (name, fallback) => process.argv.find(arg => arg.startsWith(`--${name}=`))?.split('=').slice(1).join('=') ?? fallback;
 const output = path.resolve(option('output', process.env.PROFILE_OUTPUT || '.interaction-profiles'));
 const trials = Number(option('trials', process.env.TRIALS || 3));

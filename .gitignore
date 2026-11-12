@@ -27,3 +27,11 @@ dist-ssr
 
 # Local mood board — not shipped (contains third-party reference imagery)
 design-references
+
+# Local review output and AI-tool caches; never production inputs.
+.review-artifacts/
+.impeccable/
+# Retired root review-tool naming convention (use scripts/review instead).
+/_*.mjs
+/_*.py
+/_*.png
