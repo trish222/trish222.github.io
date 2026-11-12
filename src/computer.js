@@ -40,6 +40,9 @@ const SCREEN_SPILL = 0x5fe3d4;
 const SCREEN_EMISSIVE = 0xb8f2ea;
 
 /* --- Proportions ----------------------------------------- */
+// Frontmost keyboard contact shadow in kit-local coordinates.
+export const COMPUTER_FRONT_Z = 7.2;
+
 export const MON_W = 6.0, MON_H = 6.5;
 const BEZEL_D = 1.35;
 
@@ -1407,6 +1410,8 @@ export function buildComputer(anisotropy = 1) {
     /* The picture plane, so scene.js can project its corners and lay the
        live login screen over it. */
     screen: monitor.screen,
+    screenAnchor: monitor.screen,
+    projectionSurface: { mesh: monitor.screen, width: SCREEN_W, height: SCREEN_H, overscan: OVERSCAN },
     screenMat: monitor.screenMat,
     screenGlow: monitor.screenGlow,
     setScreen: monitor.setScreen,

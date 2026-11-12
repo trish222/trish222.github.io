@@ -572,7 +572,7 @@ function addField(group, shape, material, casts) {
    running back to -WALL_T. That last part is what lets both walls be
    the same builder — the caller puts the group on the inner face and
    turns it, and local +Z is then the inner normal. */
-function buildWallPanel(width, colour, opening = null, cast = null) {
+function buildWallPanel(width, colour, opening = null, cast = null, scenery) {
   const g = new THREE.Group();
   const half = width / 2;
 
@@ -751,6 +751,7 @@ function buildWallPanel(width, colour, opening = null, cast = null) {
       thickness: WALL_T,
       anisotropy,
       reduced: reducedMotion,
+      scenery,
     });
     win.group.position.set(opening.x, opening.y, 0);
     g.add(win.group);
@@ -772,7 +773,7 @@ function buildWallPanel(width, colour, opening = null, cast = null) {
 /* ==========================================
    BUILD
    ========================================== */
-export function buildRoom(maxAnisotropy = 1, reduced = false) {
+export function buildRoom(maxAnisotropy = 1, reduced = false, { scenery } = {}) {
   anisotropy = maxAnisotropy;
   reducedMotion = !!reduced;
   const root = new THREE.Group();
@@ -830,6 +831,7 @@ export function buildRoom(maxAnisotropy = 1, reduced = false) {
       h: WINDOW_OPENING.h,
     },
     { x0: centreZ - CAST_Z1, x1: centreZ - Z0, h: CAST_H },
+    scenery,
   );
   left.group.position.set(X0, 0, centreZ);
   left.group.rotation.y = Math.PI / 2; // local +Z -> world +X

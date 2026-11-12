@@ -1232,7 +1232,7 @@ body.glass-fullscreen #scene {
    still unmistakably a Win98 title bar; one you cannot close is just a
    picture of software.
    ================================ */
-@media (max-width: 560px), (max-height: 520px) and (pointer: coarse) {
+@media (max-width: 760px), (max-height: 520px) and (pointer: coarse) {
   :root {
     /* Exactly a 44px Start button plus the bar's own 2px bevel and its
        4px of padding either side — `box-sizing: border-box` is global,
@@ -1608,3 +1608,21 @@ body.glass-fullscreen #screen-back-bar {
 #screen-back-bar button {
   cursor: pointer;
 }
+
+/* The resize grip shares the monitor's transformed desktop coordinates. */
+.window-resize {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 14px;
+  height: 14px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: repeating-linear-gradient(135deg, transparent 0 3px, #808080 3px 4px, #fff 4px 5px);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  cursor: nwse-resize;
+  touch-action: none;
+}
+.window[data-maximized="true"] > .window-resize { display: none; }

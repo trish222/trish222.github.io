@@ -1058,11 +1058,90 @@ function rainMaterial(key, w, h) {
 /* ==========================================
    BUILD
    ========================================== */
+// A scenery provider returns a local-space backdrop and its materials.
+// Its dispose method is called with the window; built-in resources use track().
+export function buildNightScenery({ anisotropy = 1 } = {}) {
+  const materials = [];
+  const backdrop = new THREE.Group();
+  backdrop.name = "window-backdrop";
+
+  const plane = (name, layer, material, order) => {
+    const mesh = new THREE.Mesh(
+      track(new THREE.PlaneGeometry(layer.w, layer.h)),
+      material,
+    );
+    mesh.name = name;
+    mesh.position.set(layer.x, layer.y, layer.z);
+    mesh.renderOrder = order;
+    mesh.castShadow = mesh.receiveShadow = false;
+    backdrop.add(mesh);
+    materials.push(material);
+    return mesh;
+  };
+
+  const flat = (map) =>
+    track(
+      new THREE.MeshBasicMaterial({
+        map,
+        transparent: true,
+        depthWrite: false,
+        opacity: 1,
+      }),
+    );
+
+  plane("window-sky", LAYERS.sky, flat(drawSkyLayer(LAYERS.sky, anisotropy)), ORDER.sky);
+
+  /* The moon rides just in front of the sky on the same plane's
+     depth, so it parallaxes with the farthest thing out there — which
+     is what a moon does. */
+  const moon = new THREE.Mesh(
+    track(new THREE.PlaneGeometry(MOON_SIZE, MOON_SIZE)),
+    track(
+      new THREE.MeshBasicMaterial({
+        map: drawMoon(anisotropy),
+        transparent: true,
+        depthWrite: false,
+        opacity: 1,
+      }),
+    ),
+  );
+  moon.name = "window-moon";
+  moon.position.set(MOON_AT.x, MOON_AT.y, LAYERS.sky.z + 0.05);
+  moon.renderOrder = ORDER.moon;
+  moon.castShadow = moon.receiveShadow = false;
+  backdrop.add(moon);
+  materials.push(moon.material);
+
+  for (const key of ["cityFar", "cityMid", "cityNear"]) {
+    plane(
+      `window-${key}`,
+      LAYERS[key],
+      flat(drawCity(LAYERS[key], CITY[key], anisotropy)),
+      ORDER[key],
+    );
+  }
+
+  /* The far rain, on its own quad out past the glass. */
+  const rainFar = new THREE.Mesh(
+    track(new THREE.PlaneGeometry(LAYERS.rainFar.w, LAYERS.rainFar.h)),
+    rainMaterial("far", LAYERS.rainFar.w, LAYERS.rainFar.h),
+  );
+  rainFar.name = "window-rain-far";
+  rainFar.position.set(LAYERS.rainFar.x, LAYERS.rainFar.y, LAYERS.rainFar.z);
+  rainFar.renderOrder = ORDER.rainFar;
+  rainFar.castShadow = rainFar.receiveShadow = false;
+  backdrop.add(rainFar);
+  materials.push(rainFar.material);
+
+  return { backdrop, materials };
+}
+
 export function buildNightWindow({
   noise = null,
   thickness = 0.6,
   anisotropy = 1,
   reduced = false,
+  scenery = buildNightScenery,
 } = {}) {
   const group = new THREE.Group();
   group.name = "wall-window";
@@ -1136,76 +1215,10 @@ export function buildNightWindow({
      ORDER rather than by distance. None of them cast or receive: a
      backdrop that cast would fill the hole it is seen through, and
      one that received would be a surface in a room it is not in. */
-  const backdrop = new THREE.Group();
-  backdrop.name = "window-backdrop";
-
-  const plane = (name, layer, material, order) => {
-    const mesh = new THREE.Mesh(
-      track(new THREE.PlaneGeometry(layer.w, layer.h)),
-      material,
-    );
-    mesh.name = name;
-    mesh.position.set(layer.x, layer.y, layer.z);
-    mesh.renderOrder = order;
-    mesh.castShadow = mesh.receiveShadow = false;
-    backdrop.add(mesh);
-    materials.push(material);
-    return mesh;
-  };
-
-  const flat = (map) =>
-    track(
-      new THREE.MeshBasicMaterial({
-        map,
-        transparent: true,
-        depthWrite: false,
-        opacity: 1,
-      }),
-    );
-
-  plane("window-sky", LAYERS.sky, flat(drawSkyLayer(LAYERS.sky, anisotropy)), ORDER.sky);
-
-  /* The moon rides just in front of the sky on the same plane's
-     depth, so it parallaxes with the farthest thing out there — which
-     is what a moon does. */
-  const moon = new THREE.Mesh(
-    track(new THREE.PlaneGeometry(MOON_SIZE, MOON_SIZE)),
-    track(
-      new THREE.MeshBasicMaterial({
-        map: drawMoon(anisotropy),
-        transparent: true,
-        depthWrite: false,
-        opacity: 1,
-      }),
-    ),
-  );
-  moon.name = "window-moon";
-  moon.position.set(MOON_AT.x, MOON_AT.y, LAYERS.sky.z + 0.05);
-  moon.renderOrder = ORDER.moon;
-  moon.castShadow = moon.receiveShadow = false;
-  backdrop.add(moon);
-  materials.push(moon.material);
-
-  for (const key of ["cityFar", "cityMid", "cityNear"]) {
-    plane(
-      `window-${key}`,
-      LAYERS[key],
-      flat(drawCity(LAYERS[key], CITY[key], anisotropy)),
-      ORDER[key],
-    );
-  }
-
-  /* The far rain, on its own quad out past the glass. */
-  const rainFar = new THREE.Mesh(
-    track(new THREE.PlaneGeometry(LAYERS.rainFar.w, LAYERS.rainFar.h)),
-    rainMaterial("far", LAYERS.rainFar.w, LAYERS.rainFar.h),
-  );
-  rainFar.name = "window-rain-far";
-  rainFar.position.set(LAYERS.rainFar.x, LAYERS.rainFar.y, LAYERS.rainFar.z);
-  rainFar.renderOrder = ORDER.rainFar;
-  rainFar.castShadow = rainFar.receiveShadow = false;
-  backdrop.add(rainFar);
-  materials.push(rainFar.material);
+  const view = scenery({ anisotropy });
+  const { backdrop, materials: backdropMaterials } = view;
+  if (view.dispose) track(view);
+  materials.push(...backdropMaterials);
 
   /* --- the glass ---
      **What is on the pane, not what is behind it.** This used to be
