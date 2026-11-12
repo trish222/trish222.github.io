@@ -20,18 +20,16 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
    ========================================== */
 
 /* --- Palette --------------------------------------------- */
-/* Yellowed beige, not grey beige. Every tone below was pushed toward
-   yellow at roughly constant luminance (the blue channel carries the
-   move, ~10 points down; red comes up ~6), so the shells read as
-   plastic that has aged in a sunny room without moving the value the
-   room's lighting was calibrated against. */
-const PLASTIC      = 0xd4c6a2;   // front shell, warm yellowed beige — kept clear of the cream floor
-const PLASTIC_BACK = 0xc7b893;   // rear shell: moulded separately, so it reads cooler
-const PLASTIC_DARK = 0x8b8166;   // recesses, vent cavities, seams
-const KEY_WELL     = 0x6c6450;   // the well under the caps: darker again, so the gaps read as gaps
-const KEY_CAP      = 0xdcd2b2;
-const KEY_MOD      = 0xc8bd98;   // the wide keys are a shade darker, as they usually are
-const CABLE        = 0x978d78;   // darker than the shells, or it reads as a scratch on the floor
+/* Warm off-white ABS, inspired by the cream PC references. The rear
+   moulding and modifier keys retain a gentle tonal separation; shadowed
+   cavities stay warm grey rather than yellow-brown. */
+const PLASTIC      = 0xeee8dc;
+const PLASTIC_BACK = 0xded8cc;
+const PLASTIC_DARK = 0x948e82;
+const KEY_WELL     = 0x716d63;
+const KEY_CAP      = 0xf1ece2;
+const KEY_MOD      = 0xded8cb;
+const CABLE        = 0xa5a092;
 const SCREEN_TEAL  = 0x0b7a76;
 const SCREEN_INK   = '#1b47a3';  // the floor blue, reused on the screen
 /* The tube and the light coming off it. The spill is the colour the
@@ -42,24 +40,19 @@ const SCREEN_SPILL = 0x5fe3d4;
 const SCREEN_EMISSIVE = 0xb8f2ea;
 
 /* --- Proportions ----------------------------------------- */
-export const MON_W = 6.4, MON_H = 5.4;
+export const MON_W = 6.0, MON_H = 6.5;
 const BEZEL_D = 1.35;
 
-/* The funnel is 35% shorter than it was (4.2), on request: at a side
-   view the machine ran nearly the full depth of the desk and there was
-   no walnut visible behind it. It is shortened **from the back only** —
-   `FUNNEL_FRONT_Z` is an offset from the bezel rather than a fraction
-   of the funnel's own depth, so the bezel, the glass and the
-   `SCREEN_TARGET` the whole fly-in is read off do not move. Both vent
-   panels are placed proportionally against it (see `buildMonitor`), so
-   the flank reads exactly as it did, scaled in z. */
-const BACK_D = 2.73, BACK_TAPER = 0.42;
-const FUNNEL_W = MON_W * 0.88, FUNNEL_H = MON_H * 0.86;
-const FUNNEL_FRONT_Z = -BEZEL_D / 2 + 0.1;   // fixed; see above
+/* Tall CRT shell with broad shoulders and a rounded tapered rear.
+   The front face remains the datum; the tube sits half a unit behind it. */
+const CASING_DEPTH = 1.55;
+const BACK_D = 4.0, BACK_TAPER = 0.66;
+const FUNNEL_W = MON_W * 0.99, FUNNEL_H = MON_H * 0.99;
+const FUNNEL_FRONT_Z = BEZEL_D / 2 - CASING_DEPTH + 0.1;
 
-export const SCREEN_W = 5.1, SCREEN_H = 3.9;
-export const MON_Y = 3.85;       // centre height of the monitor body
-export const OPEN_CY = 0.26;     // screen opening rides above centre
+export const SCREEN_W = 4.55, SCREEN_H = 3.50;
+export const MON_Y = 4.50;       // centre height of the monitor body
+export const OPEN_CY = 0.48;     // screen opening rides above centre
 
 /* The black overscan border drawn around the picture, as a fraction of
    the screen either side (see `drawPicture`). The live HTML overlay is
@@ -183,7 +176,7 @@ function plasticTextures(size = 512) {
 
       /* Narrow spread: map multiplies the material colour, so anything
          wider than a few percent reads as dirt rather than moulding. */
-      const v = 232 + low * 17 + fine * 6;
+      const v = 244 + low * 7 + fine * 4;
       albedo.data[k] = albedo.data[k + 1] = albedo.data[k + 2] = v;
       albedo.data[k + 3] = 255;
     }
@@ -212,7 +205,7 @@ function plasticMaterial(grain, color = PLASTIC, roughness = 0.56) {
     map: grain.albedo,
     roughnessMap: grain.rough,
     bumpMap: grain.rough,
-    bumpScale: 0.02,
+    bumpScale: 0.009,
     /* The HDRI is a big part of what was lifting the shell to within a
        shade of the cream floor; the machine takes less of it than the
        floor does. Lower again at 0.34: the HDRI is ambient from every
@@ -563,7 +556,9 @@ function taperedBox(w, h, d, radius, taper) {
   for (let i = 0; i < pos.count; i++) {
     v.fromBufferAttribute(pos, i);
     const t = THREE.MathUtils.clamp((v.z + d / 2) / d, 0, 1);  // 0 back, 1 front
-    const k = THREE.MathUtils.lerp(taper, 1, t);
+    // Broad tube shoulders, then a rounded, narrower rear cap.
+    const shoulder = THREE.MathUtils.smoothstep(t, 0.0, 0.82);
+    const k = THREE.MathUtils.lerp(taper, 1, shoulder);
     pos.setXY(i, v.x * k, v.y * k);
   }
   geo.computeVertexNormals();
@@ -576,7 +571,8 @@ function taperedBox(w, h, d, radius, taper) {
    steeper part of it, which leaves a vent panel floating off the
    flank. `t` runs 0 at the back to 1 at the front, as in taperedBox. */
 function funnelK(inset) {
-  return THREE.MathUtils.lerp(BACK_TAPER, 1, 1 - inset / BACK_D);
+  return THREE.MathUtils.lerp(BACK_TAPER, 1,
+    THREE.MathUtils.smoothstep(1 - inset / BACK_D, 0, 0.82));
 }
 
 /* Rounded rectangle as a Shape, so the bezel can be extruded with a
@@ -608,6 +604,36 @@ function domedPanel(w, h, bulge, seg = 40) {
   }
   geo.computeVertexNormals();
   return track(geo);
+}
+
+/* A real sloped reveal between the front aperture and the flat tube.
+   Matched rounded contours keep it inexpensive and clear of the HTML's
+   inner overscan rectangle at every supported camera angle. */
+function screenReveal(w, h) {
+  const outer = roundedRect(w, h, 0.26).getPoints(8);
+  const inner = roundedRect(SCREEN_W + 0.04, SCREEN_H + 0.04, 0.18).getPoints(8);
+  const positions = [], indices = [];
+  for (let i = 0; i < outer.length; i++) {
+    positions.push(outer[i].x, outer[i].y, BEZEL_D / 2 - 0.065);
+    positions.push(inner[i].x, inner[i].y, BEZEL_D / 2 - 0.515);
+    if (i < outer.length - 1) {
+      const k = i * 2;
+      indices.push(k, k + 2, k + 1, k + 1, k + 2, k + 3);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  // Shared material maps need UVs even on this small shadowed surround.
+  const uv = [];
+  for (let i = 0; i < positions.length; i += 3) uv.push(positions[i] / w + 0.5, positions[i + 1] / h + 0.5);
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+  return track(geo);
+}
+
+function turnedProfile(points, segments = 48) {
+  return track(new THREE.LatheGeometry(points.map(([r, y]) => new THREE.Vector2(r, y)), segments));
 }
 
 /* Keycap: rounded box drawn in slightly toward the top, so the caps
@@ -746,44 +772,56 @@ function buildStand(body, dark) {
   const g = new THREE.Group();
 
   const foot = new THREE.Mesh(
-    track(new THREE.CylinderGeometry(2.05, 2.25, 0.3, 56)), body);
+    turnedProfile([[0, -0.15], [2.12, -0.15], [2.22, -0.12], [2.25, -0.07],
+      [2.23, 0.02], [2.12, 0.12], [2.05, 0.15], [0, 0.15]]), body);
   foot.position.y = 0.15;
+  foot.scale.set(0.9, 1, 0.9);
 
   /* A moulded step on top of the foot, so the base is not one slab. */
   const step = new THREE.Mesh(
-    track(new THREE.CylinderGeometry(1.74, 1.9, 0.14, 48)), body);
+    turnedProfile([[0, -0.07], [1.85, -0.07], [1.9, -0.04],
+      [1.86, 0.01], [1.77, 0.065], [1.74, 0.07], [0, 0.07]]), body);
   step.position.y = 0.36;
+  step.scale.set(0.9, 1, 0.9);
 
   const neck = new THREE.Mesh(
-    track(new THREE.CylinderGeometry(0.95, 1.5, 0.78, 40)), body);
-  neck.position.y = 0.78;
+    track(new THREE.CylinderGeometry(1.18, 1.55, 0.86, 40)), body);
+  neck.position.set(0, 0.80, -0.28);
 
   /* Dark swivel collar where the neck meets the monitor — the joint is
      the detail that makes a tilt-and-swivel base read as a mechanism. */
   const collar = new THREE.Mesh(
     track(new THREE.CylinderGeometry(0.88, 0.88, 0.16, 40)), dark);
-  collar.position.y = 1.2;
+  collar.position.set(0, 1.18, -0.28);
 
   for (const m of [foot, step, neck, collar]) { m.castShadow = true; m.receiveShadow = true; }
   g.add(foot, step, neck, collar);
+  // The swivel collar supports a saddle under the tube's center of mass,
+  // rather than appearing to touch only the front edge of the housing.
+  const saddle = new THREE.Mesh(
+    track(new RoundedBoxGeometry(2.8, 0.38, 2.7, 4, 0.16)), body);
+  saddle.position.set(0, 1.21, -0.72);
+  saddle.castShadow = true;
+  saddle.receiveShadow = true;
+  g.add(saddle);
 
   /* The monitor closes the light out of the joint it sits on, but the
      gap is a few centimetres and the key's shadow map covers the whole
      floor, so none of that occlusion survives. Paint it on: a sleeve of
      shade down the neck, darkest under the collar. */
   const sleeve = new THREE.Mesh(
-    track(new THREE.CylinderGeometry(0.938, 1.528, 0.84, 40, 1, true)),
+    track(new THREE.CylinderGeometry(1.19, 1.57, 0.84, 40, 1, true)),
     track(new THREE.MeshBasicMaterial({
       map: sleeveShadowTexture(), transparent: true, depthWrite: false,
     })));
-  sleeve.position.y = 0.78;
+  sleeve.position.set(0, 0.80, -0.28);
   g.add(sleeve);
 
   /* Same again for the top faces of the foot and the step, which look
      straight up into the underside of the monitor and should be the
      darkest plastic on the machine rather than the brightest. */
   const shade = baseShadeTexture();
-  for (const [y, r, o] of [[0.3015, 2.06, 0.85], [0.4315, 1.76, 1]]) {
+  for (const [y, r, o] of [[0.3015, 2.06 * 0.9, 0.85], [0.4315, 1.76 * 0.9, 1]]) {
     const disc = new THREE.Mesh(track(new THREE.CircleGeometry(r, 48)),
       track(new THREE.MeshBasicMaterial({
         map: shade, transparent: true, depthWrite: false, opacity: o,
@@ -818,12 +856,19 @@ function buildVents(body, dark, w, h, count, slatDepth = 0.06) {
 }
 
 function buildMonitor(body, backBody, dark) {
+  // Share existing grain textures; soften the relief on the monitor only
+  // so the broad moulded panels catch continuous edge highlights.
+  body = track(body.clone());
+  body.roughness = 0.62;
+  body.bumpScale = 0.006;
+  backBody = track(backBody.clone());
+  backBody.bumpScale = 0.008;
   const g = new THREE.Group();
   g.position.y = MON_Y;
 
   /* Deep tapered funnel behind the bezel. */
   const back = new THREE.Mesh(
-    taperedBox(FUNNEL_W, FUNNEL_H, BACK_D, 0.45, BACK_TAPER), backBody);
+    taperedBox(FUNNEL_W, FUNNEL_H, BACK_D, 0.44, BACK_TAPER), backBody);
   back.position.z = FUNNEL_FRONT_Z - BACK_D / 2;
   back.castShadow = true;
   back.receiveShadow = true;
@@ -832,29 +877,20 @@ function buildMonitor(body, backBody, dark) {
   /* Thick bezel, extruded as a frame with a rounded opening. The
      opening sits above centre so the bottom bezel is the deepest, which
      is where the button panel and LED live in crt-computer.png. */
-  const openW = SCREEN_W + 0.3, openH = SCREEN_H + 0.3;
-  const face = roundedRect(MON_W, MON_H, 0.34);
+  const openW = SCREEN_W + 0.46, openH = SCREEN_H + 0.46;
+  const face = roundedRect(MON_W, MON_H, 0.48);
   face.holes.push(roundedRect(openW, openH, 0.26, 0, OPEN_CY));
-  /* **`bevelSegments` is 1, not 2: one flat chamfer instead of a
-     two-step curve.** That is the whole of "crisper" on the bezel — a
-     chamfer has an arris at each end for a highlight to stop against,
-     where a rounded edge spreads the same highlight over the curve and
-     reads soft. `bevelThickness` and `bevelSize` are deliberately
-     untouched at 0.05: the extrude's total depth is
-     `depth + 2 * bevelThickness`, so moving either would move the
-     bezel's front face relative to the glass behind it — which is the
-     housing, and the housing does not move. `curveSegments` goes to 14
-     so the rounded outline and the screen opening stop faceting now
-     that there is a crisp edge running round them. */
+  /* A broad five-step moulded edge wraps the new rounded profile.
+     Extrusion runs back from the front-face datum around a real aperture. */
   const bezelGeo = track(new THREE.ExtrudeGeometry(face, {
-    depth: BEZEL_D - 0.1,
+    depth: CASING_DEPTH - 0.28,
     bevelEnabled: true,
-    bevelThickness: 0.05,
-    bevelSize: 0.05,
-    bevelSegments: 1,
+    bevelThickness: 0.14,
+    bevelSize: 0.13,
+    bevelSegments: 5,
     curveSegments: 14,
   }));
-  bezelGeo.translate(0, 0, -(BEZEL_D - 0.1) / 2);
+  bezelGeo.translate(0, 0, BEZEL_D / 2 - CASING_DEPTH + 0.14);
   const bezel = new THREE.Mesh(bezelGeo, body);
   bezel.castShadow = true;
   bezel.receiveShadow = true;
@@ -864,22 +900,27 @@ function buildMonitor(body, backBody, dark) {
      frame standing a hair proud of the bezel wall, so it reads as a
      groove running right around the case. Injection-moulded plastic
      always has this line and a solid shell never does. */
-  const seamShape = roundedRect(MON_W + 0.014, MON_H + 0.014, 0.346);
-  seamShape.holes.push(roundedRect(MON_W - 0.1, MON_H - 0.1, 0.3));
+  const seamShape = roundedRect(MON_W + 0.014, MON_H + 0.014, 0.48);
+  seamShape.holes.push(roundedRect(MON_W - 0.1, MON_H - 0.1, 0.43));
   const seamGeo = track(new THREE.ExtrudeGeometry(seamShape, {
     depth: 0.06, bevelEnabled: false, curveSegments: 14,
   }));
   seamGeo.translate(0, 0, -0.03);
   const seam = new THREE.Mesh(seamGeo, dark);
-  seam.position.z = -0.31;
+  seam.position.z = BEZEL_D / 2 - CASING_DEPTH + 0.15;
   g.add(seam);
 
   /* Dark backing panel behind the opening, closing off the recess. */
   const well = new THREE.Mesh(
     track(new THREE.BoxGeometry(openW + 0.5, openH + 0.5, 0.12)), dark);
-  well.position.set(0, OPEN_CY, BEZEL_D / 2 - 0.42);
+  well.position.set(0, OPEN_CY, BEZEL_D / 2 - 0.62);
   well.receiveShadow = true;
   g.add(well);
+  const reveal = new THREE.Mesh(screenReveal(openW + 0.15, openH + 0.15), backBody);
+  reveal.position.y = OPEN_CY;
+  reveal.castShadow = true;
+  reveal.receiveShadow = true;
+  g.add(reveal);
 
   /* The picture itself — emissive, so it reads as a lit CRT.
 
@@ -909,8 +950,11 @@ function buildMonitor(body, backBody, dark) {
     roughness: 0.9,
     metalness: 0,
   }));
-  const screen = new THREE.Mesh(domedPanel(SCREEN_W, SCREEN_H, 0.1), screenMat);
-  screen.position.set(0, OPEN_CY, BEZEL_D / 2 - 0.3);
+  // The HTML homography describes a plane. Keep the physical image flat
+  // too; the separate glass/reflection layers supply the CRT curvature.
+  const screen = new THREE.Mesh(track(new THREE.PlaneGeometry(SCREEN_W, SCREEN_H)), screenMat);
+  screen.name = 'crt-interactive-plane';
+  screen.position.set(0, OPEN_CY, BEZEL_D / 2 - 0.5);
   g.add(screen);
 
   /* **The tube's own light, which now has to reach the keyboard.**
@@ -957,7 +1001,7 @@ function buildMonitor(body, backBody, dark) {
       opacity: 0.16,
       envMapIntensity: 0.7,
     })));
-  glass.position.set(0, OPEN_CY, BEZEL_D / 2 - 0.19);
+  glass.position.set(0, OPEN_CY, BEZEL_D / 2 - 0.39);
   g.add(glass);
 
   /* The room reflected in the glass. */
@@ -969,7 +1013,7 @@ function buildMonitor(body, backBody, dark) {
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     })));
-  glare.position.set(0, OPEN_CY, BEZEL_D / 2 - 0.17);
+  glare.position.set(0, OPEN_CY, BEZEL_D / 2 - 0.37);
   g.add(glare);
 
   /* The bezel lip's shadow on the picture, in front of the glare so it
@@ -979,13 +1023,13 @@ function buildMonitor(body, backBody, dark) {
     track(new THREE.MeshBasicMaterial({
       map: recessShadowTexture(), transparent: true, depthWrite: false,
     })));
-  recess.position.set(0, OPEN_CY, BEZEL_D / 2 - 0.155);
+  recess.position.set(0, OPEN_CY, BEZEL_D / 2 - 0.355);
   g.add(recess);
 
   /* Button panel, bottom right of the bezel face. */
   const panelW = 1.5, panelH = 0.46;
   const panelX = MON_W / 2 - panelW / 2 - 0.42;
-  const panelY = -MON_H / 2 + 0.52;
+  const panelY = -MON_H / 2 + 0.68;
   /* The panel and the three control bodies below all keep their size
      and their position; only the corner radii come down — 0.05 to 0.02,
      0.04 to 0.016, 0.06 to 0.022 — because at the old figures a 0.2

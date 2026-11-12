@@ -34,20 +34,28 @@ Three things are less obvious than they look:
   the funnel is shortened. Scaling the panel with the funnel keeps the
   slats as flush as they ever were. Only the gap behind the bezel's rear
   wall is absolute, because that wall does not move.
-- **`BACK_D` is 2.73, 35% shorter than the 4.2 it was built at**, on
-  request: at a side view the machine ran nearly the whole depth of the
-  desk with no walnut visible behind it. It is shortened **from the back
-  only** — `FUNNEL_FRONT_Z` is an offset from the bezel rather than a
-  fraction of the funnel's own depth, so the bezel, the glass and
-  `SCREEN_TARGET` do not move. That was checked rather than assumed:
-  `#screen`'s client rect at the home framing *is* the projection of the
-  screen plane's corners, and it is identical to three decimals at both
-  depths. The gain is 1.47 of clear desk behind the monitor.
+- **The body is tall, with broad shoulders and a smooth tapered rear.**
+  `MON_W` is 6.0, `MON_H` is 6.5 and its centre is at `MON_Y` 4.50.
+  The picture plane is 4.55 × 3.50, with `OPEN_CY` 0.48 keeping the
+  opening above centre. The rear is 4.0 deep and narrows to 0.66 of its
+  shoulder dimensions through a smooth profile. The front casing is
+  1.55 deep; its broad outline has 0.48 corners and a 0.13 bevel, with
+  five bevel segments. The tube sits 0.5 behind the front-face datum,
+  inside a sloped reveal rather than on top of a flat bezel.
+- **The stand supports the deeper body.** A wider neck and a 2.8 ×
+  0.38 × 2.7 saddle carry the tube's centre of mass over the existing
+  round foot. The saddle sits behind the front edge of the housing,
+  so the swivel joint reads as a support rather than a point of contact.
+- **The overlay follows the actual glass.** `scene.js` projects the
+  screen mesh's world matrix using the exported screen dimensions, so
+  geometry changes carry through to the live HTML overlay automatically.
+  The interaction registration check reads the geometry rather than
+  obsolete literal screen dimensions.
 
 ## What carries the realism
 
-The silhouette was already right; what was missing was everything a real
-desk has that a clean render does not.
+The CRT silhouette uses a tall front, broad moulded edges and a deep rear.
+The details below give it the material and everyday character of a real desk.
 
 - **The keyboard is a 101-key layout, not a grid.** `keyLayout()` lays
   the field out in key units (`KU` is the pitch) from rows of widths —
@@ -135,17 +143,14 @@ desk has that a clean render does not.
   `PLASTIC_DARK`: the gaps between the caps have plastic on four sides
   and nothing but the tube's spill reaching in, so they are the darkest
   beige on the machine.
-- **Edges are small flat chamfers, not rounded ones.** A chamfer has an
-  arris at each end for a highlight to stop against; a rounded edge
-  spreads the same highlight over the curve and reads soft. So the
-  bezel's `bevelSegments` is 1, the keycap radius is 0.014 rather than
-  0.035, the buttons' is 0.016 rather than 0.04, and the keyboard
-  shell's is 0.06 rather than 0.1. **`bevelThickness` and `bevelSize`
-  on the bezel are untouched at 0.05 on purpose**: the extrude's total
-  depth is `depth + 2 * bevelThickness`, so either one would move the
-  bezel's front face relative to the glass — that is the housing, and
-  the housing does not move. `curveSegments` went 8 to 14 to stop the
-  outline faceting now that there is a crisp edge running round it.
+- **The monitor has broad moulded edges; the peripherals keep small
+  chamfers.** The bezel uses a 0.48 outer corner radius, a 0.13 bevel
+  size and 0.14 bevel thickness with five bevel segments, giving the
+  tall housing a rounded highlight. Its 1.55 total depth runs back from
+  the front-face datum, keeping the glass recess explicit. The keycap
+  radius remains 0.014, the buttons' 0.016 and the keyboard shell's 0.06,
+  so their smaller edges still read crisply. `curveSegments` is 14 to
+  keep the bezel outline smooth.
 - **Every canvas texture here is built by `canvasTexture`**, which sets
   the renderer's maximum anisotropy — handed to `buildComputer` the way
   `buildRoom` takes it. That is the biggest sharpness win on the
@@ -224,3 +229,16 @@ hang off it, while the contact shadows hang off `root` and stay on the
 desk. Nothing moves it now, but **if anything ever animates the machine
 again it has to move `lift`**: moving `root` takes the contact shadows
 up with it and they float as a detached grey blob.
+
+## CRT geometry review
+
+The scoped CRT update passed the production build and `check-build`,
+plus five desktop/mobile interaction configurations. Visual review was
+**Ship** for the CRT geometry scope. The user attachment was unavailable
+for comparison, so these checks establish the implemented silhouette and
+interaction behaviour, not exact fidelity to that attachment.
+
+Review captures: [desktop](../.impeccable/review/desktop.png),
+[angled](../.impeccable/review/angled.png),
+[mobile](../.impeccable/review/mobile.png) and
+[focused](../.impeccable/review/focused.png).
