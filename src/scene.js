@@ -1,36 +1,18 @@
 import { createInteraction } from "./scene/interaction.js";
 import { createAnimationLoop } from "./scene/animation.js";
 import { createRoomScene } from "./scene/createScene.js";
-import { SCENERY_PRESETS, WINDOW_SCENERY } from "./environment/presets.js";
 import { createNavigation } from "./scene/navigation.js";
-import { createLighting, createWorkstationEnvironment, NIGHT_LIGHTING } from "./scene/lighting.js";
+import { createLighting, NIGHT_LIGHTING } from "./scene/lighting.js";
 import { createCameraRig } from "./scene/camera.js";
 import { isDesktopFullscreen } from "./config/experience.js";
-import { createComposer, createMotionComposer } from "./scene/renderer.js";
+import { createComposer } from "./scene/renderer.js";
 import { createParallax } from "./scene/parallax.js";
 import { createScreenProjection } from "./overlay/screenOverlay.js";
 import { createDesktopSnapshot } from "./overlay/desktopSnapshot.js";
+import { createLampState } from "./lamp.js";
 import * as THREE from "three";
 import { gsap } from "gsap/gsap-core";
-import {
-  disposeComputer,
-  loadScreenFont,
-  FACING,
-  SCREEN_W,
-  SCREEN_H,
-} from "./computer.js";
-import * as executiveDesk from "./desks/executive.js";
-import { disposeTreehouse } from "./treehouse.js";
-import { disposeNameplate } from "./nameplate.js";
-import * as greenLamp from "./lamps/greenlamp.js";
-import {
-  disposeRoom,
-  ROOM_PLAN,
-  ROOM_RADIUS,
-  setFogRange,
-  VOID,
-} from "./room.js";
-import { rainState, tickRain } from "./nightwindow.js";
+import { FACING, SCREEN_W, SCREEN_H } from "./scene/screenSpec.js";
 import { tonemapForward, tonemapPreimage, TONE_MAPPINGS } from "./tonemap.js";
 
 let interaction = null;
@@ -39,7 +21,7 @@ let interaction = null;
 
 
 
-const diagnosticNames = new Set(["__cam", "__camera", "__composer", "__diveTo", "__enter", "__flyFrom", "__flyTo", "__fov", "__gtao", "__lamp", "__lights", "__orbit", "__pick", "__probes", "__rain", "__room", "__scene", "__stillReady", "__tonemap", "__zoom"]);
+const diagnosticNames = new Set(["__cam", "__camera", "__composer", "__diveTo", "__enter", "__flyFrom", "__flyTo", "__fov", "__lamp", "__orbit", "__pick", "__scene", "__stillReady", "__tonemap", "__zoom"]);
 let sceneGeneration = 0;
 
 
@@ -47,38 +29,6 @@ let sceneGeneration = 0;
 
 
 
-
-
-
-
-
-
-
-let deskMod = executiveDesk;
-
-async function resolveDesk() {
-  if (import.meta.env.DEV && new URLSearchParams(location.search).get("desk") === "classic") {
-    return import("./desks/classic.js");
-  }
-  return executiveDesk;
-}
-
-let DESK_TOP_Y = executiveDesk.DESK_TOP_Y;
-
-
-
-
-
-
-
-let lampMod = greenLamp;
-
-async function resolveLamp() {
-  if (import.meta.env.DEV && new URLSearchParams(location.search).get("lamp") === "lamp") {
-    return import("./lamp.js");
-  }
-  return greenLamp;
-}
 
 
 
@@ -112,26 +62,13 @@ const LAMP_START_ON = true;
 
 const LAMP_FADE_S = 0.4;
 
-const LAMP_EXPOSURE_LIFT = 0;
-const EXPOSURE_STEP = 0.02;
-
-// NIGHT LIGHTING
-
-const HEMI_GROUND = NIGHT_LIGHTING.hemiGround;
-
-const HEMI_INTENSITY = NIGHT_LIGHTING.hemiIntensity;
-
 const OFF_DARKNESS = 0.52;
 const HEMI_GROUND_OFF = 0x2a2a3e;
+const BACKGROUND = "#1c1a2a";
 
 const TONE_EXPOSURE = 1.45;
 
-const GTAO_BLEND = 1.0; // deep enough that the creases actually darken
-
-const GTAO_BOX_MARGIN = 8;
 const HOVER_RATE = 7; // hover easing, per second
-
-const SCREEN_GLOW = 8.5;
 
 const MAX_DPR = 2;
 const MOBILE_MAX_DPR = 2;
@@ -140,31 +77,14 @@ function scenePixelRatio() {
   return Math.min(window.devicePixelRatio || 1, isMobile() ? MOBILE_MAX_DPR : MAX_DPR);
 }
 
-// Keep drawing buffers allocated across camera motion. Even a single canvas
-// resize can synchronize with the GPU (100ms+ on the measured Metal path),
-// and damping / the return home used to bounce between two resolutions.
-// Desktop keeps a second, small composer for the existing motion resolution,
-// so switching quality does not dispose/reallocate render targets either.
-let motionQuality = false;
+// Keep drawing buffers allocated across camera motion: even a single canvas
+// resize can synchronize with the GPU (100ms+ on the measured Metal path).
+// Only a real DPR or viewport breakpoint change resizes the canvas and composer.
 function syncRenderQuality() {
-  const moving = cameraMoving() && !prefersReducedMotion();
   const ratio = scenePixelRatio();
-  if (moving === motionQuality && renderer.getPixelRatio() === ratio) return;
-  motionQuality = moving;
-  // setPixelRatio calls setSize even for an unchanged value. Only a real DPR
-  // or viewport breakpoint change should resize the canvas and composer.
-  if (renderer.getPixelRatio() !== ratio) {
-    renderer.setPixelRatio(ratio);
-    composer?.setPixelRatio(ratio);
-    if (composer && ratio > 1 && !motionComposer) {
-      motionComposer = buildMotionComposer();
-      motionComposer.render(); // a real DPR change, before the next gesture
-    }
-    motionComposer?.setPixelRatio(Math.min(ratio, 1));
-  }
-  // AO redraws the entire room for its depth/normal pass. Keep the real
-  // light/shadow rendering during motion and restore contact detail at rest.
-  if (gtaoPass) gtaoPass.enabled = !moving;
+  if (renderer.getPixelRatio() === ratio) return;
+  renderer.setPixelRatio(ratio);
+  composer?.setPixelRatio(ratio);
 }
 
 // LOOKING AROUND
@@ -201,7 +121,6 @@ const SCAN_STEP = 2;
 let renderer = null;
 let canvasEl = null;
 let scene = null;
-let gtaoPass = null;
 let screenEl = null;
 
 let fly = { value: 0, dir: 0 };
@@ -209,37 +128,18 @@ let fly = { value: 0, dir: 0 };
 let dive = { value: 0, dir: 0 };
 let camera = null;
 let composer = null;
-let motionComposer = null;
-let computer = null;
-let desk = null;
-let treehouse = null;
-let nameplate = null;
+let stage = null;
 
-let lamp = null;
-let lampOn = LAMP_START_ON;
-let lampP = LAMP_START_ON ? 1 : 0;
 let lampLevel = LAMP_START_ON ? 1 : 0;
 let lampBtn = null;
 let onLampBtn = null;
 
-let toneBase = TONE_EXPOSURE;
-
-let toneWritten = -1;
-
-let hemiBase = HEMI_INTENSITY;
-
-let offDarkness = OFF_DARKNESS;
-
-const HEMI_GROUND_WARM = new THREE.Color(HEMI_GROUND);
+const HEMI_GROUND_WARM = new THREE.Color(NIGHT_LIGHTING.hemiGround);
 const HEMI_GROUND_COOL = new THREE.Color(HEMI_GROUND_OFF);
 
-let room = null;
-let envMap = null;
 let hover = { target: 0, value: 0 };
 
 let lights = null;
-
-let screenGlowBase = SCREEN_GLOW;
 
 // World units at the viewport edges, with a radial cap for diagonals.
 // Smoothness is a time constant in seconds: smaller values respond faster.
@@ -310,111 +210,37 @@ function camDist() {
   return distFor(frustumFor());
 }
 
-function buildScene() {
-  const built = createRoomScene({ renderer, deskMod, lampMod,
-    reducedMotion: prefersReducedMotion(), fogDistance: camDist(), screenGlowBase,
-    scenery: SCENERY_PRESETS[WINDOW_SCENERY] });
-  ({ scene, room, desk, computer, treehouse, nameplate, lamp } = built);
-  DESK_TOP_Y = built.deskTopY;
-  lights = createLighting(scene, { from: MOON_FROM, at: MOON_AT });
-  applyLampLevel(lampLevel);
-  return scene;
-}
-
-// AIMING THE MOON
-
-const MOON_AT = new THREE.Vector3(-2.0, 0, 11.0);
-const MOON_DIST = 45;
-
-function windowCentre() {
-  const win = ROOM_PLAN.window;
-  return new THREE.Vector3(ROOM_PLAN.X0, win.sillY + win.h / 2, win.z);
-}
-
-function moonDirection(at = MOON_AT) {
-  return at.clone().sub(windowCentre()).normalize();
-}
-
-const MOON_FROM = MOON_AT.clone().addScaledVector(moonDirection(), -MOON_DIST);
-
-function setMoonAt(x, y, z) {
-  MOON_AT.set(x, y, z);
-  lights.moon.target.position.copy(MOON_AT);
-  lights.moon.position.copy(
-    MOON_AT.clone().addScaledVector(moonDirection(), -MOON_DIST),
-  );
-  lights.moon.target.updateMatrixWorld();
-  renderer.shadowMap.needsUpdate = true;
-}
-
-// THE DESK LAMP
-
 function applyLampLevel(level) {
   lampLevel = level;
-  lampMod.setLamp(level);
-
-  nameplate?.setLight(level);
-
-  if (lights) {
-    const dim = offDarkness + (1 - offDarkness) * level;
-    lights.hemi.intensity = hemiBase * dim;
-    lights.hemi.groundColor
-      .copy(HEMI_GROUND_COOL)
-      .lerp(HEMI_GROUND_WARM, level);
-  }
-  if (!renderer) return;
-
-  const want =
-    Math.round(
-      ((toneBase + LAMP_EXPOSURE_LIFT * (1 - level)) / EXPOSURE_STEP),
-    ) * EXPOSURE_STEP;
-  if (Math.abs(want - toneWritten) < 1e-6) return;
-  toneWritten = want;
-  renderer.toneMappingExposure = want;
-  applyVoidColor();
+  if (!lights) return;
+  const dim = OFF_DARKNESS + (1 - OFF_DARKNESS) * level;
+  lights.hemi.intensity = NIGHT_LIGHTING.hemiIntensity * dim;
+  lights.hemi.groundColor.copy(HEMI_GROUND_COOL).lerp(HEMI_GROUND_WARM, level);
 }
+
+const lampState = createLampState({ startOn: LAMP_START_ON, fadeS: LAMP_FADE_S, onLevel: applyLampLevel });
 
 function setLampOn(on, jump = !animation?.running) {
-  lampOn = !!on;
-  if (jump) {
-    lampP = lampOn ? 1 : 0;
-    applyLampLevel(lampP);
-    if (renderer) render();
-  }
-  lampBtn?.setAttribute("aria-pressed", String(lampOn));
-  return lampOn;
-}
-
-function tickLamp(dt) {
-  if (!lamp) return;
-  const target = lampOn ? 1 : 0;
-  if (lampP === target) return;
-  const step = dt / LAMP_FADE_S;
-  lampP = lampOn
-    ? Math.min(1, lampP + step)
-    : Math.max(0, lampP - step);
-  applyLampLevel(lampOn ? 1 - (1 - lampP) * (1 - lampP) : lampP * lampP);
+  lampState.set(on, jump);
+  if (jump && renderer) render();
+  lampBtn?.setAttribute("aria-pressed", String(lampState.on));
+  return lampState.on;
 }
 
 function initLampButton() {
   lampBtn = document.getElementById("lamp-toggle");
   if (!lampBtn) return;
   lampBtn.hidden = false;
-  lampBtn.setAttribute("aria-pressed", String(lampOn));
-  onLampBtn = () => setLampOn(!lampOn);
+  lampBtn.setAttribute("aria-pressed", String(lampState.on));
+  onLampBtn = () => setLampOn(!lampState.on);
   lampBtn.addEventListener("click", onLampBtn);
 }
 
-// THE VOID
-
 function applyVoidColor() {
   if (!scene || !renderer) return;
-  const target = new THREE.Color(VOID);
   scene.background = composer
-    ? tonemapPreimage(target, renderer.toneMapping, renderer.toneMappingExposure)
-    : target;
-
-  scene.fog?.color.set(target);
+    ? tonemapPreimage(new THREE.Color(BACKGROUND), renderer.toneMapping, renderer.toneMappingExposure)
+    : new THREE.Color(BACKGROUND);
 }
 
 // CAMERA
@@ -425,18 +251,12 @@ const clamp01 = (v) => Math.max(0, Math.min(1, v));
 const navigation = createNavigation({ homeTarget: () => rig.homeTarget(),
   isAtDesk: () => fly.value === 0, reducedMotion: prefersReducedMotion,
   hasFrame: () => !!animation?.running, onChange: () => updateScreenOverlay(), render: () => render(),
-  resetParallax: () => parallax.reset(), onDisable: () => interaction?.cancel(), roomPlan: ROOM_PLAN });
+  resetParallax: () => parallax.reset(), onDisable: () => interaction?.cancel() });
 const rig = createCameraRig({ screenTarget: SCREEN_TARGET, getCamera: () => camera,
   getFov: () => fov, getFlightStart: () => flyStart,
   getOrbitRadius: () => navigation.home.radius, distFor, isMobile });
-const { homeTarget, screenFrustum, coverFrustum, buildFlyPath, applyDive,
+const { homeTarget, screenFrustum, coverFrustum, buildFlyPath, applyFly, applyDive,
   target: flyTarget, pose: flyPose } = rig;
-function applyFly(p, width, height) {
-  const frustum = rig.applyFly(p, width, height);
-  if (gtaoPass) gtaoPass.blendIntensity = GTAO_BLEND * (1 - clamp01(p / 0.3));
-  return frustum;
-}
-
 function applyPose(width, height) {
   return dive.value > 0
     ? applyDive(dive.value, width, height)
@@ -446,7 +266,7 @@ function applyPose(width, height) {
 const CAM_NEAR = 0.5;
 
 function camFar() {
-  return ROOM_RADIUS + distFor(FRUSTUM_MOBILE * homeZoom) + 20;
+  return distFor(FRUSTUM_MOBILE * homeZoom) + 100;
 }
 
 function buildCamera() {
@@ -511,8 +331,6 @@ function reframeHome() {
   const height = canvasEl.clientHeight;
   camera.near = CAM_NEAR;
   camera.far = camFar();
-  setFogRange(scene.fog, camDist());
-
   flyStart = null;
   buildFlyPath(width, height);
   applyPose(width, height);
@@ -540,7 +358,7 @@ function reframeHome() {
 // THE LIVE PAGE ON THE GLASS
 
 const projection = createScreenProjection();
-function screenFacing() { return projection.facing(computer.projectionSurface, camera, SCREEN_TARGET); }
+function screenFacing() { return projection.facing(stage.projectionSurface, camera, SCREEN_TARGET); }
 
 let screenTransform = "";
 
@@ -559,7 +377,7 @@ function syncScreenVisibility() {
 }
 
 function updateScreenOverlay(transformOnly = false) {
-  if (!screenEl || !camera || !computer) return;
+  if (!screenEl || !camera || !stage) return;
   const width = canvasEl.clientWidth;
   const height = canvasEl.clientHeight;
   if (!width || !height) return;
@@ -577,7 +395,7 @@ function updateScreenOverlay(transformOnly = false) {
   syncScreenVisibility();
   if (screenAway) return;
 
-  const { transform, scale } = projection.project(computer.projectionSurface, camera,
+  const { transform, scale } = projection.project(stage.projectionSurface, camera,
     width, height, SCREEN_BASE_W, SCREEN_BASE_H);
   if (!transform) {
 
@@ -604,31 +422,8 @@ function updateScreenOverlay(transformOnly = false) {
   set("--blur", `${blur.toFixed(2)}px`);
 }
 
-// ENVIRONMENT MAP
-
-function loadEnvironment() {
-  try {
-    envMap = createWorkstationEnvironment(renderer, scene, {
-      room: room.root, desk: desk.root, computer: computer.root,
-    });
-    return true;
-  } catch (e) {
-    console.warn("env map failed:", e);
-    return false; // plain lighting; the scene still reads
-  }
-}
-
-// AMBIENT OCCLUSION
-
-function buildComposer(width, height) {
-  const result = createComposer({ renderer, scene, camera, width, height,
-    objects: [desk.root, computer.root, treehouse.root, lamp?.root],
-    blend: GTAO_BLEND, margin: GTAO_BOX_MARGIN });
-  gtaoPass = result.gtao;
-  return result.composer;
-}
-function buildMotionComposer() {
-  return createMotionComposer(renderer, scene, camera, scenePixelRatio());
+function buildComposer() {
+  return createComposer({ renderer, scene, camera });
 }
 
 // HOVER, AND THE CURSOR
@@ -641,9 +436,8 @@ function render() {
   // HTML and WebGL share the same presentation pose, never the base pose.
   if (shifted || parallaxPresented) updateScreenOverlay(true);
   parallaxPresented = shifted;
-  const activeComposer = motionQuality && motionComposer ? motionComposer : composer;
   try {
-    if (activeComposer) activeComposer.render();
+    if (composer) composer.render();
     else renderer.render(scene, camera);
   } finally {
     if (shifted) endParallax();
@@ -731,11 +525,11 @@ function applyFade(v) {
 const snapshot = createDesktopSnapshot({ width: SCREEN_BASE_W, height: SCREEN_BASE_H });
 
 function showStill(on) {
-  if (!computer) return;
+  if (!stage) return;
   if (on) {
-    if (snapshot.canvas) computer.setStill(snapshot.canvas);
+    if (snapshot.canvas) stage.setStill(snapshot.canvas);
   } else {
-    computer.clearStill();
+    stage.clearStill();
   }
 }
 
@@ -1009,38 +803,29 @@ export async function initScene(canvas) {
   renderer.toneMappingExposure = TONE_EXPOSURE;
   renderer.setPixelRatio(scenePixelRatio());
   renderer.setSize(w, h, false);
-  renderer.shadowMap.enabled = true;
-
-  renderer.shadowMap.type = THREE.VSMShadowMap;
-
-  renderer.shadowMap.autoUpdate = false;
-  renderer.shadowMap.needsUpdate = true;
 
   performance.mark('room:renderer-ready');
-  const [, nextDesk, nextLamp] = await Promise.all([loadScreenFont(), resolveDesk(), resolveLamp()]);
-  if (generation !== sceneGeneration) return false;
-  deskMod = nextDesk;
-  lampMod = nextLamp;
+  const loaded = await createRoomScene({ renderer });
+  if (generation !== sceneGeneration) { loaded.dispose(); return false; }
+  stage = loaded;
+  scene = stage.scene;
   performance.mark('room:assets-ready');
   rig.resetPath();
-  scene = buildScene();
+  lights = createLighting(scene);
+  applyLampLevel(lampLevel);
   performance.mark('room:geometry-ready');
   camera = buildCamera();
 
   scene.updateMatrixWorld(true);
-  computer.screenAnchor.getWorldPosition(SCREEN_TARGET);
+  stage.screenPlane.getWorldPosition(SCREEN_TARGET);
   applyFly(0, w, h);
-
-  renderer.shadowMap.needsUpdate = true;
 
   if (!isMobile() && !prefersReducedMotion()) {
     try {
-      composer = buildComposer(w, h);
-      if (scenePixelRatio() > 1) motionComposer = buildMotionComposer();
+      composer = buildComposer();
     } catch {
       composer?.dispose();
-      motionComposer?.dispose();
-      composer = motionComposer = null; // fall back to a straight render
+      composer = null; // fall back to a straight render
     }
   }
 
@@ -1052,30 +837,23 @@ export async function initScene(canvas) {
       import('./debug/geometry.js'), import('./debug/experience.js'),
     ]);
     if (generation !== sceneGeneration) return false;
-    disposeDiagnostics = installGeometryDiagnostics({ scene, camera, renderer, composer, lights, render });
+    disposeDiagnostics = installGeometryDiagnostics({ scene, camera, renderer, composer, background: BACKGROUND, render });
     installExperienceDiagnostics({
-      get DESK_TOP_Y() { return DESK_TOP_Y; },
       get FACING() { return FACING; },
-      get LAMP_EXPOSURE_LIFT() { return LAMP_EXPOSURE_LIFT; },
       get LAMP_FADE_S() { return LAMP_FADE_S; },
-      get MOON_AT() { return MOON_AT; },
-      get ROOM_PLAN() { return ROOM_PLAN; },
       get TONE_MAPPINGS() { return TONE_MAPPINGS; },
-      get VOID() { return VOID; },
       get applyFade() { return applyFade; },
-      get applyLampLevel() { return applyLampLevel; },
       get applyVoidColor() { return applyVoidColor; },
+      get background() { return BACKGROUND; },
       get camDist() { return camDist; },
       get camera() { return camera; },
       get canvasEl() { return canvasEl; },
       get clamp01() { return clamp01; },
       get composer() { return composer; },
-      get computer() { return computer; },
       get dive() { return dive; },
       get diveState() { return diveState; },
       get diveTl() { return diveTl; },
       get enterScreen() { return enterScreen; },
-      get envMap() { return envMap?.texture; },
       get fly() { return fly; },
       get flyFrom() { return flyFrom; },
       set flyFrom(value) { flyFrom = value; },
@@ -1087,41 +865,24 @@ export async function initScene(canvas) {
       get flyTl() { return flyTl; },
       get fov() { return fov; },
       get frustumFor() { return frustumFor; },
-      get gtaoPass() { return gtaoPass; },
-      get hemiBase() { return hemiBase; },
-      set hemiBase(value) { hemiBase = value; },
       get homeZoom() { return homeZoom; },
-      get lamp() { return lamp; },
       get lampBtn() { return lampBtn; },
       get lampLevel() { return lampLevel; },
-      get lampMod() { return lampMod; },
-      get lampOn() { return lampOn; },
-      get lampP() { return lampP; },
-      get lights() { return lights; },
-      get moonDirection() { return moonDirection; },
+      get lampOn() { return lampState.on; },
+      get lampP() { return lampState.progress; },
       get navigation() { return navigation; },
-      get offDarkness() { return offDarkness; },
-      set offDarkness(value) { offDarkness = value; },
       get pickTarget() { return e => interaction?.pick(e); },
-      get rainState() { return rainState; },
       get render() { return render; },
       get renderer() { return renderer; },
       get scene() { return scene; },
       get screenFacing() { return screenFacing; },
-      get screenGlowBase() { return screenGlowBase; },
-      set screenGlowBase(value) { screenGlowBase = value; },
       get setDive() { return setDive; },
       get setFov() { return setFov; },
       get setHomeZoom() { return setHomeZoom; },
       get setLampOn() { return setLampOn; },
-      get setMoonAt() { return setMoonAt; },
       get showStill() { return showStill; },
       get snapshot() { return snapshot; },
       get tanHalfFov() { return tanHalfFov; },
-      get toneBase() { return toneBase; },
-      set toneBase(value) { toneBase = value; },
-      get toneWritten() { return toneWritten; },
-      set toneWritten(value) { toneWritten = value; },
       get tonemapForward() { return tonemapForward; },
       get updateScreenOverlay() { return updateScreenOverlay; },
     });
@@ -1134,9 +895,6 @@ export async function initScene(canvas) {
     syncRenderQuality();
     renderer.setSize(width, height, false);
     composer?.setSize(width, height);
-    motionComposer?.setSize(width, height);
-
-    setFogRange(scene.fog, camDist());
 
     buildFlyPath(width, height);
 
@@ -1154,28 +912,8 @@ export async function initScene(canvas) {
   };
   window.addEventListener("resize", onResize);
 
-  // Reflection capture must see decoded wood maps. Prepare everything before
-  // enabling input, so a late environment upload cannot hitch the first drag.
-  await desk.ready;
-  if (generation !== sceneGeneration) return false;
   performance.mark('room:before-first-frame');
-  // Allocate/upload the small motion targets before interaction, not on the
-  // first drag. The following full-resolution draw reuses programs/shadows.
-  // The close opening view culls furniture that a first drag can reveal.
-  // Warm those static buffers too, then restore culling before the visible
-  // frame. Both draws are synchronous, so only the seated view is presented.
-  const culled = [];
-  scene.traverse((object) => {
-    if (object.isMesh && object.frustumCulled) {
-      culled.push(object);
-      object.frustumCulled = false;
-    }
-  });
   renderer.compile(scene, camera);
-  if (motionComposer) motionComposer.render();
-  else renderer.render(scene, camera);
-  for (const object of culled) object.frustumCulled = true;
-  if (loadEnvironment() && motionComposer) motionComposer.render();
   performance.mark('room:environment-ready');
   render();
   performance.mark('room:first-frame');
@@ -1184,10 +922,10 @@ export async function initScene(canvas) {
   buildDiveTimeline();
 
   navigation.init(camera, canvasEl);
-  interaction = createInteraction({ canvas, camera, computer, lamp, parallax,
+  interaction = createInteraction({ canvas, camera, proxies: stage.proxies, parallax,
     canOrbit: () => navigation.allowed(), isDragging: () => navigation.dragging,
     canLeaveScreen, overScreen, beginParallax, endParallax,
-    setHover: value => { hover.target = value; }, onLamp: () => setLampOn(!lampOn),
+    setHover: value => { hover.target = value; }, onLamp: () => setLampOn(!lampState.on),
     onEnter: enterScreen, onExit: flyFromScreen });
 
   initLampButton();
@@ -1204,45 +942,32 @@ export async function initScene(canvas) {
     }
   }
 
-  const screenMat = computer.screenMat;
-  const screenGlow = computer.screenGlow;
-  let elapsed = 0;
   let hoverStyle = "";
   animation = createAnimationLoop((dt) => {
     perf?.begin();
 
     // The canvas is frozen behind the live desktop. Leave native scrolling
-    // alone instead of updating invisible rain, textures and inherited CSS.
+    // alone instead of updating invisible textures and inherited CSS.
     // Keep the lamp ramp live for its keyboard control.
     if (fly.value === 1 && fly.dir === 0 && dive.dir === 0) {
-      const lampMoving = lamp && lampP !== (lampOn ? 1 : 0);
-      tickLamp(dt);
-      if (lampMoving || motionQuality) render();
+      const lampMoving = lampState.moving;
+      lampState.tick(dt);
+      if (lampMoving) render();
       perf?.end(1 - dive.value);
       return;
     }
-    elapsed += dt;
-
-    tickRain(dt);
 
     navigation.tick(dt);
     tickParallax(dt);
 
-    tickLamp(dt);
+    lampState.tick(dt);
     const k = 1 - Math.exp(-HOVER_RATE * dt);
     hover.value += (hover.target - hover.value) * k;
-    computer.setScreen(hover.value);
     const nextHoverStyle = hover.value.toFixed(3);
     if (nextHoverStyle !== hoverStyle) {
       hoverStyle = nextHoverStyle;
       screenEl?.style.setProperty("--hover", hoverStyle);
     }
-
-    const flicker =
-      1 + 0.018 * Math.sin(elapsed * 11.3) * Math.sin(elapsed * 2.7);
-    const bright = (1 + hover.value * 0.45) * flicker;
-    screenMat.emissiveIntensity = bright;
-    screenGlow.intensity = screenGlowBase * bright;
 
     if (fly.value < 1 || dive.dir !== 0) render();
 
@@ -1273,7 +998,6 @@ export function disposeScene() {
   fov = FOV_DEFAULT;
   tanHalfFov = Math.tan(THREE.MathUtils.degToRad(fov) / 2);
   homeZoom = HOME_ZOOM;
-  screenGlowBase = SCREEN_GLOW;
   lights = null;
   if (lampBtn && onLampBtn) lampBtn.removeEventListener("click", onLampBtn);
   if (lampBtn) {
@@ -1281,28 +1005,13 @@ export function disposeScene() {
     lampBtn.setAttribute("aria-pressed", String(LAMP_START_ON));
   }
   lampBtn = onLampBtn = null;
-  lamp = null;
-  lampOn = LAMP_START_ON;
-  lampP = lampLevel = LAMP_START_ON ? 1 : 0;
-  toneBase = TONE_EXPOSURE;
-  toneWritten = -1;
-
-  hemiBase = HEMI_INTENSITY;
-  offDarkness = OFF_DARKNESS;
+  lampState.reset();
+  lampLevel = LAMP_START_ON ? 1 : 0;
   document.getElementById("orbit-hint")?.setAttribute("hidden", "");
   perf?.dispose();
   perf = null;
-  disposeComputer();
-  deskMod.disposeDesk();
-  disposeTreehouse();
-  disposeNameplate();
-  lampMod.disposeLamp();
-  computer = null;
-  nameplate = null;
-  desk = null;
-  treehouse = null;
-  disposeRoom();
-  room = null;
+  stage?.dispose();
+  stage = null;
   flyTl?.kill();
   flyTl = null;
   flyState.p = flyState.fade = 0;
@@ -1339,17 +1048,11 @@ export function disposeScene() {
   fly = { value: 0, dir: 0 };
   dive = { value: 0, dir: 0 };
   screenEl = null;
-  gtaoPass = null;
   canvasEl = null;
-  envMap?.dispose();
-  motionComposer?.passes.forEach((pass) => pass.dispose());
   composer?.passes.forEach((pass) => pass.dispose());
-  motionComposer?.dispose();
-  motionComposer = null;
   composer?.dispose();
   renderer?.dispose();
   hover = { target: 0, value: 0 };
-  renderer = scene = camera = composer = computer = envMap = null;
-  motionQuality = false;
+  renderer = scene = camera = composer = null;
   onResize = onScreenInput = null;
 }

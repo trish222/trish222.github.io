@@ -13,19 +13,32 @@ Generated in P0 from [visual-plan.md](visual-plan.md). Work the first unchecked 
 
 ## P1 — Gut the scene
 
-- [ ] Delete `src/computer.js`, `room.js`, `desks/`, `lamps/`, `nameplate.js`, `treehouse.js`, `nightwindow.js`. Done when: `npm run check:source` reports no missing imports.
-- [ ] Move `FACING`, `MON_W`, `MON_H`, `SCREEN_W`, `SCREEN_H`, `OVERSCAN` into `src/scene/screenSpec.js` as a temporary stand-in for `camera.js` and `scene.js`. Done when: no module imports `computer.js` (P4 replaces these with values from `screen_plane` and the cam_* Empties).
-- [ ] Strip `src/scene.js` of desk/lamp/room/rain/treehouse/nameplate wiring (`deskMod`, `lampMod`, `resolveDesk`, `resolveLamp`, `disposeRoom`, `ROOM_PLAN`, `ROOM_RADIUS`, `setFogRange`, `VOID`, `rainState`, `tickRain`, `loadScreenFont`, the `?desk=`/`?lamp=` variants). Done when: the site boots to the placeholder scene and the desktop works.
-- [ ] Delete `src/lamp-lab.js` (orphaned; `lamp-lab.html` doesn't exist). Done when: the file is gone and no references remain.
-- [ ] Reduce `src/lamp.js` to the toggle state/logic the lamp interaction needs; no geometry. Done when: the lamp toggle test passes against a placeholder proxy.
-- [ ] Simplify `src/environment/presets.js` so it no longer imports `nightwindow.js`. Done when: one scene and no scenery builder remain.
-- [ ] Remove the `room.js` `VOID` dependency from `src/debug/geometry.js`; keep `src/debug/` and `src/perf.js`. Done when: the diagnostics build without `room.js`.
-- [ ] Remove real-time shadows from `scene/lighting.js` and GTAO/SSAO from `scene/renderer.js`. Done when: grep finds no `shadowMap`, `castShadow` or `GTAOPass` in `src/`.
-- [ ] Create `src/scene/loadScene.js` (GLTFLoader + KTX2Loader + MeshoptDecoder) and a placeholder `public/models/scene.glb`: a box named `screen_plane` plus contract-named Empties. Rewrite `createScene.js` to use it. Done when: the placeholder loads and the projection anchors to `screen_plane`.
-- [ ] Update tests and `scripts/review` that use `__rain`, `__gtao`, `__probes`, `__lights`, `?desk=` and `?lamp=` (`tests/lifecycle.mjs`, `tests/interaction.mjs`, `scripts/review/render-quality.mjs`, `nameplate.mjs`). Delete the `foundation-*` review scripts that only exist for the old lighting. Done when: `npm test` and `npm run test:lifecycle` pass.
-- [ ] Add `npm run check:size` (fails if any `src/` file is over 250 lines) and wire it into `check:build`. Done when: it runs inside `check:build`; files over the limit are listed in Backlog if they can't be split yet.
-- [ ] Update the README file map and `.github/copilot-instructions.md` (point it to CLAUDE.md) for the new layout. Done when: no doc names a deleted file as current.
-- [ ] Verify. Done when: `npm test`, `npm run build`, `check:build` and `check:source` all pass; report the lines added and removed.
+- [x] Delete `src/computer.js`, `room.js`, `desks/`, `lamps/`, `nameplate.js`, `treehouse.js`, `nightwindow.js`. Done when: `npm run check:source` reports no missing imports.
+  - Note: all seven files deleted plus `src/environment/`; `check:source` clean (26 modules, no cycles).
+- [x] Move `FACING`, `MON_W`, `MON_H`, `SCREEN_W`, `SCREEN_H`, `OVERSCAN` into `src/scene/screenSpec.js` as a temporary stand-in for `camera.js` and `scene.js`. Done when: no module imports `computer.js` (P4 replaces these with values from `screen_plane` and the cam_* Empties).
+  - Note: `src/scene/screenSpec.js` holds the constants; `camera.js` and `scene.js` import it, nothing imports `computer.js`.
+- [x] Strip `src/scene.js` of desk/lamp/room/rain/treehouse/nameplate wiring (`deskMod`, `lampMod`, `resolveDesk`, `resolveLamp`, `disposeRoom`, `ROOM_PLAN`, `ROOM_RADIUS`, `setFogRange`, `VOID`, `rainState`, `tickRain`, `loadScreenFont`, the `?desk=`/`?lamp=` variants). Done when: the site boots to the placeholder scene and the desktop works.
+  - Note: `scene.js` 1355 → 1058 lines; boots on the placeholder and `npm test` passes. Fog, `ROOM_*`, moon, rain, env map and the motion composer are gone; the `navigation.js` wall leash went too, since the ±7° limit already governed.
+- [x] Delete `src/lamp-lab.js` (orphaned; `lamp-lab.html` doesn't exist). Done when: the file is gone and no references remain.
+  - Note: deleted, no references remain.
+- [x] Reduce `src/lamp.js` to the toggle state/logic the lamp interaction needs; no geometry. Done when: the lamp toggle test passes against a placeholder proxy.
+  - Note: `lamp.js` is now `createLampState` (577 → 25 lines); the toggle and keyboard tests pass, and the `click_lamp_chain` proxy is wired into the picker (no automated click test on it yet).
+- [x] Simplify `src/environment/presets.js` so it no longer imports `nightwindow.js`. Done when: one scene and no scenery builder remain.
+  - Note: file deleted, since nothing needs a scenery preset.
+- [x] Remove the `room.js` `VOID` dependency from `src/debug/geometry.js`; keep `src/debug/` and `src/perf.js`. Done when: the diagnostics build without `room.js`.
+  - Note: `debug/geometry.js` takes the background colour as an argument; `__shadowfit`, `__room`, `__lights`, `__rain`, `__probes` and `__gtao` removed from `debug/experience.js` (432 → 232 lines).
+- [x] Remove real-time shadows from `scene/lighting.js` and GTAO/SSAO from `scene/renderer.js`. Done when: grep finds no `shadowMap`, `castShadow` or `GTAOPass` in `src/`.
+  - Note: `grep shadowMap|castShadow|GTAOPass src` is empty; the composer is RenderPass + OutputPass.
+- [x] Create `src/scene/loadScene.js` (GLTFLoader + KTX2Loader + MeshoptDecoder) and a placeholder `public/models/scene.glb`: a box named `screen_plane` plus contract-named Empties. Rewrite `createScene.js` to use it. Done when: the placeholder loads and the projection anchors to `screen_plane`.
+  - Note: `loadScene.js` loads the GLB with KTX2/meshopt wired in (KTX2 uses three's bundled transcoder, so there is no `public/basis`). The placeholder comes from `scripts/make-placeholder-glb.mjs` and uses a flat quad for `screen_plane`, per the contract, so the flat-plane assertion stays intact. The KTX2/meshopt paths are untested until P3.
+- [x] Update tests and `scripts/review` that use `__rain`, `__gtao`, `__probes`, `__lights`, `?desk=` and `?lamp=` (`tests/lifecycle.mjs`, `tests/interaction.mjs`, `scripts/review/render-quality.mjs`, `nameplate.mjs`). Delete the `foundation-*` review scripts that only exist for the old lighting. Done when: `npm test` and `npm run test:lifecycle` pass.
+  - Note: `npm test` and `test:lifecycle` pass (lifecycle runs on the dev server at 4321). The `foundation-*`, `compare-foundation` and `nameplate` scripts are deleted and `render-quality.mjs` trimmed.
+- [x] Add `npm run check:size` (fails if any `src/` file is over 250 lines) and wire it into `check:build`. Done when: it runs inside `check:build`; files over the limit are listed in Backlog if they can't be split yet.
+  - Note: `scripts/check-size.mjs` with capped allowlist (no warn mode); `check:build` runs it. Four capped files are in the Backlog as `split <file>`.
+- [x] Update the README file map and `.github/copilot-instructions.md` (point it to CLAUDE.md) for the new layout. Done when: no doc names a deleted file as current.
+  - Note: README map, the `style.css` comments and `.github/copilot-instructions.md` updated.
+- [x] Verify. Done when: `npm test`, `npm run build`, `check:build` and `check:source` all pass; report the lines added and removed.
+  - Note: build, `check:build`, `check:source`, `check:size`, `npm test` and `test:lifecycle` pass. No visual or performance claims.
 
 ## P2 — Blender scene
 
@@ -38,6 +51,7 @@ Generated in P0 from [visual-plan.md](visual-plan.md). Work the first unchecked 
 
 - [ ] Add `npm run assets`: `@gltf-transform/cli` meshopt, textures resized to 2048 (desktop) and 1024 (mobile), KTX2 (UASTC lightmaps, ETC1S albedo), outputs `scene.glb` and `scene-mobile.glb`. Done when: it is reproducible from `art/` output.
 - [ ] Add `scripts/check-assets.js` that fails when any budget in visual-plan is exceeded, and wire it into `check:build`. Done when: it passes on the current assets and fails on an over-budget test file.
+- [ ] Verify KTX2 decoding with a real KTX2 texture. Confirm whether KTX2Loader needs setTranscoderPath with basis_transcoder.js/.wasm served from public/ (copied from three/examples/jsm/libs/basis/); fix if so. Done when a KTX2 texture loads in the browser with no console errors.
 
 ## P4 — Integration
 
@@ -72,5 +86,10 @@ Generated in P0 from [visual-plan.md](visual-plan.md). Work the first unchecked 
 
 ## Backlog
 
+- split src/scene.js (1058 lines; capped in `scripts/check-size.mjs`)
+- split src/desktop/desktop.js (455 lines; capped)
+- split src/desktop/windows.js (438 lines; capped)
+- split src/style.css (1628 lines; capped)
+- `public/textures/desk-wood-*` are orphaned since the procedural desk was deleted; remove them or reuse in P2/P4.
 - `src/style.css` comments reference `VOID` in `room.js` and `SCREEN_W/H` in `computer.js`; fix them when P1 touches those values.
 - `docs/architecture.md` still describes procedural models and the frozen shadow map; update its scene/rendering sections after P4.

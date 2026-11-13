@@ -10,28 +10,22 @@ npm run check:build
 npm run preview   # http://127.0.0.1:4320
 ```
 
-With the production preview running, `npm test` checks screen registration, camera/parallax, monitor entry and seated exit, login, desktop windows, lamp controls, responsive handover, and the no-WebGL fallback. Chromium must be installed for Playwright. `npm run test:lifecycle` uses the development server at port 4321 to check disposal/reinitialization and alternate models. `npm run check:source` checks local imports and cycles.
+With the production preview running, `npm test` checks screen registration, camera/parallax, monitor entry and seated exit, login, desktop windows, lamp controls, responsive handover, and the no-WebGL fallback. Chromium must be installed for Playwright. `npm run test:lifecycle` uses the development server at port 4321 to check disposal and reinitialization. `npm run check:source` checks local imports and cycles. `npm run check:size` caps `src/` files at 250 lines (listed exceptions can only shrink); `check:build` runs it. `node scripts/make-placeholder-glb.mjs` regenerates the placeholder `public/models/scene.glb`.
 
 ```text
 src/main.js                application entry and desktop bootstrap
 src/scene.js               experience state, transitions, and subsystem coordination
-src/scene/                 camera rig, navigation, rendering, animation, lighting, assembly
+src/scene/                 GLB loading and assembly (loadScene, createScene), camera rig, navigation, rendering, lighting, screenSpec (temporary screen constants)
 src/overlay/               projection and DOM snapshots for the monitor
 src/desktop/               session/login/apps, window manager, resizing, event lifecycle
 src/config/experience.js   shared responsive handover rule
-src/environment/presets.js window scenery selection
 src/debug/                 optional geometry and experience diagnostics
-src/computer.js            CRT, keyboard, mouse, screen surface contract
-src/room.js                room shell and window placement
-src/nightwindow.js         window joinery, rain, and built-in night scenery
-src/desks/, src/lamps/     cohesive procedural model variants
-src/treehouse.js           treehouse and spare bricks
-src/nameplate.js           nameplate and lettering
+src/lamp.js                lamp toggle state and eased fade
 src/tonemap.js             calibrated tone mapping mathematics
 src/style.css, src/vendor/ desktop styling and generated scoped 98.css
 src/utils/                 listener/timer lifecycle helper
-public/                    shipped fonts, generated icons, licensed textures/environment
-scripts/                   build checks, asset generation, profiling, review capture
+public/                    shipped fonts, generated icons, models/scene.glb (placeholder until P2), licensed textures/environment
+scripts/                   build and size checks, placeholder GLB generator, asset generation, profiling, review capture
 tests/                    automated Node and Playwright checks
 docs/                     architecture, calibration notes, deployment, refactor record
 references/               retained monitor review images, never shipped

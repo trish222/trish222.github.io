@@ -1,1 +1,1 @@
-Follow [AGENTS.md](../AGENTS.md) and the authoritative [experience and architecture specification](../docs/architecture.md). Use [README.md](../README.md) for commands and current structure. Historical documents are not active instructions.
+Follow [CLAUDE.md](../CLAUDE.md) (also read via AGENTS.md) and start each session with [docs/TODO.md](../docs/TODO.md). Use [README.md](../README.md) for commands and current structure. `docs/history/` is superseded and not an active instruction.

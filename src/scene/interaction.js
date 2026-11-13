@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 // One gesture stream and one nearest-hit picker for every 3D action.
-export function createInteraction({ canvas, camera, computer, lamp, parallax,
+export function createInteraction({ canvas, camera, proxies, parallax,
   canOrbit, isDragging, canLeaveScreen, overScreen, beginParallax, endParallax,
   setHover, onLamp, onEnter, onExit }) {
   const CLICK_SLOP = 5;
@@ -12,7 +12,7 @@ export function createInteraction({ canvas, camera, computer, lamp, parallax,
   const pickRay = new THREE.Raycaster();
 
   function pickTarget(e) {
-    if (!computer || !canvas || !camera) return null;
+    if (!proxies || !canvas || !camera) return null;
     const r = canvas.getBoundingClientRect();
     if (!r.width || !r.height) return null;
     pickNdc.x = ((e.clientX - r.left) / r.width) * 2 - 1;
@@ -21,14 +21,9 @@ export function createInteraction({ canvas, camera, computer, lamp, parallax,
     pickRay.setFromCamera(pickNdc, camera);
     if (shifted) endParallax();
 
-    const roots = lamp ? [lamp.root, computer.root] : [computer.root];
-    const hits = pickRay.intersectObjects(roots, true);
+    const hits = pickRay.intersectObjects([proxies.lampChain, proxies.crt], false);
     if (!hits.length) return null;
-    for (let o = hits[0].object; o; o = o.parent) {
-      if (lamp && o === lamp.root) return "lamp";
-      if (o === computer.root) return "machine";
-    }
-    return null;
+    return hits[0].object === proxies.lampChain ? "lamp" : "machine";
   }
 
 

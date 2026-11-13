@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { FACING, MON_W, MON_H, SCREEN_W, SCREEN_H, OVERSCAN } from '../computer.js';
+import { FACING, MON_W, MON_H, SCREEN_W, SCREEN_H, OVERSCAN } from './screenSpec.js';
 
 // Keep the calibrated spline, logarithmic zoom, and screen fit together.
 const TURN_END = 0.55;

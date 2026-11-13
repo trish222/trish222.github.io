@@ -1,6 +1,9 @@
 import { readFile, readdir, access } from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+
+execFileSync(process.execPath, ['scripts/check-size.mjs'], { stdio: 'inherit' });
 
 // Pages must receive Vite's output, including every stable public asset.
 const output = path.resolve('dist');

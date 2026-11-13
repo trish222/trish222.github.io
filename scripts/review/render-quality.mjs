@@ -45,15 +45,15 @@ try {
       gpu: ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER),
       context: gl.getContextAttributes(), maxSamples: gl.getParameter(gl.MAX_SAMPLES),
       maxTextureSize: r.capabilities.maxTextureSize, maxAnisotropy: r.capabilities.getMaxAnisotropy(),
-      passes: c.passes.map((p, i) => ({ name: ['RenderPass', 'GTAOPass', 'OutputPass'][i], enabled: p.enabled })),
+      passes: c.passes.map((p, i) => ({ name: ['RenderPass', 'OutputPass'][i], enabled: p.enabled })),
       targets: [c.renderTarget1, c.renderTarget2].map(t => ({ width: t.width, height: t.height, samples: t.samples, type: t.texture.type })),
       camera: { position: window.__camera.position.toArray(), quaternion: window.__camera.quaternion.toArray(), fov: window.__camera.fov },
-      lighting: window.__lights(), toneMapping: window.__tonemap(), shadowType: r.shadowMap.type,
+      toneMapping: window.__tonemap(),
       meshes, triangles, materials: materials.size, textures: [...textures.values()] };
   });
   await writeFile(`${output}/inventory.json`, JSON.stringify(inventory, null, 2));
   for (const trial of [0, 1, 2]) {
-    for (const variant of (trial % 2 ? ['dpr2', 'msaa4', 'noAO', 'baseline', 'dpr1'] : ['dpr1', 'baseline', 'noAO', 'msaa4', 'dpr2'])) {
+    for (const variant of (trial % 2 ? ['dpr2', 'msaa4', 'baseline', 'dpr1'] : ['dpr1', 'baseline', 'msaa4', 'dpr2'])) {
       const result = await page.evaluate(async ({ variant, trial }) => {
         const c = window.__composer, r = c.renderer;
         const ratio = variant === 'dpr1' ? 1 : variant === 'dpr2' ? 2 : 1.5;
@@ -61,7 +61,6 @@ try {
         for (const target of [c.renderTarget1, c.renderTarget2]) {
           target.dispose(); target.samples = variant === 'msaa4' ? 4 : 0;
         }
-        c.passes.find(p => p.gtaoMaterial).enabled = variant !== 'noAO';
         const next = () => new Promise(window.__auditRAF);
         for (let i = 0; i < 20; i++) { await next(); c.render(); }
         const deltas = [], submit = [];

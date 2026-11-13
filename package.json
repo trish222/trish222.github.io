@@ -17,6 +17,7 @@
     "icons": "node scripts/make-icons.mjs",
     "test:startup": "node tests/startup.mjs",
     "check:source": "node scripts/check-source.mjs",
+    "check:size": "node scripts/check-size.mjs",
     "review": "node scripts/review/capture.mjs",
     "test": "node tests/projection.mjs && node tests/interaction.mjs && node tests/startup.mjs && node tests/responsive.mjs",
     "test:responsive": "node tests/responsive.mjs",

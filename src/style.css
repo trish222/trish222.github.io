@@ -16,8 +16,8 @@
    **Its one consumer now is the CRT's own picture**, not the floor.
    The floor's tiled wordmark went with floor.js and the rug's single
    name was dropped on request; what is left is the greeting
-   computer.js draws into the screen texture, which is still canvas 2D
-   and so still needs the face resident up front. Drop that and this,
+   the snapshot is drawn into the screen texture as canvas 2D, which
+   still needs the face resident up front. Drop that and this,
    the preload and the vendored woff2 all go together.
    ================================ */
 @font-face {
@@ -89,7 +89,7 @@
      because there it is a row of thumb targets rather than a strip of
      chrome a mouse points at. */
   --taskbar-h: 40px;
-  /* Must match VOID in src/room.js: the 3D canvas stops at the taskbar,
+  /* Must match BACKGROUND in src/scene.js: the 3D canvas stops at the taskbar,
      so this is what shows in the strip the taskbar vacates during the
      fly-in. The room is a finite diorama floating in this colour, so
      it is the void rather than the floor now — and src/tonemap.js is
@@ -953,7 +953,7 @@ body {
    THE CRT's PICTURE, AS LIVE HTML
 
    #screen is a plain DOM box of a fixed base size (set from JS, so the
-   aspect matches SCREEN_W/SCREEN_H in computer.js exactly) that
+   aspect matches SCREEN_W/SCREEN_H in src/scene/screenSpec.js exactly) that
    scene.js maps onto the monitor's screen plane with a CSS transform
    every frame. The camera is a perspective one, so the image of that
    plane keystones: four projected corners and a `matrix3d` carrying

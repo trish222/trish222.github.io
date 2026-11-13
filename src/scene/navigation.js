@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { gsap } from 'gsap/gsap-core';
-const AZ_WALL_MARGIN = THREE.MathUtils.degToRad(9);
 const ORBIT_HORIZONTAL = THREE.MathUtils.degToRad(7);
 const ORBIT_DOWN = THREE.MathUtils.degToRad(4);
 const ORBIT_UP = THREE.MathUtils.degToRad(4);
@@ -15,7 +14,7 @@ const ORBIT_EPS = THREE.MathUtils.degToRad(0.2);
 const ORBIT_SETTLE_MS = 120;
 
 export function createNavigation({ homeTarget, isAtDesk, reducedMotion, hasFrame,
-  onChange, render, resetParallax, onDisable, roomPlan }) {
+  onChange, render, resetParallax, onDisable }) {
   let camera = null;
   let canvasEl = null;
   let controls = null;
@@ -35,33 +34,11 @@ export function createNavigation({ homeTarget, isAtDesk, reducedMotion, hasFrame
     orbitDirty = true;
   }
 
-  function wallAzimuthRange(radius, phi) {
-    const R = radius * Math.sin(phi);
-    let lo = -Math.PI;
-    let hi = Math.PI;
-
-    const sx = (roomPlan.X0 - homeTarget().x) / R;
-    if (sx > -1) {
-      const a = Math.asin(Math.min(1, sx));
-      lo = Math.max(lo, a);
-      hi = Math.min(hi, Math.PI - a);
-    }
-
-    const sz = (roomPlan.Z0 - homeTarget().z) / R;
-    if (sz > -1) {
-      const a = Math.acos(Math.min(1, sz));
-      lo = Math.max(lo, -a);
-      hi = Math.min(hi, a);
-    }
-    return { lo, hi };
-  }
-
   const orbitLeash = { min: 0, max: 0, softMin: 0, softMax: 0 };
 
   function applyOrbitLimits() {
-    const wall = wallAzimuthRange(orbitHome.radius, orbitHome.phi + ORBIT_DOWN);
-    orbitLeash.softMin = Math.max(orbitHome.theta - ORBIT_HORIZONTAL, wall.lo + AZ_WALL_MARGIN);
-    orbitLeash.softMax = Math.min(orbitHome.theta + ORBIT_HORIZONTAL, wall.hi - AZ_WALL_MARGIN);
+    orbitLeash.softMin = orbitHome.theta - ORBIT_HORIZONTAL;
+    orbitLeash.softMax = orbitHome.theta + ORBIT_HORIZONTAL;
     if (orbitLeash.softMin > orbitHome.theta || orbitLeash.softMax < orbitHome.theta) {
       orbitLeash.softMin = orbitLeash.softMax = orbitHome.theta;
     }
@@ -225,7 +202,7 @@ export function createNavigation({ homeTarget, isAtDesk, reducedMotion, hasFrame
   return {
     init: initOrbit, tick: tickOrbit, allowed: orbitAllowed, offHome: orbitOffHome,
     setEnabled: setOrbitEnabled, setAngles: setOrbitAngles,
-    applyLimits: applyOrbitLimits, wallRange: wallAzimuthRange,
+    applyLimits: applyOrbitLimits,
     killReturn, spendGlide, returnHome,
     home: orbitHome, spherical: orbitSpherical, leash: orbitLeash,
     get controls() { return controls; },

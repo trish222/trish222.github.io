@@ -44,17 +44,9 @@ try {
     await page.waitForFunction(() => window.__stillReady?.());
     await page.waitForTimeout(300);
     const initial = await page.evaluate(() => {
-      const ao = window.__composer?.passes.find(p => p.gtaoMaterial);
-      return { width: scene.width, height: scene.height, orbit: window.__orbit(),
-        ao: ao ? { size: [ao.width, ao.height], samples: ao.gtaoMaterial.defines.SAMPLES } : null,
-        reflections: window.__lights().envMap };
+      return { width: scene.width, height: scene.height, orbit: window.__orbit() };
     });
     assert.deepEqual([initial.width, initial.height], [width * Math.min(dpr, 2), height * Math.min(dpr, 2)], 'color buffer uses up to native DPR 2 independently of the HTML desktop');
-    assert.equal(initial.reflections, true, 'workstation reflection resource is prepared before interaction');
-    if (initial.ao) {
-      assert.deepEqual(initial.ao.size, [Math.round(width * .75), Math.round(height * .75)], 'AO density stays independent of Retina color resolution');
-      assert.equal(initial.ao.samples, 12);
-    }
     for (const [actual, expected] of initial.orbit.limits.swing.map((v, i) => [v, [-7, 7][i]])) {
       assert.ok(Math.abs(actual - expected) < .01, 'horizontal limits follow the neutral pose by ±7 degrees');
     }
@@ -94,10 +86,6 @@ try {
       const client = await context.newCDPSession(page);
       await client.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 2, mobile: false });
       await page.waitForFunction(() => document.querySelector('#scene').width === 2880);
-      assert.deepEqual(await page.evaluate(() => {
-        const ao = window.__composer.passes.find(p => p.gtaoMaterial);
-        return [ao.width, ao.height];
-      }), [1080, 675], 'display DPR changes preserve the AO pixel budget');
       await page.waitForTimeout(300);
       await page.evaluate(() => { window.__canvasWrites = window.__gpuAllocations = 0; window.__measureAllocations = true; });
       await page.mouse.move(width * .8, height * .8);
@@ -201,7 +189,7 @@ try {
     await page.waitForFunction(() => document.body.classList.contains('screen-focused'));
     assert.equal(await page.evaluate(() => window.__orbit().enabled), false, 'flight owns the camera');
     const registration = await page.evaluate(() => {
-      const screen = window.__scene.getObjectByName('crt-interactive-plane');
+      const screen = window.__scene.getObjectByName('screen_plane');
       const positions = screen.geometry.attributes.position;
       const flat = Array.from({ length: positions.count }, (_, i) => positions.getZ(i)).every(z => z === 0);
       const canvas = document.querySelector('#scene').getBoundingClientRect();
@@ -274,10 +262,6 @@ try {
     const ratio = Math.min(dpr, 2);
     assert.equal(raster.width, Math.floor(raster.cssWidth * ratio));
     assert.equal(raster.height, Math.floor(raster.cssHeight * ratio));
-    if (initial.ao) assert.deepEqual(await page.evaluate(() => {
-      const ao = window.__composer.passes.find(p => p.gtaoMaterial);
-      return [ao.width, ao.height];
-    }), [Math.round(raster.cssWidth * .75), Math.round(raster.cssHeight * .75)], 'viewport resizing retains the separate AO density');
     assert.deepEqual(errors, []);
     assert.deepEqual(missing, []);
     console.log(`PASS ${width}x${height} DPR ${dpr} ${reducedMotion}: orbit, fixed buffers, flight, login, windows, scrolling, links, logoff, resize`);

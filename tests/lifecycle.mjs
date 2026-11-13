@@ -31,7 +31,7 @@ try {
   await page.mouse.click(4, 4);
   await page.waitForFunction(() => document.body.classList.contains('orbit-live'));
   await page.evaluate(() => {
-    for (const name of ['__cam','__fov','__tonemap','__lights','__lamp','__rain','__gtao','__zoom','__flyFrom','__fit','__shadowfit','__probes','__pixel','__histogram']) window[name]();
+    for (const name of ['__cam','__fov','__tonemap','__lamp','__zoom','__flyFrom','__fit','__pixel','__histogram']) window[name]();
     window.__flyTo(.5);
     window.__flyTo(1);
     window.__diveTo(.5);
@@ -42,10 +42,4 @@ try {
   console.log('PASS retained diagnostic reports and camera-seek tools');
   console.log('PASS back-bar and room-click exit routes');
   console.log('PASS disposal, delayed snapshot cancellation, scene reinitialization, and monitor reentry');
-  for (const url of ['?desk=classic', '?lamp=lamp']) {
-    await page.goto(`http://127.0.0.1:4321/${url}`);
-    await page.waitForFunction(() => window.__stillReady?.());
-    assert.deepEqual(errors, []);
-  }
-  console.log('PASS development-only classic desk and cone lamp');
 } finally { await browser.close(); }

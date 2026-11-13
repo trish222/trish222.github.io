@@ -1,10 +1,9 @@
 import * as THREE from 'three';
-import { VOID } from '../room.js';
 
-export function installGeometryDiagnostics({ scene, camera, renderer, composer, lights, render }) {
+export function installGeometryDiagnostics({ scene, camera, renderer, composer, background, render }) {
   window.__fit = (...names) => {
     const box = new THREE.Box3();
-    for (const n of names.length ? names : ["desk", "computer"]) {
+    for (const n of names.length ? names : ["screen_plane"]) {
       const o = scene.getObjectByName(n);
       if (o) box.union(new THREE.Box3().setFromObject(o));
     }
@@ -20,55 +19,6 @@ export function installGeometryDiagnostics({ scene, camera, renderer, composer, 
           out.y1 = Math.max(out.y1, v.y);
         }
     return { world: [box.min.toArray(), box.max.toArray()], ndc: out };
-  };
-  window.__shadowfit = (...names) => {
-    const light = lights.moon;
-    const fwd = new THREE.Vector3()
-      .subVectors(light.target.position, light.position)
-      .normalize();
-    const right = new THREE.Vector3(0, 1, 0).cross(fwd).normalize();
-    const up = new THREE.Vector3().crossVectors(fwd, right).normalize();
-    const v = new THREE.Vector3();
-    const out = {};
-    let all = null;
-    for (const n of names.length
-      ? names
-      : ["room", "desk", "computer", "treehouse", "lamp"]) {
-      const o = scene.getObjectByName(n);
-      if (!o) continue;
-      const b = new THREE.Box3().setFromObject(o);
-      const r = { x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity, z0: Infinity, z1: -Infinity };
-      for (const x of [b.min.x, b.max.x])
-        for (const y of [b.min.y, b.max.y])
-          for (const z of [b.min.z, b.max.z]) {
-            v.set(x, y, z).sub(light.position);
-            const a = v.dot(right), c = v.dot(up), d = v.dot(fwd);
-            r.x0 = Math.min(r.x0, a); r.x1 = Math.max(r.x1, a);
-            r.y0 = Math.min(r.y0, c); r.y1 = Math.max(r.y1, c);
-            r.z0 = Math.min(r.z0, d); r.z1 = Math.max(r.z1, d);
-          }
-      out[n] = r;
-      all = all
-        ? {
-            x0: Math.min(all.x0, r.x0), x1: Math.max(all.x1, r.x1),
-            y0: Math.min(all.y0, r.y0), y1: Math.max(all.y1, r.y1),
-            z0: Math.min(all.z0, r.z0), z1: Math.max(all.z1, r.z1),
-          }
-        : { ...r };
-    }
-    const c = light.shadow.camera;
-    return {
-      perObject: out,
-      union: all,
-      camera: { left: c.left, right: c.right, top: c.top, bottom: c.bottom, near: c.near, far: c.far },
-      /* World units a shadow texel covers, on each lateral axis. */
-      texel: [
-        Number(((c.right - c.left) / light.shadow.mapSize.x).toFixed(4)),
-        Number(((c.top - c.bottom) / light.shadow.mapSize.y).toFixed(4)),
-      ],
-      normalBias: light.shadow.normalBias,
-      bias: light.shadow.bias,
-    };
   };
   window.__pixel = (u, v) => {
     render();
@@ -93,17 +43,14 @@ export function installGeometryDiagnostics({ scene, camera, renderer, composer, 
     const h = gl.drawingBufferHeight;
     const buf = new Uint8Array(w * h * 4);
     gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-    const voidRgb = new THREE.Color(VOID);
+    const voidRgb = new THREE.Color(background);
     const vr = Math.round(voidRgb.r * 255);
     const vg = Math.round(voidRgb.g * 255);
     const vb = Math.round(voidRgb.b * 255);
     const lumas = [];
     for (let i = 0; i < buf.length; i += 4) {
       const r = buf[i], g = buf[i + 1], b = buf[i + 2];
-      /* Within a level or two of the backdrop, on every channel. The
-         fog resolves to exactly the void, so this also drops the far
-         corner of the diorama, which is correct — it is backdrop by
-         construction. */
+      /* Within a level or two of the backdrop, on every channel. */
       if (Math.abs(r - vr) <= 2 && Math.abs(g - vg) <= 2 && Math.abs(b - vb) <= 2) continue;
       lumas.push(0.2126 * r + 0.7152 * g + 0.0722 * b);
     }
@@ -144,7 +91,8 @@ export function installGeometryDiagnostics({ scene, camera, renderer, composer, 
     for (const child of hidden) child.visible = true;
     render();
     const got = [px[0], px[1], px[2]];
-    const want = [0x1c, 0x1a, 0x2a];
+    const bg = new THREE.Color(background);
+    const want = [bg.r, bg.g, bg.b].map((v) => Math.round(v * 255));
     const hex = (a) => "#" + a.map((v) => v.toString(16).padStart(2, "0")).join("");
     return {
       path: composer ? "composer" : "direct",
@@ -155,7 +103,6 @@ export function installGeometryDiagnostics({ scene, camera, renderer, composer, 
   };
 return () => {
   delete window.__fit;
-  delete window.__shadowfit;
   delete window.__pixel;
   delete window.__histogram;
   delete window.__voidcheck;
