@@ -42,7 +42,9 @@ Generated in P0 from [visual-plan.md](visual-plan.md). Work the first unchecked 
 
 ## P2 — Blender scene
 
-- [ ] **B1 (Trish):** approve the Blender MCP block-out previews matched to `cam_overview` against the primary refs. Done when: Trish signs off on the composition.
+- [x] **B1 (Trish):** approve the Blender MCP block-out previews matched to `cam_overview` against the primary refs. Done when: Trish signs off on the composition.
+  - Note: block-out built and committed; scene in `art/scene.blend`, textures in `art/textures/`, budgets pass (5.19 MB / 2.96 MB, 45 draw calls). Known issue: overlay registration test fails until P4 reads `screen_plane`.
+- [ ] Restore normal and roughness maps in `art/scene.blend` (re-download from Poly Haven/Sketchfab) so the bake captures surface detail; strip them only in the export/assets pipeline so the GLB stays in budget. Done when: the bake shows surface detail and `npm run assets` still passes budgets.
 - [ ] Write `art/scripts/bake.py` (Blender 5.x, `blender -b art/scene.blend -P art/scripts/bake.py`): Smart-UV `UVMap_Light` atlases on `baked_*`, Cycles diffuse direct+indirect bakes at 2048 px with denoise, for lamp on and lamp off, saved to `art/bakes/`, then export `public/models/scene.glb` with custom properties. Done when: the script runs headless and prints a report of names that don't match the contract (empty).
 - [x] Assemble the scene via Blender MCP: source hero props (CRT, keyboard, lamp) from CC0/CC-BY, generate LEGO bricks in Python, light it (lamp key, cool window fill, screen emitter), and name everything per `docs/scene-contract.md`. Done when: `art/scene.blend` exists and the name report is clean.
   - Note: block-out at metre scale saved to `art/scene.blend`, with textures in `art/textures/`, credits in `art/credits.md` and a preview at `art/previews/blockout-cam_overview.png`. An in-Blender name check is clean; bake.py's report is still to come. `npm run assets` passes budgets (desktop 5.19 MB / 45 draws / 200 MB tex; mobile 2.96 MB / 45 / 80 MB). Known issue: `tests/interaction.mjs` overlay alignment fails by 39 px until P4 drops `screenSpec.js`.
