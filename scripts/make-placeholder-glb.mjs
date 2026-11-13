@@ -83,5 +83,6 @@ header.writeUInt32LE(0x46546c67, 0); header.writeUInt32LE(2, 4);
 header.writeUInt32LE(12 + 8 + json.length + 8 + bin.length, 8);
 const chunkHead = (len, type) => { const h = Buffer.alloc(8); h.writeUInt32LE(len, 0); h.writeUInt32LE(type, 4); return h; };
 await mkdir('public/models', { recursive: true });
-await writeFile('public/models/scene.glb', Buffer.concat([header, chunkHead(json.length, 0x4e4f534a), json, chunkHead(bin.length, 0x004e4942), bin]));
-console.log('Wrote public/models/scene.glb');
+const glb = Buffer.concat([header, chunkHead(json.length, 0x4e4f534a), json, chunkHead(bin.length, 0x004e4942), bin]);
+for (const name of ['scene.glb', 'scene-mobile.glb']) await writeFile(`public/models/${name}`, glb);
+console.log('Wrote public/models/scene.glb and scene-mobile.glb');

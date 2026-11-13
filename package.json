@@ -21,9 +21,14 @@
     "review": "node scripts/review/capture.mjs",
     "test": "node tests/projection.mjs && node tests/interaction.mjs && node tests/startup.mjs && node tests/responsive.mjs",
     "test:responsive": "node tests/responsive.mjs",
-    "test:lifecycle": "node tests/lifecycle.mjs"
+    "test:lifecycle": "node tests/lifecycle.mjs",
+    "assets": "node scripts/assets.mjs",
+    "check:assets": "node scripts/check-assets.js"
   },
   "devDependencies": {
+    "@gltf-transform/cli": "^4.5.1",
+    "@gltf-transform/core": "^4.5.1",
+    "@gltf-transform/extensions": "^4.5.1",
     "@tailwindcss/vite": "^4.1.18",
     "98.css": "^0.1.21",
     "playwright": "^1.63.0",

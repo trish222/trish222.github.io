@@ -49,9 +49,12 @@ Generated in P0 from [visual-plan.md](visual-plan.md). Work the first unchecked 
 
 ## P3 — Asset pipeline
 
-- [ ] Add `npm run assets`: `@gltf-transform/cli` meshopt, textures resized to 2048 (desktop) and 1024 (mobile), KTX2 (UASTC lightmaps, ETC1S albedo), outputs `scene.glb` and `scene-mobile.glb`. Done when: it is reproducible from `art/` output.
-- [ ] Add `scripts/check-assets.js` that fails when any budget in visual-plan is exceeded, and wire it into `check:build`. Done when: it passes on the current assets and fails on an over-budget test file.
-- [ ] Verify KTX2 decoding with a real KTX2 texture. Confirm whether KTX2Loader needs setTranscoderPath with basis_transcoder.js/.wasm served from public/ (copied from three/examples/jsm/libs/basis/); fix if so. Done when a KTX2 texture loads in the browser with no console errors.
+- [x] Add `npm run assets`: `@gltf-transform/cli` meshopt, textures resized to 2048 (desktop) and 1024 (mobile), KTX2 (UASTC lightmaps, ETC1S albedo), outputs `scene.glb` and `scene-mobile.glb`. Done when: it is reproducible from `art/` output.
+  - Done: `scripts/assets.mjs` reads `art/export/scene-raw.glb` and writes `public/models/scene.glb` (2048) and `scene-mobile.glb` (1024): resize, UASTC for `lightmap*`, ETC1S for the rest, meshopt. Verified with a synthetic raw GLB only; the real export arrives with P2. Missing input or `toktx` exits with a clear message.
+- [x] Add `scripts/check-assets.js` that fails when any budget in visual-plan is exceeded, and wire it into `check:build`. Done when: it passes on the current assets and fails on an over-budget test file.
+  - Done: budgets are parsed from the visual-plan table. Download size, draw calls and worst-case texture memory are checked per GLB; it passes on the placeholders and fails on a 341 MB-texture test file. The placeholder script now also writes `scene-mobile.glb`. Download is the GLB only, not the whole first-frame load.
+- [x] Verify KTX2 decoding with a real KTX2 texture. Confirm whether KTX2Loader needs setTranscoderPath with basis_transcoder.js/.wasm served from public/ (copied from three/examples/jsm/libs/basis/); fix if so. Done when a KTX2 texture loads in the browser with no console errors.
+  - Done: `KTX2Loader` needed `setTranscoderPath`. `public/basis/` holds the transcoder and its Apache-2.0 `LICENSE.txt`, and `loadScene.js` points at it. Verified in Chromium: UASTC and ETC1S textures transcode with no loader errors.
 
 ## P4 — Integration
 
