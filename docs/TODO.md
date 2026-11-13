@@ -98,6 +98,15 @@ Generated in P0 from [visual-plan.md](visual-plan.md). Work the first unchecked 
 - [ ] Add OG/Twitter meta with a screenshot. Done when: the meta validates.
 - [ ] Run every check, then open a PR from `theme/crt-baked` to `main` with a summary and before/after screenshots (only when Trish asks). Done when: all acceptance criteria in visual-plan are ticked and the Pages deploy succeeds.
 
+## Step 6 progress (scene finish, paused 2026-11-13)
+
+Saved in `art/scene.blend`; nothing exported to `public/`, nothing committed.
+
+- Done: bezel rim, `screen_glass` and `crt_glow` refit to `screen_plane` (plane unchanged), so the pale band is gone in Blender. Papers are now paper-thin; floppies restacked on them with `click_project_*` moved to match. Project labels on the floppies (`baked_floppy_labels`, built by `art/scripts/floppy_labels.py`; titles are drawn from the resume, so Trish should confirm them). Pencils and pen in the cup (joined into `baked_pencilcup`). Mug (`baked_mug`, CC BY, credited). Sheer curtains (`baked_curtains`). Treehouse rebuilt with a green studded baseplate (`art/scripts/treehouse.py`, which also refits `click_treehouse`). Noise-driven roughness and tint wear on CRT plastics, desk, brass, LEGO, mug, floor, wall, lamp and stationery. `click_*` proxies hidden from renders.
+- Lighting (in progress): Cycles on the M1 GPU. Lamp key is a 2700 K area light, moved under the shade (the shade is a closed solid that blocked it), at 6 W. Lamp bulb uses a 2700 K blackbody. The CRT emits Win98 teal. The window fill is cool at 4 W. The world HDRI stays at 0.04. `window_view` now projects the Shanghai Bund HDRI as an emissive night-city photo (strength 0.22, saturation 0.7; Blender only, not exportable).
+- Left: look-tuning. The city is still too bright against the room, the lamp pool is slightly hot on the notepad and cup, the nameplate text is hard to read, and the treehouse/right side is very dark. After that, the final 1920×1080 Cycles render to `art/previews/`, and the side-by-side with `docs/refs/`. Latest 960×540 test renders are in the session scratchpad only.
+- Half-finished or needs follow-up: the pale-band fix and the new objects reach the site only after export (bake.py / P2). Sheer curtains need an alpha-blended material on the web side. The Verbatim "V" is still embossed on the floppy shutters.
+
 ## Backlog
 
 - split src/scene.js (1058 lines; capped in `scripts/check-size.mjs`)

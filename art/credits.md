@@ -10,6 +10,7 @@ Every third-party asset in `art/scene.blend` and `public/models/scene*.glb`. CC 
 | Desk lamp | Banker's lamp (`baked_lamp`) | 7ASSAN | https://sketchfab.com/models/b9458e04d30e4b6284d46d35880a9b95 |
 | Verbatim Floppy Disk 3.5" | Project floppies (`baked_floppies`) | Timescade | https://sketchfab.com/models/f055312452cb4b5f87898a9beb312cbe |
 | Ice Coffee | Iced coffee (`baked_icedcoffee_drink`, `baked_icedcoffee_glass`) | ponchoguy | https://sketchfab.com/models/fd2e9142168d4f31ba99bf4d9b1165b4 |
+| Coffee Mug (School Project) | Mug (`baked_mug`) | FrenchBaguette | https://sketchfab.com/models/5f5ccee1514c440887c072fae8e0d699 |
 
 Modifications: decimated, rescaled, re-oriented, materials simplified (normal and roughness maps removed); the floppies are joined into one mesh. Ice Coffee was decimated from 406k to about 6k faces: coffee, ice and straw are one mesh with vertex colours, the glass keeps a generated condensation mask instead of the scanned water-drop meshes.
 
@@ -23,8 +24,14 @@ Modifications: decimated, rescaled, re-oriented, materials simplified (normal an
 | Book Encyclopedia Set 01 | Books (`baked_books`) | John Malcolm | https://polyhaven.com/a/book_encyclopedia_set_01 |
 | Office Notepads | Papers and legal pad | Ulan Cabanilla | https://polyhaven.com/a/office_notepads |
 | Stationery Supplies | Pencil cup, pencil, pen | Mateusz Sadek | https://polyhaven.com/a/stationery_supplies |
-| Shanghai Bund (HDRI) | Blender world light only; not exported | Greg Zaal | https://polyhaven.com/a/shanghai_bund |
+| Shanghai Bund (HDRI) | Blender world light and the `window_view` night city in previews; not exported | Greg Zaal | https://polyhaven.com/a/shanghai_bund |
+
+## SIL Open Font License 1.1
+
+| Asset | Used as | Author | Source |
+| --- | --- | --- | --- |
+| Departure Mono | Floppy label text (`art/textures/floppy_labels.png`, via `art/scripts/floppy_labels.py`) | Helena Zhang | https://departuremono.com |
 
 ## Made in Blender Python (no third-party license)
 
-Room shell (wall, floor, window frame, sill, glass, `window_view`), `screen_plane`, `crt_glow`, `lamp_bulb`, the lamp pull chain, the nameplate, the LEGO-style treehouse, and all `click_*` proxies.
+Room shell (wall, floor, window frame, sill, glass, `window_view`), sheer curtains (`baked_curtains`), floppy label quads, `screen_plane`, `crt_glow`, `lamp_bulb`, the lamp pull chain, the nameplate, the LEGO-style treehouse (`art/scripts/treehouse.py`), and all `click_*` proxies.
