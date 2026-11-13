@@ -60,11 +60,13 @@ Generated in P0 from [visual-plan.md](visual-plan.md). Work the first unchecked 
 - [ ] Hook the `click_*` proxies into `interaction.js` through the nearest-hit picker. Done when: the CRT, lamp chain, projects, nameplate and treehouse each trigger exactly one action.
 - [ ] Re-anchor `overlay/projection.js` to the four corners of `screen_plane`, and read camera poses from the `cam_*` Empties; delete `scene/screenSpec.js`. Done when: no hard-coded screen or camera constants remain.
 - [ ] Playwright tests for the lamp toggle, CRT zoom, and projection alignment within 2 px. Done when: `npm test` includes them and they pass.
+- [ ] `cam_screen` frames `screen_plane` straight-on: camera on the plane's normal through its center, no side angle. The zoomed view must not inherit the overview's yaw or parallax. Done when: the zoomed screen edges are parallel to the viewport edges.
 
 ## P5 — CRT and window
 
 - [ ] Create `src/scene/crtMaterial.js`: the snapshot texture with barrel distortion, scanlines, RGB mask, vignette, bloom-friendly brightness and subtle flicker. When zoomed in, hide it and show the live DOM with a CSS scanline/vignette overlay. Done when: the zoom transition has no visible pop.
 - [ ] `window_view` plays the muted looping `public/media/window.mp4` with a poster fallback, plus a rain-droplets-on-glass shader. Done when: it plays, and with reduced motion it shows only the poster/static frame.
+- [ ] Convex CRT look when zoomed in, per `docs/refs/design/ref-curved-screen.png`: content bulges, edges curve inward, corners rounded. Propose options before implementing; text must stay crisp and clicks must land where they appear.
 
 ## P6 — Look-dev
 
