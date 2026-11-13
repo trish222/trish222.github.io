@@ -67,6 +67,7 @@ Generated in P0 from [visual-plan.md](visual-plan.md). Work the first unchecked 
 - [ ] Re-anchor `overlay/projection.js` to the four corners of `screen_plane`, and read camera poses from the `cam_*` Empties; delete `scene/screenSpec.js`. Done when: no hard-coded screen or camera constants remain.
 - [ ] Playwright tests for the lamp toggle, CRT zoom, and projection alignment within 2 px. Done when: `npm test` includes them and they pass.
 - [ ] `cam_screen` frames `screen_plane` straight-on: camera on the plane's normal through its center, no side angle. The zoomed view must not inherit the overview's yaw or parallax. Done when: the zoomed screen edges are parallel to the viewport edges.
+- [ ] Mouse parallax tuned for the new `cam_overview`: pointer up moves the view down, pointer right moves the view left (inverse, like looking around). Subtle range, smoothed, disabled in `cam_screen` and with `prefers-reduced-motion`; on touch devices use gentle device tilt or nothing. Done when it feels like leaning around the desk.
 
 ## P5 — CRT and window
 
@@ -101,7 +102,8 @@ Generated in P0 from [visual-plan.md](visual-plan.md). Work the first unchecked 
 - `public/textures/desk-wood-*` are orphaned since the procedural desk was deleted; remove them or reuse in P2/P4.
 - `src/style.css` comments reference `VOID` in `room.js` and `SCREEN_W/H` in `computer.js`; fix them when P1 touches those values.
 - `window_view` is a flat teal placeholder; needs a real night-city photo/video (P5).
-- Treehouse canopy is a round blob; flatten and tier it like `docs/refs/design/cherryblossom.png`.
-- Plaster wall reads grey; warm it toward the palette.
+- Treehouse canopy is a round blob; flatten and tier it like `docs/refs/design/cherryblossom.png`. (Rebuilt tiered in B1 round 2; awaiting Trish's review.)
+- Plaster wall reads grey; warm it toward the palette. (Tinted deep warm brown in B1 round 2; awaiting review.)
 - Floppy labels show the Verbatim brand; replace with project labels (P8).
 - `docs/architecture.md` still describes procedural models and the frozen shadow map; update its scene/rendering sections after P4.
+- Sheer curtains (Step 6), fallback regular curtains or blinds.

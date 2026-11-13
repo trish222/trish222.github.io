@@ -9,9 +9,9 @@ Every third-party asset in `art/scene.blend` and `public/models/scene*.glb`. CC 
 | old computer | CRT monitor, case, keyboard, keycaps, mouse, cables (`baked_crt_*`) | ivsn | https://sketchfab.com/models/8183647717084f008969c22b7fcd1b8a |
 | Desk lamp | Banker's lamp (`baked_lamp`) | 7ASSAN | https://sketchfab.com/models/b9458e04d30e4b6284d46d35880a9b95 |
 | Verbatim Floppy Disk 3.5" | Project floppies (`baked_floppies`) | Timescade | https://sketchfab.com/models/f055312452cb4b5f87898a9beb312cbe |
-| Coffee Mug | Mug (`baked_mug`) | scaniverse | https://sketchfab.com/models/386912b5eead4b87a0983d845b14c215 |
+| Ice Coffee | Iced coffee (`baked_icedcoffee_drink`, `baked_icedcoffee_glass`) | ponchoguy | https://sketchfab.com/models/fd2e9142168d4f31ba99bf4d9b1165b4 |
 
-Modifications: decimated, rescaled, re-oriented, materials simplified (normal and roughness maps removed); the floppies are joined into one mesh.
+Modifications: decimated, rescaled, re-oriented, materials simplified (normal and roughness maps removed); the floppies are joined into one mesh. Ice Coffee was decimated from 406k to about 6k faces: coffee, ice and straw are one mesh with vertex colours, the glass keeps a generated condensation mask instead of the scanned water-drop meshes.
 
 ## CC0 (Poly Haven, no attribution required)
 
