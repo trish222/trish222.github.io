@@ -1,10 +1,10 @@
 import * as THREE from "three";
 
 export function createParallax() {
-const parallaxStrengthX = 0.36;
-const parallaxStrengthY = 0.30;
+const parallaxStrengthX = 0.04;
+const parallaxStrengthY = 0.025;
 const parallaxSmoothness = 0.09;
-const maxParallaxOffset = 0.42;
+const maxParallaxOffset = 0.045;
 const parallaxPointer = new THREE.Vector2();
 const parallaxOffset = new THREE.Vector2();
 const parallaxPosition = new THREE.Vector3();
@@ -25,8 +25,8 @@ function tick(dt, active) {
   const k = 1 - Math.exp(-dt / parallaxSmoothness);
   parallaxOffset.x += (targetX - parallaxOffset.x) * k;
   parallaxOffset.y += (targetY - parallaxOffset.y) * k;
-  if (Math.abs(parallaxOffset.x) < 0.00001) parallaxOffset.x = 0;
-  if (Math.abs(parallaxOffset.y) < 0.00001) parallaxOffset.y = 0;
+  if (Math.abs(parallaxOffset.x) < 0.000001) parallaxOffset.x = 0;
+  if (Math.abs(parallaxOffset.y) < 0.000001) parallaxOffset.y = 0;
 }
 
 function begin(camera, target, active) {

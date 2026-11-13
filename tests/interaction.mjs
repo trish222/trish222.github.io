@@ -138,19 +138,19 @@ try {
     await page.waitForTimeout(180);
     const response = await page.evaluate(() => window.__parallaxSample);
     if (!touch && reducedMotion !== 'reduce') {
-      assert.ok(response.x < -.18 && response.y < -.15, 'parallax responds visibly within 180ms');
+      assert.ok(response.x < -.018 && response.y < -.011, 'parallax responds visibly within 180ms');
     }
     await page.waitForTimeout(500);
     const parallax = await page.evaluate(() => window.__parallaxSample);
     if (touch || reducedMotion === 'reduce') {
-      assert.ok(parallax.max < .0001, 'touch and reduced motion disable passive camera movement');
+      assert.ok(parallax.max < .000001, 'touch and reduced motion disable passive camera movement');
     } else {
-      assert.ok(parallax.x < -.27 && parallax.y < -.22, 'upper-right pointer produces stronger inverted movement on both axes');
-      assert.ok(parallax.max <= .42001, 'diagonal movement stays inside the radial cap');
+      assert.ok(parallax.x < -.029 && parallax.y < -.018, 'upper-right pointer produces stronger inverted movement on both axes');
+      assert.ok(parallax.max <= .04501, 'diagonal movement stays inside the radial cap');
       await page.mouse.move(width - 1, 1);
       await page.waitForTimeout(650);
       const corner = await page.evaluate(() => window.__parallaxSample);
-      assert.ok(corner.max > .40 && corner.max <= .42001, 'viewport corner reaches the maximum offset without exceeding it');
+      assert.ok(corner.max > .043 && corner.max <= .04501, 'viewport corner reaches the maximum offset without exceeding it');
       await page.evaluate(() => { window.__parallaxSample.max = 0; });
       await page.mouse.move(width * .1, height * .9);
       await page.waitForTimeout(1200);
@@ -158,7 +158,7 @@ try {
       await page.evaluate(() => { window.__parallaxSample.max = 0; });
       await page.waitForTimeout(100);
       const reversed = await page.evaluate(() => window.__parallaxSample);
-      assert.ok(reversed.x > .27 && reversed.y > .22, 'lower-left pointer produces stronger rightward and upward movement');
+      assert.ok(reversed.x > .029 && reversed.y > .018, 'lower-left pointer produces stronger rightward and upward movement');
     }
     const neutral = await page.evaluate(() => window.__camera.position.toArray());
     assert.ok(neutral.every((v, i) => Math.abs(v - home[i]) < .0001), 'parallax never alters the permanent camera pose');
@@ -166,7 +166,7 @@ try {
     await page.waitForTimeout(1500);
     await page.evaluate(() => { window.__parallaxSample.max = 0; });
     await page.waitForTimeout(100);
-    assert.ok(await page.evaluate(() => window.__parallaxSample.max) < .001, 'pointer centering smoothly restores neutral');
+    assert.ok(await page.evaluate(() => window.__parallaxSample.max) < .0001, 'pointer centering smoothly restores neutral');
     await page.evaluate(() => window.__restoreCameraSample());
     if (reducedMotion !== 'reduce') {
       // Interrupt a return with a second grab, then with a programmed flight.

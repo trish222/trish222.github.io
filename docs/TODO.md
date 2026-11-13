@@ -71,8 +71,8 @@ Generated in P0 from [visual-plan.md](visual-plan.md). Work the first unchecked 
   - Partial: `tests/alignment.mjs` (in `npm test`) clicks `click_crt` and checks all four overlay corners against `screen_plane` at the overview, on arrival and after exit: worst error 0.28 px at 1440×900 and 390×844. The lamp crossfade test waits for the lightmap material.
 - [x] `cam_screen` frames `screen_plane` straight-on: camera on the plane's normal through its center, no side angle. The zoomed view must not inherit the overview's yaw or parallax. Done when: the zoomed screen edges are parallel to the viewport edges.
   - Note: arrival lands on `cam_screen`'s axis through the plane centre; `alignment.mjs` measures 0.000 px edge skew.
-- [ ] Mouse parallax tuned for the new `cam_overview`: pointer up moves the view down, pointer right moves the view left (inverse, like looking around). Subtle range, smoothed, disabled in `cam_screen` and with `prefers-reduced-motion`; on touch devices use gentle device tilt or nothing. Done when it feels like leaning around the desk.
-  - Known issue: `parallax.js` strengths are still legacy world units, now metres, so the corner offset is 0.42 m (far too strong). `tests/interaction.mjs` thresholds encode those values; retune both together.
+- [x] Mouse parallax tuned for the new `cam_overview`: pointer up moves the view down, pointer right moves the view left (inverse, like looking around). Subtle range, smoothed, disabled in `cam_screen` and with `prefers-reduced-motion`; on touch devices use gentle device tilt or nothing. Done when it feels like leaning around the desk.
+  - Note: strengths now metres (0.04 x / 0.025 y, 4.5 cm radial cap, 0.09 s smoothing); the camera keeps looking at the target, so the shift also rotates the view slightly. Gating (cam_screen, reduced motion, touch) was already in `scene.js`. `tests/interaction.mjs` thresholds retuned; `npm test` passes (19). No feel check by eye yet.
 
 ## P5 — CRT and window
 
