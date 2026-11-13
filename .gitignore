@@ -35,3 +35,7 @@ design-references
 /_*.mjs
 /_*.py
 /_*.png
+
+# Blender raw export and autosave backups; public/models holds the shipped GLBs.
+art/export/
+*.blend1

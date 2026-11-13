@@ -44,7 +44,8 @@ Generated in P0 from [visual-plan.md](visual-plan.md). Work the first unchecked 
 
 - [ ] **B1 (Trish):** approve the Blender MCP block-out previews matched to `cam_overview` against the primary refs. Done when: Trish signs off on the composition.
 - [ ] Write `art/scripts/bake.py` (Blender 5.x, `blender -b art/scene.blend -P art/scripts/bake.py`): Smart-UV `UVMap_Light` atlases on `baked_*`, Cycles diffuse direct+indirect bakes at 2048 px with denoise, for lamp on and lamp off, saved to `art/bakes/`, then export `public/models/scene.glb` with custom properties. Done when: the script runs headless and prints a report of names that don't match the contract (empty).
-- [ ] Assemble the scene via Blender MCP: source hero props (CRT, keyboard, lamp) from CC0/CC-BY, generate LEGO bricks in Python, light it (lamp key, cool window fill, screen emitter), and name everything per `docs/scene-contract.md`. Done when: `art/scene.blend` exists and the name report is clean.
+- [x] Assemble the scene via Blender MCP: source hero props (CRT, keyboard, lamp) from CC0/CC-BY, generate LEGO bricks in Python, light it (lamp key, cool window fill, screen emitter), and name everything per `docs/scene-contract.md`. Done when: `art/scene.blend` exists and the name report is clean.
+  - Note: block-out at metre scale saved to `art/scene.blend`, with textures in `art/textures/`, credits in `art/credits.md` and a preview at `art/previews/blockout-cam_overview.png`. An in-Blender name check is clean; bake.py's report is still to come. `npm run assets` passes budgets (desktop 5.19 MB / 45 draws / 200 MB tex; mobile 2.96 MB / 45 / 80 MB). Known issue: `tests/interaction.mjs` overlay alignment fails by 39 px until P4 drops `screenSpec.js`.
 - [ ] **B2 (Trish):** approve the baked render previews (lamp on and off). Done when: Trish signs off; `public/models/scene.glb` is exported.
 
 ## P3 — Asset pipeline
@@ -97,4 +98,8 @@ Generated in P0 from [visual-plan.md](visual-plan.md). Work the first unchecked 
 - split src/style.css (1628 lines; capped)
 - `public/textures/desk-wood-*` are orphaned since the procedural desk was deleted; remove them or reuse in P2/P4.
 - `src/style.css` comments reference `VOID` in `room.js` and `SCREEN_W/H` in `computer.js`; fix them when P1 touches those values.
+- `window_view` is a flat teal placeholder; needs a real night-city photo/video (P5).
+- Treehouse canopy is a round blob; flatten and tier it like `docs/refs/design/cherryblossom.png`.
+- Plaster wall reads grey; warm it toward the palette.
+- Floppy labels show the Verbatim brand; replace with project labels (P8).
 - `docs/architecture.md` still describes procedural models and the frozen shadow map; update its scene/rendering sections after P4.
