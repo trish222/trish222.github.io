@@ -31,7 +31,7 @@ try {
   await page.mouse.click(4, 4);
   await page.waitForFunction(() => document.body.classList.contains('orbit-live'));
   await page.evaluate(() => {
-    for (const name of ['__cam','__fov','__tonemap','__lamp','__zoom','__flyFrom','__fit','__pixel','__histogram']) window[name]();
+    for (const name of ['__cam','__fov','__tonemap','__lamp','__flyFrom','__fit','__pixel','__histogram']) window[name]();
     window.__flyTo(.5);
     window.__flyTo(1);
     window.__diveTo(.5);

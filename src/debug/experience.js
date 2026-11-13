@@ -85,14 +85,12 @@ export function installExperienceDiagnostics(context) {
     dist: context.camera.position.distanceTo(context.flyTarget),
     eyeY: context.camera.position.y,
     frustum: 2 * context.camera.position.distanceTo(context.flyTarget) * context.tanHalfFov,
-    homeDist: context.camDist(),
-    homeFrustum: context.frustumFor(),
   });
   /* Switches the field of view and re-derives everything downstream of
      it — see setFov. No argument just reports. */
   window.__fov = (deg) => {
     if (deg !== undefined) context.setFov(deg);
-    return { fov: context.fov, dist: context.camDist(), frustum: context.frustumFor() };
+    return { fov: context.fov };
   };
   /* Switches the tone-mapping operator on a live page and re-derives
      the void's pre-image with it, which is what let AgX and ACES be
@@ -141,12 +139,6 @@ export function installExperienceDiagnostics(context) {
     const r = context.canvasEl?.getBoundingClientRect();
     if (!r) return null;
     return context.pickTarget({ clientX: r.left + x, clientY: r.top + y });
-  };
-  /* Scales the establishing shot and re-derives everything downstream
-     of it — see setHomeZoom. No argument just reports. */
-  window.__zoom = (f) => {
-    if (f !== undefined) context.setHomeZoom(f);
-    return { zoom: context.homeZoom, dist: context.camDist(), frustum: context.frustumFor() };
   };
   /* "current" starts the flight from wherever the camera has been
      swung to; "home" walks it back first. See FLY_FROM. */

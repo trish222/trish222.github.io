@@ -19,7 +19,7 @@
     "check:source": "node scripts/check-source.mjs",
     "check:size": "node scripts/check-size.mjs",
     "review": "node scripts/review/capture.mjs",
-    "test": "node tests/projection.mjs && node tests/interaction.mjs && node tests/startup.mjs && node tests/responsive.mjs",
+    "test": "node tests/projection.mjs && node tests/interaction.mjs && node tests/alignment.mjs && node tests/startup.mjs && node tests/responsive.mjs",
     "test:responsive": "node tests/responsive.mjs",
     "test:lifecycle": "node tests/lifecycle.mjs",
     "assets": "node scripts/assets.mjs",

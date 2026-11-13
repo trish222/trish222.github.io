@@ -10,7 +10,7 @@ npm run check:build
 npm run preview   # http://127.0.0.1:4320
 ```
 
-With the production preview running, `npm test` checks screen registration, camera/parallax, monitor entry and seated exit, login, desktop windows, lamp controls, responsive handover, and the no-WebGL fallback. Chromium must be installed for Playwright. `npm run test:lifecycle` uses the development server at port 4321 to check disposal and reinitialization. `npm run check:source` checks local imports and cycles. `npm run check:size` caps `src/` files at 250 lines (listed exceptions can only shrink); `check:build` runs it. `node scripts/make-placeholder-glb.mjs` regenerates the placeholder `public/models/scene.glb`.
+With the production preview running, `npm test` checks screen registration, camera/parallax, monitor entry and seated exit, login, desktop windows, lamp controls, responsive handover, and the no-WebGL fallback. Chromium must be installed for Playwright. `npm run test:lifecycle` uses the development server at port 4321 to check disposal and reinitialization. `npm run check:source` checks local imports and cycles. `npm run check:size` caps `src/` files at 250 lines (listed exceptions can only shrink); `check:build` runs it.
 
 ```text
 src/main.js                application entry and desktop bootstrap

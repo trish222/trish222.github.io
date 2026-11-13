@@ -62,12 +62,17 @@ Generated in P0 from [visual-plan.md](visual-plan.md). Work the first unchecked 
 ## P4 — Integration
 
 - [ ] In `createScene.js`, give `baked_*` meshes a material that multiplies albedo by a lightmap, with a `lampMix` uniform that crossfades lampOn/lampOff. Done when: the lamp toggle crossfades in under 400 ms.
+  - Interim: `baked_*` (and `screen_plane`) use flat `MeshBasicMaterial` with the GLB's map, colour, vertex colours and alpha until bake.py ships lightmaps.
 - [ ] Keep metal and glass on MeshStandardMaterial with a small Poly Haven HDRI. Done when: brass and glass glint in the overview.
 - [ ] Hook the `click_*` proxies into `interaction.js` through the nearest-hit picker. Done when: the CRT, lamp chain, projects, nameplate and treehouse each trigger exactly one action.
-- [ ] Re-anchor `overlay/projection.js` to the four corners of `screen_plane`, and read camera poses from the `cam_*` Empties; delete `scene/screenSpec.js`. Done when: no hard-coded screen or camera constants remain.
+- [x] Re-anchor `overlay/projection.js` to the four corners of `screen_plane`, and read camera poses from the `cam_*` Empties; delete `scene/screenSpec.js`. Done when: no hard-coded screen or camera constants remain.
+  - Note: corners come from the plane's UV corners and are measured in world space (meshopt quantization scales the node); no overscan inset. The rig flies from `cam_overview`/`cam_mobile` (GLB FOV) to `cam_screen`'s axis. `screenSpec.js`, `make-placeholder-glb.mjs`, `__zoom` and the legacy frustum knobs are deleted. Name check: only `window_glass` was off-contract; renamed to `baked_window_glass` in Blender and re-exported.
 - [ ] Playwright tests for the lamp toggle, CRT zoom, and projection alignment within 2 px. Done when: `npm test` includes them and they pass.
-- [ ] `cam_screen` frames `screen_plane` straight-on: camera on the plane's normal through its center, no side angle. The zoomed view must not inherit the overview's yaw or parallax. Done when: the zoomed screen edges are parallel to the viewport edges.
+  - Partial: `tests/alignment.mjs` (in `npm test`) clicks `click_crt` and checks all four overlay corners against `screen_plane` at the overview, on arrival and after exit: worst error 0.28 px at 1440×900 and 390×844. The lamp crossfade test waits for the lightmap material.
+- [x] `cam_screen` frames `screen_plane` straight-on: camera on the plane's normal through its center, no side angle. The zoomed view must not inherit the overview's yaw or parallax. Done when: the zoomed screen edges are parallel to the viewport edges.
+  - Note: arrival lands on `cam_screen`'s axis through the plane centre; `alignment.mjs` measures 0.000 px edge skew.
 - [ ] Mouse parallax tuned for the new `cam_overview`: pointer up moves the view down, pointer right moves the view left (inverse, like looking around). Subtle range, smoothed, disabled in `cam_screen` and with `prefers-reduced-motion`; on touch devices use gentle device tilt or nothing. Done when it feels like leaning around the desk.
+  - Known issue: `parallax.js` strengths are still legacy world units, now metres, so the corner offset is 0.42 m (far too strong). `tests/interaction.mjs` thresholds encode those values; retune both together.
 
 ## P5 — CRT and window
 
@@ -107,3 +112,6 @@ Generated in P0 from [visual-plan.md](visual-plan.md). Work the first unchecked 
 - Floppy labels show the Verbatim brand; replace with project labels (P8).
 - `docs/architecture.md` still describes procedural models and the frozen shadow map; update its scene/rendering sections after P4.
 - Sheer curtains (Step 6), fallback regular curtains or blinds.
+- `screen_glass`/`crt_glow` show a pale band above and below `screen_plane` at arrival; resize the glass opening or the plane in Blender so the live DOM fills the tube.
+- `art/previews/blockout-cam_overview.png` predates B1 round 2; re-render it.
+- `src/style.css` comments still cite `screenSpec.js`, `SCREEN_W/H` and the overscan inset; update them with the CSS split.

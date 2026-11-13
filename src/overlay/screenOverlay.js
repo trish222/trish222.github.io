@@ -13,8 +13,8 @@ export function createScreenProjection() {
     [0, 0],
   ];
 
-  function projectCorner(surface, camera, x, y, width, height, out) {
-    screenCorner.set(x, y, 0).applyMatrix4(surface.mesh.matrixWorld);
+  function projectCorner(surface, camera, corner, width, height, out) {
+    screenCorner.copy(corner).applyMatrix4(surface.mesh.matrixWorld);
     /* View-space depth, before the projection divides by it. */
     cornerView.copy(screenCorner).applyMatrix4(camera.matrixWorldInverse);
     if (-cornerView.z <= camera.near) return false;
@@ -24,26 +24,17 @@ export function createScreenProjection() {
     return true;
   }
 
-  const screenNormal = new THREE.Vector3();
   const viewDir = new THREE.Vector3();
 
   function facing(surface, camera, target) {
-    screenNormal.set(0, 0, 1).transformDirection(surface.mesh.matrixWorld);
     viewDir.copy(target).sub(camera.position).normalize();
-    return -screenNormal.dot(viewDir);
+    return -surface.normal.dot(viewDir);
   }
-
 
   return {
     facing,
     project(surface, camera, width, height, boxWidth, boxHeight) {
-      const hw = surface.width * (1 - 2 * surface.overscan) / 2;
-      const hh = surface.height * (1 - 2 * surface.overscan) / 2;
-      const front =
-        projectCorner(surface, camera, -hw, hh, width, height, QUAD[0]) &&
-        projectCorner(surface, camera, hw, hh, width, height, QUAD[1]) &&
-        projectCorner(surface, camera, hw, -hh, width, height, QUAD[2]) &&
-        projectCorner(surface, camera, -hw, -hh, width, height, QUAD[3]);
+      const front = surface.corners.every((corner, i) => projectCorner(surface, camera, corner, width, height, QUAD[i]));
       const transform = front ? quadTransform(QUAD, boxWidth, boxHeight) : null;
       return { transform, scale: Math.hypot(QUAD[1][0] - QUAD[0][0], QUAD[1][1] - QUAD[0][1]) / boxWidth || 1 };
     },

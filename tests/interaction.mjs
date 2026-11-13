@@ -1,6 +1,16 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
+import { registration as screenRegistration } from './screenRegistration.mjs';
 
+// The camera sits exactly on the GLB's opening camera and looks along it.
+const atOpeningPose = () => {
+  const name = innerWidth <= 760 ? 'cam_mobile' : 'cam_overview';
+  const cam = window.__scene.getObjectByName(name);
+  const camera = window.__camera;
+  const forward = camera.position.clone().set(0, 0, -1).transformDirection(cam.matrixWorld);
+  const looking = camera.getWorldDirection(camera.position.clone());
+  return camera.position.distanceTo(cam.getWorldPosition(camera.position.clone())) < 1e-4 && looking.angleTo(forward) < 1e-4;
+};
 const url = process.argv[2] || 'http://127.0.0.1:4320/?diagnostics=1';
 const browser = await chromium.launch({ channel: 'chromium' });
 try {
@@ -101,12 +111,7 @@ try {
     }
     await page.evaluate(() => window.__orbit(0, 0));
     const home = await page.evaluate(() => window.__camera.position.toArray());
-    assert.ok(Math.abs(await page.evaluate(() => window.__orbit().front) - 10) < .1, 'opening reveals the monitor casing at a gentle seated angle');
-    const elevation = await page.evaluate(() => {
-      const direction = window.__camera.getWorldDirection(window.__camera.position.clone());
-      return Math.asin(-direction.y) * 180 / Math.PI;
-    });
-    assert.ok(Math.abs(elevation - 12) < .1, 'opening looks gently downward toward the desk');
+    assert.ok(await page.evaluate(atOpeningPose), 'opening uses the cam_overview (cam_mobile) pose from scene.glb');
     await page.mouse.move(width / 2, height / 2);
     await page.waitForTimeout(1200);
     await page.evaluate(() => {
@@ -188,25 +193,9 @@ try {
     }
     await page.waitForFunction(() => document.body.classList.contains('screen-focused'));
     assert.equal(await page.evaluate(() => window.__orbit().enabled), false, 'flight owns the camera');
-    const registration = await page.evaluate(() => {
-      const screen = window.__scene.getObjectByName('screen_plane');
-      const positions = screen.geometry.attributes.position;
-      const flat = Array.from({ length: positions.count }, (_, i) => positions.getZ(i)).every(z => z === 0);
-      const canvas = document.querySelector('#scene').getBoundingClientRect();
-      const corners = [];
-      for (const x of [-positions.getX(0) * .93, positions.getX(0) * .93]) {
-        for (const y of [-positions.getY(0) * .93, positions.getY(0) * .93]) {
-          const p = screen.localToWorld(screen.position.clone().set(x, y, 0)).project(window.__camera);
-          corners.push([(p.x + 1) * canvas.width / 2 + canvas.left, (1 - p.y) * canvas.height / 2 + canvas.top]);
-        }
-      }
-      const bounds = document.querySelector('#screen').getBoundingClientRect();
-      const expected = [Math.min(...corners.map(p => p[0])), Math.min(...corners.map(p => p[1])),
-        Math.max(...corners.map(p => p[0])), Math.max(...corners.map(p => p[1]))];
-      return { flat, error: Math.max(...[bounds.left, bounds.top, bounds.right, bounds.bottom].map((v, i) => Math.abs(v - expected[i]))) };
-    });
+    const registration = await screenRegistration(page);
     assert.ok(registration.flat, 'interactive CRT picture stays on a flat plane');
-    assert.ok(registration.error < 1, `HTML overlay matches the projected CRT glass within one CSS pixel: ${registration.error}`);
+    assert.ok(registration.error < 1, `HTML overlay corners match the projected screen_plane within one CSS pixel: ${registration.error}`);
     await page.locator('#login-user').fill('Trish');
     await page.locator('.login-dialog button.default').click();
     await page.waitForFunction(() => document.body.classList.contains('signed-in'));
@@ -251,7 +240,7 @@ try {
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => document.body.classList.contains('orbit-live'));
     const back = await page.evaluate(() => window.__camera.position.toArray());
-    assert.ok(Math.abs(await page.evaluate(() => window.__orbit().front) - 10) < .1, 'return navigation restores the seated desk view');
+    assert.ok(await page.evaluate(atOpeningPose), 'return navigation restores the cam_overview view');
     assert.ok(back.every((v, i) => Math.abs(v - home[i]) < .001), 'screen exit restores the seated camera position');
     const overviewLimits = await page.evaluate(() => window.__orbit().limits.swing);
     assert.ok(Math.abs(overviewLimits[0] + 7) < .01 && Math.abs(overviewLimits[1] - 7) < .01,

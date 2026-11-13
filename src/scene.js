@@ -12,7 +12,6 @@ import { createDesktopSnapshot } from "./overlay/desktopSnapshot.js";
 import { createLampState } from "./lamp.js";
 import * as THREE from "three";
 import { gsap } from "gsap/gsap-core";
-import { FACING, SCREEN_W, SCREEN_H } from "./scene/screenSpec.js";
 import { tonemapForward, tonemapPreimage, TONE_MAPPINGS } from "./tonemap.js";
 
 let interaction = null;
@@ -21,7 +20,7 @@ let interaction = null;
 
 
 
-const diagnosticNames = new Set(["__cam", "__camera", "__composer", "__diveTo", "__enter", "__flyFrom", "__flyTo", "__fov", "__lamp", "__orbit", "__pick", "__scene", "__stillReady", "__tonemap", "__zoom"]);
+const diagnosticNames = new Set(["__cam", "__camera", "__composer", "__diveTo", "__enter", "__flyFrom", "__flyTo", "__fov", "__lamp", "__orbit", "__pick", "__scene", "__stillReady", "__tonemap"]);
 let sceneGeneration = 0;
 
 
@@ -38,19 +37,19 @@ let sceneGeneration = 0;
 
 // Experience state and rendering configuration
 
-const FOV_DEFAULT = 28;
-let fov = FOV_DEFAULT;
-let tanHalfFov = Math.tan(THREE.MathUtils.degToRad(fov) / 2);
-
-function distFor(frustum) {
-  return frustum / (2 * tanHalfFov);
+// The GLB camera's field of view, unless a diagnostic overrides it.
+let fovOverride = null;
+function currentFov() {
+  return fovOverride ?? (isMobile() ? stage.cams.mobile : stage.cams.overview).fov;
+}
+function tanHalfFov() {
+  return Math.tan(THREE.MathUtils.degToRad(currentFov()) / 2);
 }
 
-const FRUSTUM = 24;
+function distFor(frustum) {
+  return frustum / (2 * tanHalfFov());
+}
 
-const FRUSTUM_MOBILE = 37;
-
-const HOME_ZOOM = 1.1;
 const MOBILE_BP = 760;
 
      // the front of the keyboard's contact shadow
@@ -112,8 +111,8 @@ const DIVE_S = 0.9; // seconds; the flight's 1.6s would drag over a dolly this s
 const DIVE_EASE = FLY_EASE;
 
 export const SCREEN_BASE_W = 900;
-
-const SCREEN_BASE_H = (SCREEN_BASE_W * SCREEN_H) / SCREEN_W;
+// Follows screen_plane's aspect once the GLB is loaded.
+let screenBaseH = 0;
 
 const BLUR_STEP = 0.5;
 const SCAN_STEP = 2;
@@ -200,16 +199,6 @@ function isMobile() {
 // Framing and desktop handover agree at 760px; short touch screens also break out.
 const isHandheld = isDesktopFullscreen;
 
-let homeZoom = HOME_ZOOM;
-
-function frustumFor() {
-  return (isMobile() ? FRUSTUM_MOBILE : FRUSTUM) * homeZoom;
-}
-
-function camDist() {
-  return distFor(frustumFor());
-}
-
 function applyLampLevel(level) {
   lampLevel = level;
   if (!lights) return;
@@ -252,8 +241,8 @@ const navigation = createNavigation({ homeTarget: () => rig.homeTarget(),
   isAtDesk: () => fly.value === 0, reducedMotion: prefersReducedMotion,
   hasFrame: () => !!animation?.running, onChange: () => updateScreenOverlay(), render: () => render(),
   resetParallax: () => parallax.reset(), onDisable: () => interaction?.cancel() });
-const rig = createCameraRig({ screenTarget: SCREEN_TARGET, getCamera: () => camera,
-  getFov: () => fov, getFlightStart: () => flyStart,
+const rig = createCameraRig({ getStage: () => stage, getCamera: () => camera,
+  getFov: currentFov, getFlightStart: () => flyStart,
   getOrbitRadius: () => navigation.home.radius, distFor, isMobile });
 const { homeTarget, screenFrustum, coverFrustum, buildFlyPath, applyFly, applyDive,
   target: flyTarget, pose: flyPose } = rig;
@@ -263,14 +252,12 @@ function applyPose(width, height) {
     : applyFly(fly.value, width, height);
 }
 
-const CAM_NEAR = 0.5;
-
-function camFar() {
-  return distFor(FRUSTUM_MOBILE * homeZoom) + 100;
-}
+// Metres: the arrival sits ~0.4 m from the glass inside a few-metre room.
+const CAM_NEAR = 0.01;
+const CAM_FAR = 30;
 
 function buildCamera() {
-  return new THREE.PerspectiveCamera(fov, 1, CAM_NEAR, camFar());
+  return new THREE.PerspectiveCamera(currentFov(), 1, CAM_NEAR, CAM_FAR);
 }
 
 // LOOKING AROUND — the implementation
@@ -315,22 +302,13 @@ function enterScreen() {
 
 function setFov(deg) {
   if (!camera || !canvasEl) return;
-  fov = THREE.MathUtils.clamp(Number(deg) || FOV_DEFAULT, 5, 80);
-  tanHalfFov = Math.tan(THREE.MathUtils.degToRad(fov) / 2);
-  reframeHome();
-}
-
-function setHomeZoom(f) {
-  if (!camera || !canvasEl) return;
-  homeZoom = THREE.MathUtils.clamp(Number(f) || HOME_ZOOM, 0.5, 3);
+  fovOverride = deg === null ? null : THREE.MathUtils.clamp(Number(deg) || currentFov(), 5, 80);
   reframeHome();
 }
 
 function reframeHome() {
   const width = canvasEl.clientWidth;
   const height = canvasEl.clientHeight;
-  camera.near = CAM_NEAR;
-  camera.far = camFar();
   flyStart = null;
   buildFlyPath(width, height);
   applyPose(width, height);
@@ -396,7 +374,7 @@ function updateScreenOverlay(transformOnly = false) {
   if (screenAway) return;
 
   const { transform, scale } = projection.project(stage.projectionSurface, camera,
-    width, height, SCREEN_BASE_W, SCREEN_BASE_H);
+    width, height, SCREEN_BASE_W, screenBaseH);
   if (!transform) {
 
     screenAway = true;
@@ -468,7 +446,7 @@ function logArrival() {
     position: camera.position.toArray().map(round),
     target: flyTarget.toArray().map(round),
     frustumHeight: round(flyPose.frustum),
-    fov,
+    fov: currentFov(),
     dist: round(flyPose.dist),
   });
 }
@@ -505,7 +483,7 @@ function depart() {
 
   navigation.setEnabled(true);
 
-  snapshot.invalidate();
+  snapshot?.invalidate();
 }
 
 // THE CROSSFADE
@@ -522,7 +500,7 @@ function applyFade(v) {
 
 // THE STILL
 
-const snapshot = createDesktopSnapshot({ width: SCREEN_BASE_W, height: SCREEN_BASE_H });
+let snapshot = null;
 
 function showStill(on) {
   if (!stage) return;
@@ -702,12 +680,12 @@ function jumpDive(to) {
 }
 
 export function refreshLoginStill() {
-  snapshot.invalidate();
+  snapshot?.invalidate();
 }
 
 export function syncDesktopOverlay() {
   if (!screenEl) return;
-  snapshot.invalidate();
+  snapshot?.invalidate();
   updateScreenOverlay();
   render();
 }
@@ -761,7 +739,7 @@ function initScreenOverlay() {
   if (!screenEl) return;
 
   screenEl.style.width = `${SCREEN_BASE_W}px`;
-  screenEl.style.height = `${SCREEN_BASE_H}px`;
+  screenEl.style.height = `${screenBaseH}px`;
   screenEl.hidden = false;
   screenEl.addEventListener("click", onScreenClick);
 
@@ -817,7 +795,11 @@ export async function initScene(canvas) {
   camera = buildCamera();
 
   scene.updateMatrixWorld(true);
-  stage.screenPlane.getWorldPosition(SCREEN_TARGET);
+  SCREEN_TARGET.copy(stage.projectionSurface.center);
+  const { width: screenW, height: screenH, normal: screenNormal } = stage.projectionSurface;
+  screenBaseH = (SCREEN_BASE_W * screenH) / screenW;
+  snapshot = createDesktopSnapshot({ width: SCREEN_BASE_W, height: screenBaseH });
+  const facingAngle = Math.atan2(screenNormal.x, screenNormal.z);
   applyFly(0, w, h);
 
   if (!isMobile() && !prefersReducedMotion()) {
@@ -839,13 +821,12 @@ export async function initScene(canvas) {
     if (generation !== sceneGeneration) return false;
     disposeDiagnostics = installGeometryDiagnostics({ scene, camera, renderer, composer, background: BACKGROUND, render });
     installExperienceDiagnostics({
-      get FACING() { return FACING; },
+      get FACING() { return facingAngle; },
       get LAMP_FADE_S() { return LAMP_FADE_S; },
       get TONE_MAPPINGS() { return TONE_MAPPINGS; },
       get applyFade() { return applyFade; },
       get applyVoidColor() { return applyVoidColor; },
       get background() { return BACKGROUND; },
-      get camDist() { return camDist; },
       get camera() { return camera; },
       get canvasEl() { return canvasEl; },
       get clamp01() { return clamp01; },
@@ -863,9 +844,7 @@ export async function initScene(canvas) {
       get coverFrustum() { return coverFrustum; },
       get flyState() { return flyState; },
       get flyTl() { return flyTl; },
-      get fov() { return fov; },
-      get frustumFor() { return frustumFor; },
-      get homeZoom() { return homeZoom; },
+      get fov() { return currentFov(); },
       get lampBtn() { return lampBtn; },
       get lampLevel() { return lampLevel; },
       get lampOn() { return lampState.on; },
@@ -878,11 +857,10 @@ export async function initScene(canvas) {
       get screenFacing() { return screenFacing; },
       get setDive() { return setDive; },
       get setFov() { return setFov; },
-      get setHomeZoom() { return setHomeZoom; },
       get setLampOn() { return setLampOn; },
       get showStill() { return showStill; },
       get snapshot() { return snapshot; },
-      get tanHalfFov() { return tanHalfFov; },
+      get tanHalfFov() { return tanHalfFov(); },
       get tonemapForward() { return tonemapForward; },
       get updateScreenOverlay() { return updateScreenOverlay; },
     });
@@ -915,7 +893,11 @@ export async function initScene(canvas) {
   performance.mark('room:before-first-frame');
   renderer.compile(scene, camera);
   performance.mark('room:environment-ready');
+  // Draw unculled once so props outside the opening frame upload now, not mid-drag.
+  const culled = [];
+  scene.traverse((o) => { if (o.frustumCulled) { culled.push(o); o.frustumCulled = false; } });
   render();
+  for (const o of culled) o.frustumCulled = true;
   performance.mark('room:first-frame');
   initScreenOverlay();
   buildFlyTimeline();
@@ -995,9 +977,7 @@ export function disposeScene() {
   navigation.dispose();
   flyStart = null;
   flyFrom = FLY_FROM;
-  fov = FOV_DEFAULT;
-  tanHalfFov = Math.tan(THREE.MathUtils.degToRad(fov) / 2);
-  homeZoom = HOME_ZOOM;
+  fovOverride = null;
   lights = null;
   if (lampBtn && onLampBtn) lampBtn.removeEventListener("click", onLampBtn);
   if (lampBtn) {
@@ -1028,7 +1008,8 @@ export function disposeScene() {
     screenEl.style.visibility = "";
     screenTransform = "";
   }
-  snapshot.dispose();
+  snapshot?.dispose();
+  snapshot = null;
   stillHidden = false;
   screenAway = false;
   brokenOut = false;
