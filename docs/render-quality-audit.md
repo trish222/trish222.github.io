@@ -1,5 +1,9 @@
 # Rendering and realism audit
 
+This is the baseline at audit checkpoint `d2b7e1c`. See
+[the measured rendering foundation](rendering-foundation.md) for the subsequent
+authorized changes and current configuration.
+
 Audited 2026-11-12 against the current production build. The seated camera, room,
 monitor geometry, lighting, tone mapping, and projection are preserved. No
 production rendering changes passed the benefit/cost threshold for this task.

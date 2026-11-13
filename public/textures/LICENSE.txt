@@ -1,5 +1,6 @@
 desk-wood-512.jpg
 desk-wood-rough-512.jpg
+desk-wood-normal-512.jpg
 
 "Wood Table 001" by Rob Tuytel / Poly Haven
 https://polyhaven.com/a/wood_table_001
@@ -14,3 +15,8 @@ UVs a quarter turn so it runs along the desk's length instead.
 
 Both are only ever seen at a few hundred pixels across, so 512 costs
 nothing visually and ~390 kB of page weight against the 1k originals.
+
+The OpenGL tangent-space normal map is derived from the same asset's
+1k JPEG normal release, downsampled to 512x512 with macOS sips. It has
+no color-space conversion or gamma lift. The production normal map is
+about 15 kB; the tested 1k version provided no useful visible gain.

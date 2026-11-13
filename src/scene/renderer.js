@@ -4,11 +4,27 @@ import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { GTAOPass } from "three/examples/jsm/postprocessing/GTAOPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 
+// AO density is independent of color-buffer density. At DPR 2 this uses
+// 14% of the color image's pixels, preserving the calibrated contact radius
+// without paying for full-resolution depth/normals and AO on Retina screens.
+const AO_PIXEL_RATIO = 0.75;
+class ContactGTAOPass extends GTAOPass {
+  constructor(scene, camera, width, height, renderer) {
+    super(scene, camera, width, height);
+    this.renderer = renderer;
+  }
+
+  setSize(width, height) {
+    const scale = Math.min(1, AO_PIXEL_RATIO / this.renderer.getPixelRatio());
+    super.setSize(Math.max(1, Math.round(width * scale)), Math.max(1, Math.round(height * scale)));
+  }
+}
+
 export function createComposer({ renderer, scene, camera, width, height, objects, blend, margin }) {
   const c = new EffectComposer(renderer);
   c.addPass(new RenderPass(scene, camera));
 
-  const gtao = new GTAOPass(scene, camera, width, height);
+  const gtao = new ContactGTAOPass(scene, camera, width, height, renderer);
   gtao.output = GTAOPass.OUTPUT.Default;
   gtao.blendIntensity = blend;
   /* **The AO is bounded to the furniture, and the perspective camera is
@@ -38,7 +54,7 @@ export function createComposer({ renderer, scene, camera, width, height, objects
     distanceExponent: 1.4,
     thickness: 1.0,
     scale: 1.15, // deeper than neutral; past ~1.35 the noise shows on the bezel
-    samples: 24, // 12 is not enough once the scale is up
+    samples: 12, // compared at the capped AO density; retain the 16-sample denoiser
   });
   c.addPass(gtao);
   c.addPass(new OutputPass());

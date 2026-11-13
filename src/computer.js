@@ -208,7 +208,7 @@ function plasticMaterial(grain, color = PLASTIC, roughness = 0.56) {
     map: grain.albedo,
     roughnessMap: grain.rough,
     bumpMap: grain.rough,
-    bumpScale: 0.009,
+    bumpScale: 0.002,
     /* The HDRI is a big part of what was lifting the shell to within a
        shade of the cream floor; the machine takes less of it than the
        floor does. Lower again at 0.34: the HDRI is ambient from every
@@ -863,9 +863,9 @@ function buildMonitor(body, backBody, dark) {
   // so the broad moulded panels catch continuous edge highlights.
   body = track(body.clone());
   body.roughness = 0.62;
-  body.bumpScale = 0.006;
+  body.bumpScale = 0.002;
   backBody = track(backBody.clone());
-  backBody.bumpScale = 0.008;
+  backBody.bumpScale = 0.002;
   const g = new THREE.Group();
   g.position.y = MON_Y;
 

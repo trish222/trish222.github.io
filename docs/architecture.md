@@ -51,6 +51,19 @@ Register a scenery builder in `environment/presets.js` and change `WINDOW_SCENER
 
 `NIGHT_LIGHTING` and `createLighting` define the existing rig. Future day/night presets can supply the same fields; lamp-off fill/exposure response and scene tone exposure must be calibrated alongside a new preset. No day/night toggle or unvalidated lighting values are introduced here.
 
+## Rendering foundation
+
+The measured rendering follow-up is documented in [rendering-foundation.md](rendering-foundation.md).
+Resting desktop color is capped at native DPR 2; manual movement retains the
+preallocated DPR 1 composer. GTAO has an independent 0.75 CSS-pixel density and
+12 samples, retaining the calibrated world clip/radius and denoiser. Live HTML
+resolution and projection remain independent of both buffers. Lighting owns one
+static 128px-face room/desk PMREM shared only by workstation materials, generated
+after textures and complete-scene frozen shadows are ready, before interaction.
+The coordinator disposes its render target. The selected night fill/key balance,
+wood normal map and plastic relief are the authorized rendering refinements;
+monitor geometry, camera calibration and desktop behavior remain unchanged.
+
 ## Lifecycle and references
 
 Dispose cancels the animation loop, navigation tween/controls, pointer listeners, snapshot observers/timers/idle work, GSAP transitions, render passes/targets, models, and diagnostics. Generation checks reject initialization/environment/texture callbacks after disposal. Desktop listeners/timers share an abortable lifetime. No-WebGL still exposes the HTML login.

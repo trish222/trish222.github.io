@@ -172,9 +172,9 @@ function track(...xs) { disposables.push(...xs); return xs[0]; }
    scale from part to part, which is the one thing a solid timber desk
    never does.
 
-   So the two files load **once** and every material takes clones with
+   So the three files load **once** and every material takes clones with
    its own repeat. `Texture.clone()` shares the underlying `Source`, so
-   the pair still uploads to the GPU once however many parts there are;
+   the maps still share their source images however many parts there are;
    what the clone carries is the wrap, the rotation and the repeat.
 
    The catch is that a clone made before the image lands has its own
@@ -210,6 +210,7 @@ function woodMaps() {
   baseMaps = {
     albedo: load('desk-wood-512.jpg', true),
     rough: load('desk-wood-rough-512.jpg', false),
+    normal: load('desk-wood-normal-512.jpg', false),
   };
   return baseMaps;
 }
@@ -246,7 +247,6 @@ function wood(w, h, opts = {}) {
        reference has the window in its top. */
     rough = 1.6,
     rot = 0,
-    bump = 0.012,
     env = 0.5,
   } = opts;
   const maps = woodMaps();
@@ -261,8 +261,9 @@ function wood(w, h, opts = {}) {
     roughnessMap: rgh,
     roughness: rough,
     metalness: 0,
-    bumpMap: rgh,
-    bumpScale: bump,
+    // Scanned tangent-space relief, independent of the finish's roughness.
+    normalMap: woodMap(maps.normal, ru, rv, rot, false),
+    normalScale: new THREE.Vector2(0.25, 0.25),
     envMapIntensity: env,
   }));
 }
@@ -513,7 +514,7 @@ export function buildDesk() {
   const field = new THREE.Mesh(
     track(new RoundedBoxGeometry(fieldW, TOP_CAP_H, fieldD, 3, 0.03)),
     wood(fieldW, fieldD, {
-      tint: WALNUT_LIGHT, rough: 1.4, bump: 0.008, rot: ACROSS,
+      tint: WALNUT_LIGHT, rough: 1.4, rot: ACROSS,
     }));
   field.position.y = topY + TOP_CAP_H / 2;
   field.castShadow = true;
@@ -524,9 +525,9 @@ export function buildDesk() {
      short ones fit between them, and each carries its grain *across*
      itself — a quarter turn on the long pair, none on the short — so
      the band runs round the top the way a crossbanding does. */
-  const bandLong = wood(DESK_W, BAND, { tint: WALNUT, rough: 1.4, bump: 0.008 });
+  const bandLong = wood(DESK_W, BAND, { tint: WALNUT, rough: 1.4 });
   const bandShort = wood(BAND, fieldD, {
-    tint: WALNUT, rough: 1.4, bump: 0.008, rot: ACROSS,
+    tint: WALNUT, rough: 1.4, rot: ACROSS,
   });
   const addBand = (w, d, x, z, mat) => {
     const m = new THREE.Mesh(
@@ -674,7 +675,7 @@ export function buildDesk() {
   const slideY = UNDER_Y - apronH - 0.22;
   const slideZ = FRONT_Z + SLIDE_OUT - slideD / 2;
   const slideMat = wood(slideW, slideD, {
-    tint: WALNUT_LIGHT, rough: 1.5, bump: 0.008,
+    tint: WALNUT_LIGHT, rough: 1.5,
   });
   const slide = new THREE.Mesh(
     track(new THREE.BoxGeometry(slideW, 0.14, slideD)), slideMat);

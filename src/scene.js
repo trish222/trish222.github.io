@@ -3,7 +3,7 @@ import { createAnimationLoop } from "./scene/animation.js";
 import { createRoomScene } from "./scene/createScene.js";
 import { SCENERY_PRESETS, WINDOW_SCENERY } from "./environment/presets.js";
 import { createNavigation } from "./scene/navigation.js";
-import { createLighting, NIGHT_LIGHTING } from "./scene/lighting.js";
+import { createLighting, createWorkstationEnvironment, NIGHT_LIGHTING } from "./scene/lighting.js";
 import { createCameraRig } from "./scene/camera.js";
 import { isDesktopFullscreen } from "./config/experience.js";
 import { createComposer, createMotionComposer } from "./scene/renderer.js";
@@ -11,7 +11,6 @@ import { createParallax } from "./scene/parallax.js";
 import { createScreenProjection } from "./overlay/screenOverlay.js";
 import { createDesktopSnapshot } from "./overlay/desktopSnapshot.js";
 import * as THREE from "three";
-import { HDRLoader } from "three/examples/jsm/loaders/HDRLoader.js";
 import { gsap } from "gsap/gsap-core";
 import {
   disposeComputer,
@@ -125,8 +124,6 @@ const HEMI_INTENSITY = NIGHT_LIGHTING.hemiIntensity;
 const OFF_DARKNESS = 0.52;
 const HEMI_GROUND_OFF = 0x2a2a3e;
 
-const ENV_INTENSITY = NIGHT_LIGHTING.environmentIntensity;
-
 const TONE_EXPOSURE = 1.45;
 
 const GTAO_BLEND = 1.0; // deep enough that the creases actually darken
@@ -136,7 +133,7 @@ const HOVER_RATE = 7; // hover easing, per second
 
 const SCREEN_GLOW = 8.5;
 
-const MAX_DPR = 1.5;
+const MAX_DPR = 2;
 const MOBILE_MAX_DPR = 2;
 
 function scenePixelRatio() {
@@ -609,23 +606,11 @@ function updateScreenOverlay(transformOnly = false) {
 
 // ENVIRONMENT MAP
 
-async function loadEnvironment() {
-  const generation = sceneGeneration;
-  const activeRenderer = renderer;
-  const activeScene = scene;
-
-  if (!ENV_INTENSITY) return false;
+function loadEnvironment() {
   try {
-    const url = `${import.meta.env.BASE_URL}env/studio-small-09-256.hdr`;
-    const hdr = await new HDRLoader().loadAsync(url);
-    if (generation !== sceneGeneration) { hdr.dispose(); return false; }
-    const pmrem = new THREE.PMREMGenerator(activeRenderer);
-    envMap = pmrem.fromEquirectangular(hdr).texture;
-    activeScene.environment = envMap;
-
-    scene.environmentIntensity = ENV_INTENSITY;
-    hdr.dispose();
-    pmrem.dispose();
+    envMap = createWorkstationEnvironment(renderer, scene, {
+      room: room.root, desk: desk.root, computer: computer.root,
+    });
     return true;
   } catch (e) {
     console.warn("env map failed:", e);
@@ -1090,7 +1075,7 @@ export async function initScene(canvas) {
       get diveState() { return diveState; },
       get diveTl() { return diveTl; },
       get enterScreen() { return enterScreen; },
-      get envMap() { return envMap; },
+      get envMap() { return envMap?.texture; },
       get fly() { return fly; },
       get flyFrom() { return flyFrom; },
       set flyFrom(value) { flyFrom = value; },
@@ -1169,6 +1154,10 @@ export async function initScene(canvas) {
   };
   window.addEventListener("resize", onResize);
 
+  // Reflection capture must see decoded wood maps. Prepare everything before
+  // enabling input, so a late environment upload cannot hitch the first drag.
+  await desk.ready;
+  if (generation !== sceneGeneration) return false;
   performance.mark('room:before-first-frame');
   // Allocate/upload the small motion targets before interaction, not on the
   // first drag. The following full-resolution draw reuses programs/shadows.
@@ -1186,6 +1175,8 @@ export async function initScene(canvas) {
   if (motionComposer) motionComposer.render();
   else renderer.render(scene, camera);
   for (const object of culled) object.frustumCulled = true;
+  if (loadEnvironment() && motionComposer) motionComposer.render();
+  performance.mark('room:environment-ready');
   render();
   performance.mark('room:first-frame');
   initScreenOverlay();
@@ -1201,16 +1192,6 @@ export async function initScene(canvas) {
 
   initLampButton();
   performance.mark('room:interactive');
-  loadEnvironment().then((ok) => {
-    if (generation !== sceneGeneration) return;
-    if (ok && !animation?.running) render();
-  });
-
-  desk.ready.then(() => {
-    if (generation !== sceneGeneration) return;
-    if (!animation?.running) render();
-  });
-
   if (prefersReducedMotion()) return true;
 
   if (import.meta.env.DEV && perfWanted()) {

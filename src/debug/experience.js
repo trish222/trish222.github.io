@@ -190,8 +190,8 @@ export function installExperienceDiagnostics(context) {
       off: context.offDarkness,
       hemiGround: `#${context.lights.hemi.groundColor.getHexString()}`,
       env: context.scene.environmentIntensity,
-      /* Without this the `env` figure above is a number about nothing:
-         ENV_INTENSITY is 0, so no HDRI is fetched at all. */
+      /* The workstation has a local, prefiltered room reflection even while
+         global environment intensity stays zero. This reports that resource. */
       envMap: !!context.envMap,
       glow: context.screenGlowBase,
       /* What the operator is running at this instant, and the figure
