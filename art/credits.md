@@ -20,17 +20,18 @@ Modifications: decimated, rescaled, re-oriented, materials simplified (normal an
 | --- | --- | --- | --- |
 | Wooden Table 01 | Desk (`baked_desk`) | Ethan Place | https://polyhaven.com/a/WoodenTable_01 |
 | Painted Plaster Wall | Wall texture | Amal Kumar | https://polyhaven.com/a/painted_plaster_wall |
-| Plank Flooring 04 | Floor, window frame, sill, nameplate base | Dimitrios Savva | https://polyhaven.com/a/plank_flooring_04 |
+| Plank Flooring 04 | Floor, nameplate base | Dimitrios Savva | https://polyhaven.com/a/plank_flooring_04 |
 | Book Encyclopedia Set 01 | Books (`baked_books`) | John Malcolm | https://polyhaven.com/a/book_encyclopedia_set_01 |
 | Office Notepads | Papers and legal pad | Ulan Cabanilla | https://polyhaven.com/a/office_notepads |
 | Stationery Supplies | Pencil cup, pencil, pen | Mateusz Sadek | https://polyhaven.com/a/stationery_supplies |
-| Shanghai Bund (HDRI) | Blender world light and the `window_view` night city in previews; not exported | Greg Zaal | https://polyhaven.com/a/shanghai_bund |
+| Shanghai Bund (HDRI) | Blender world light (4k) and the `window_view` night city in previews (a crop of the 8k, `shanghai_bund_8k_city.hdr`); not exported | Greg Zaal | https://polyhaven.com/a/shanghai_bund |
 
 ## SIL Open Font License 1.1
 
 | Asset | Used as | Author | Source |
 | --- | --- | --- | --- |
 | Departure Mono | Floppy label text (`art/textures/floppy_labels.png`, via `art/scripts/floppy_labels.py`) | Helena Zhang | https://departuremono.com |
+| Cinzel, Cormorant Garamond, IM Fell English | Nameplate engraving candidates (`art/fonts/`, licences alongside); drop the two not picked | Natanael Gama; Christian Thalmann; Igino Marini | https://fonts.google.com |
 
 ## Made in Blender Python (no third-party license)
 

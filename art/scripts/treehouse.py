@@ -45,7 +45,7 @@ def build_trunk():
             for y in range(int(cy - r) - 1, int(cy + r) + 2):
                 if (x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2 <= r * r:
                     put(x, y, z, "dark" if z < 3 or rng.random() < 0.18 else "brown")
-    for z0, (x1, y1, z1) in [(40, (1, 9, 52)), (48, (17, 11, 60)), (56, (9, 10, 72)), (30, (19, 9, 40))]:
+    for z0, (x1, y1, z1) in [(40, (0, 7, 58)), (48, (17, 11, 60)), (56, (8, 10, 68)), (30, (19, 9, 40))]:
         x0, y0 = trunk_centre(z0, top)
         n = 30
         for i in range(n + 1):
@@ -101,19 +101,22 @@ def droop(x, y, ztop, length):
     steps = 5
     for i in range(steps):
         t = i / (steps - 1)
-        r = 0.013 - 0.007 * t
+        r = 0.009 - 0.005 * t
         blossom(x + 0.6 * t, y, ztop - t * length / PLATE, r, r, r * 1.3)
 
 
 def build_canopy():
-    blossom(1, 9, 52, 0.072, 0.05, 0.024)   # low tier sweeping left
-    blossom(17, 11, 60, 0.062, 0.046, 0.022)   # right tier
-    blossom(9, 10, 72, 0.075, 0.056, 0.027)    # crown, top near 28 cm
-    blossom(19, 9, 40, 0.028, 0.025, 0.014)  # small cluster over the hut
-    droop(-7, 8, 47, 0.05)
-    droop(5, 14, 48, 0.035)
-    droop(24, 13, 56, 0.045)
-    droop(12, 5, 66, 0.03)
+    """Overlapping puffy clusters, heavier on one side, spread front to back; radii in metres."""
+    for x, y, z, r in [
+        (9, 10, 71, 0.044), (2, 9, 66, 0.04), (15, 9, 68, 0.03), (-4, 10, 58, 0.032),
+        (6, 15, 64, 0.034), (9, 4, 62, 0.026), (12, 13, 75, 0.026), (4, 12, 74, 0.028),
+        (18, 11, 61, 0.03), (22, 13, 55, 0.02), (0, 4, 55, 0.024), (-8, 8, 52, 0.022),
+        (14, 4, 58, 0.02),
+    ]:
+        blossom(x, y, z, r, r * 0.9, r * 0.8)
+    blossom(19, 9, 40, 0.024, 0.022, 0.018)  # small cluster over the hut
+    droop(-9, 8, 50, 0.025)
+    droop(23, 13, 52, 0.02)
 
 
 def build_base():
