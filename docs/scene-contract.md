@@ -15,6 +15,10 @@ The handoff between the Blender scene and the site code. If public/models/scene.
 | cam_overview, cam_screen, cam_mobile | Empties (or cameras) | Camera positions and look targets |
 | baked_* | All static scene meshes | Use the baked lightmap texture set |
 
+## Floppy labels
+
+`baked_floppy_labels` is one quad per disk, textured by the `floppy_labels` atlas (`art/scripts/floppy_labels.py`). The atlas is 3×2 cells of 512×384 px, numbered row-major from the image's top-left. Cell *i* sits on the disk under `click_project_0i`, so cells 1–3 fill UV v 0.5–1 and cells 4–6 fill v 0–0.5, each spanning a third of u. Each quad maps u along the label's width and v toward the back of the desk, so a cell drawn upright reads upright from `cam_overview`. The atlas holds only blank paper and a coloured band; project titles are drawn into the cells at runtime.
+
 ## Bake rules
 
 1. Join static props into a few objects grouped by material type (wood, plastic, metal, paper) to cut draw calls.

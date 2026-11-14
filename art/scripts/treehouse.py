@@ -30,22 +30,24 @@ def put(x, y, z, col, force=False):
         grid[(x, y, z)] = col
 
 
+def trunk_centre(z, top=62):
+    t = z / top
+    return 9 + 1.6 * math.sin(t * math.pi) - 1.2 * t, 10 + 0.8 * math.sin(t * math.pi)
+
+
 def build_trunk():
-    """S-curved trunk (bonsai-like) rising from the middle of the plate."""
-    top = 44
+    """Gently curved trunk rising from the middle of the plate, with branches to each tier."""
+    top = 62
     for z in range(1, top):
-        t = z / top
-        cx = 9 + 3.2 * math.sin(t * math.pi * 1.4) - 2.5 * t
-        cy = 10 + 1.2 * math.sin(t * math.pi)
-        r = 2.4 - 1.0 * t + (1.6 if z < 4 else 0)  # root flare
+        cx, cy = trunk_centre(z, top)
+        r = 2.4 - 1.0 * z / top + (1.6 if z < 4 else 0)  # root flare
         for x in range(int(cx - r) - 1, int(cx + r) + 2):
             for y in range(int(cy - r) - 1, int(cy + r) + 2):
                 if (x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2 <= r * r:
                     put(x, y, z, "dark" if z < 3 or rng.random() < 0.18 else "brown")
-    # Branches reaching out to the canopy clusters.
-    for (x0, y0, z0), (x1, y1, z1) in [((7, 10, 34), (-1, 9, 46)), ((8, 10, 40), (17, 11, 50)),
-                                       ((10, 10, 24), (19, 9, 30)), ((7, 10, 42), (6, 12, 54))]:
-        n = 24
+    for z0, (x1, y1, z1) in [(40, (1, 9, 52)), (48, (17, 11, 60)), (56, (9, 10, 72)), (30, (19, 9, 40))]:
+        x0, y0 = trunk_centre(z0, top)
+        n = 30
         for i in range(n + 1):
             t = i / n
             p = (x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, z0 + (z1 - z0) * t)
@@ -80,7 +82,8 @@ def build_house():
 
 
 def blossom(cx, cy, cz, rx, ry, rz):
-    """A flattened, ragged cloud of pink plates."""
+    """A ragged cloud of pink plates; centre in grid cells, radii in metres."""
+    rx, ry, rz = rx / STUD, ry / STUD, rz / PLATE
     for x in range(int(cx - rx) - 1, int(cx + rx) + 2):
         for y in range(int(cy - ry) - 1, int(cy + ry) + 2):
             for z in range(int(cz - rz) - 1, int(cz + rz) + 2):
@@ -93,12 +96,24 @@ def blossom(cx, cy, cz, rx, ry, rz):
                     put(x, y, z, col)
 
 
+def droop(x, y, ztop, length):
+    """A hanging cluster: blobs shrinking as they fall `length` metres below a tier."""
+    steps = 5
+    for i in range(steps):
+        t = i / (steps - 1)
+        r = 0.013 - 0.007 * t
+        blossom(x + 0.6 * t, y, ztop - t * length / PLATE, r, r, r * 1.3)
+
+
 def build_canopy():
-    blossom(1, 9, 50, 9.5, 7.0, 4.2)     # big tier sweeping left
-    blossom(9, 11, 56, 7.5, 6.0, 3.6)    # crown
-    blossom(17, 11, 52, 6.5, 5.5, 3.4)   # right tier
-    blossom(20, 9, 33, 4.0, 3.5, 2.6)    # low cluster over the hut
-    blossom(-3, 8, 42, 4.0, 3.5, 2.2)    # drooping left tip
+    blossom(1, 9, 52, 0.072, 0.05, 0.024)   # low tier sweeping left
+    blossom(17, 11, 60, 0.062, 0.046, 0.022)   # right tier
+    blossom(9, 10, 72, 0.075, 0.056, 0.027)    # crown, top near 28 cm
+    blossom(19, 9, 40, 0.028, 0.025, 0.014)  # small cluster over the hut
+    droop(-7, 8, 47, 0.05)
+    droop(5, 14, 48, 0.035)
+    droop(24, 13, 56, 0.045)
+    droop(12, 5, 66, 0.03)
 
 
 def build_base():
