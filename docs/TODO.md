@@ -137,6 +137,17 @@ Saved in `art/scene.blend`; nothing exported to `public/`, nothing committed.
   - Done (6) sill and frame: `baked_sill` and `baked_window_frame` use the new procedural `walnut_dark` (wave and noise grain along each member, uprights switched to z, a 0.018–0.14 dark walnut ramp, bevel-driven edge wear that is lighter and rougher). `plank_flooring_04` now has no users.
   - Done (7) curtains: `curtain_sheer` base 0.8 → 0.42 and translucency 0.85 → 0.36; curtain mean luma 109 → 84. The city lights seen through them stay the brightest pixels.
 
+- Round 5 (2026-11-14; saved, rendered to `art/previews/step6-cam_overview-r5.png` at 1920×1080, 256 spp; nothing exported or committed; awaiting Trish's review).
+  - Done (1) nameplate: `baked_nameplate_brass` now uses `nameplate_brass_cinzel`. The `_dejavu`, `_cormorant` and `_imfell` meshes and the Cormorant/IM Fell font datablocks were removed from the .blend, their files and OFL texts were deleted from `art/fonts/`, and the credits row now lists Cinzel only. `nameplate_brass_blank` and `_orig` are kept.
+  - Done (2) brightness: `light_lamp_reach` 3.5 → 1.4 W, re-aimed down at the right desk (target 0.6/−0.05/0.85, spread 75° → 55°) so it stops washing the wall; `light_lamp_reach_right` 1 → 0.3 W, re-aimed straight down at the desk (it was tilted toward the wall). Mean luma at 960 px, r3/r4/r5: left desk 111/120/117, right desk 81/119/101, wall under sill 34/45/32, lamp pool 140/154/153. Known issue: books (34/60/36) and treehouse base (16/29/16) fell back to r3 levels.
+  - Done (3) CRT: beige in `Material.017`/`.018` darkened and warmed (0.64/0.58/0.44 → 0.42/0.355/0.245 and 0.62/0.53/0.36 → 0.39/0.32/0.20). Top bezel luma 156 → 131, lower bezel 162 → 134, now below the lamp pool.
+  - Done (4) city view: bokeh radius (`Math.002`) 0.0045 → 0.003.
+
+- Round 6 (2026-11-14; saved, rendered to `art/previews/step6-cam_overview-r6.png` at 1920×1080, 256 spp; nothing exported or committed; awaiting Trish's review).
+  - Done (1) right desk: new `light_right_accent` (2700 K ellipse, 0.3×0.2 m, 0.22 W, spread 55°, diffuse-only) straight above the books and floppies, and `light_treehouse_accent` (2700 K, 0.2 m, 0.12 W, diffuse-only) light-linked to `baked_treehouse` alone via collection `ll_treehouse`, so the wall can't pick it up. Mean luma at 960 px, r5 → r6 test: right desk 101→106, floppies 88→105, mug 86→108, books 36→50, blossoms 60→96, treehouse base 16→26; left desk 117 and wall under the right sill 16 unchanged. bake.py must treat both as lamp lights and keep the light linking.
+  - Done (2) keyboard: `Material.021`/`.022` get an `aged_beige` multiply (0.66/0.60/0.52) after the tint mix; keyboard luma 115 → 94, close to the CRT case. Another bake-albedo case for P2.
+  - Done (3) city view: bokeh radius 0.003 → 0.002; strength unchanged, so it stays darker than the desk.
+
 ## Backlog
 
 - split src/scene.js (1058 lines; capped in `scripts/check-size.mjs`)

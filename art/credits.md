@@ -31,7 +31,7 @@ Modifications: decimated, rescaled, re-oriented, materials simplified (normal an
 | Asset | Used as | Author | Source |
 | --- | --- | --- | --- |
 | Departure Mono | Floppy label text (`art/textures/floppy_labels.png`, via `art/scripts/floppy_labels.py`) | Helena Zhang | https://departuremono.com |
-| Cinzel, Cormorant Garamond, IM Fell English | Nameplate engraving candidates (`art/fonts/`, licences alongside); drop the two not picked | Natanael Gama; Christian Thalmann; Igino Marini | https://fonts.google.com |
+| Cinzel | Nameplate engraving (`art/fonts/`, OFL alongside) | Natanael Gama | https://fonts.google.com |
 
 ## Made in Blender Python (no third-party license)
 
