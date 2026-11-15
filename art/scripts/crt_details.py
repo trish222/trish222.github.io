@@ -16,6 +16,8 @@ CABLES = 'baked_crt_cables'  # holds the case's front LEDs and power button
 PLASTICS = ['Material.017', 'Material.018', 'Material.021', 'Material.022', 'mouse_beige']
 INK = (0.10, 0.09, 0.075, 1)
 LED_GREEN = (0.12, 1.0, 0.3, 1)
+NOTE_PAPER = (0.74, 0.65, 0.22, 1)  # aged, slightly faded tan-yellow sticky note (lived_in.py)
+PEN = (0.075, 0.075, 0.08, 1)  # medium-gray HB graphite at full pressure, same note
 CHIN_Z = 0.981
 BADGE_X = -0.011  # monitor centre
 
@@ -195,6 +197,8 @@ def detail_group():
     beige_col = mix((0.40, 0.335, 0.225, 1), math('MULTIPLY', beige_luma.outputs[0], 1.8), 1.0, 'MULTIPLY')
     col = mix(col, beige_col, attr('beige'))
     col = mix(col, INK, attr('detail_ink'))
+    col = mix(col, NOTE_PAPER, attr('note'))
+    col = mix(col, PEN, attr('pen'))
     led = attr('led')
     col = mix(col, LED_GREEN, led)
     ln.new(col, go.inputs['Color'])
