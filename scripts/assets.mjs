@@ -44,6 +44,10 @@ for (const [name, size] of VARIANTS) {
   gt('resize', withLightmaps, a, '--width', size, '--height', size);
   // Download budget: the dimmer lamp-off light is smooth enough to ship at 1024 everywhere.
   gt('resize', a, a, '--pattern', 'lightmap_lampOff', '--width', 1024, '--height', 1024);
+  // Mobile download budget: lamp-off and screen light are the smoothest maps.
+  if (size < 2048) {
+    for (const map of ['lightmap_lampOff', 'lightmap_screen']) gt('resize', a, a, '--pattern', map, '--width', 512, '--height', 512);
+  }
   gt('uastc', a, b, '--pattern', 'lightmap*');
   // etc1s skips textures that are already KTX2.
   gt('etc1s', b, c);

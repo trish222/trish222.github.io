@@ -37,6 +37,7 @@ The handoff between the Blender scene and the site code. If public/models/scene.
 - `lightmap_screen` is greyscale: only the CRT screen's light, baked with neutral white emitters. Multiply it by the screen's current colour and add it. The authored Blender look uses `light_screen` teal (0.25, 0.85, 0.85).
 - Light = mix(lampOff, lampOn, lampMix) × lightmap_range + screenColour × screen × lightmap_screen_range.
 - Islands are packed tightly (2 texels apart at 2048 with a 1-texel bake margin), so sample the lightmaps without mipmaps, or the lower mips blend neighbouring islands.
+- Sizes differ per build: desktop ships lampOn 2048 and lampOff/screen 1024; mobile ships lampOn 1024 and lampOff/screen 512. Read the size from the texture, never hard-code it.
 
 ## Real-time reflections
 
