@@ -1,0 +1,52 @@
+"""Bake art/scene.blend for the site, then export art/export/scene-raw.glb.
+
+  blender -b art/scene.blend -P art/scripts/bake.py -- [--preview] [--force]
+
+Order matters: restored normals and albedo first so the lightmaps see them.
+Each map is saved as it finishes and reused on the next run unless --force.
+--preview bakes small and fast into art/bakes/preview/ and scene-raw-preview.glb.
+The .blend is never saved, so the procedural sources stay editable.
+"""
+import argparse
+import os
+import sys
+import time
+import traceback
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import bake_albedo  # noqa: E402
+import bake_common as bc  # noqa: E402
+import bake_details  # noqa: E402
+import bake_lightmaps  # noqa: E402
+
+
+def report(when):
+    issues = bake_lightmaps.name_report()
+    print(f'\n== Name report ({when}): ' + (f'{len(issues)} mismatch(es)' if issues else 'clean'))
+    for issue in issues:
+        print('  ' + issue)
+    if issues:
+        sys.exit(1)
+
+
+parser = argparse.ArgumentParser(prog='bake.py')
+parser.add_argument('--preview', action='store_true', help='512 px / 32 spp lightmaps, half-size maps')
+parser.add_argument('--force', action='store_true', help='re-bake maps that already exist')
+opts = bc.Opts(**vars(parser.parse_args(sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else [])))
+
+report('before bake')
+bc.setup_cycles()
+stages = []
+for step in (bake_albedo, bake_details, bake_lightmaps):
+    t = time.time()
+    try:
+        step.run(opts)
+    except Exception:  # Blender's -P swallows exceptions and exits 0
+        traceback.print_exc()
+        sys.exit(1)
+    stages.append((step.__name__, time.time() - t))
+bc.summary()
+for name, dt in stages:
+    print(f'  stage {name}: {dt:.0f}s')
+report('after export')

@@ -27,6 +27,29 @@ The handoff between the Blender scene and the site code. If public/models/scene.
 4. Keep the original albedo/roughness textures; the lightmap multiplies over them. Metal and glass keep a small real-time environment reflection so they still glint.
 5. Apply all transforms before export. Export glTF Binary, Y-up, with custom properties enabled.
 
+## Lightmaps
+
+`art/scripts/bake.py` bakes them and `npm run assets` packs them into the GLB as unreferenced images named `lightmap_lampOn`, `lightmap_lampOff` and `lightmap_screen` (UASTC KTX2). They hold Cycles diffuse irradiance (direct + indirect, no albedo), so the code multiplies albedo by them.
+
+- All `baked_*` meshes share one atlas. Each node's `lightmap_uv` extra gives the glTF texture-coordinate index of `UVMap_Light`: 1 normally, 0 on meshes without their own UVs (treehouse, window glass).
+- Values are 8-bit `sqrt(sRGB(irradiance / range))`, quantised with ±0.5-code dither so dark falloffs don't band. Load them as non-colour data (`NoColorSpace`, never `SRGBColorSpace`). Decode: square the sample, convert sRGB to linear, then multiply by the scene extra `lightmap_range` (lamp maps) or `lightmap_screen_range` (screen map). `art/scripts/preview_baked.py` implements the same decode.
+- `lightmap_lampOn` includes everything lit with the lamp on, and `lightmap_lampOff` everything with the lamp off. Neither includes the screen.
+- `lightmap_screen` is greyscale: only the CRT screen's light, baked with neutral white emitters. Multiply it by the screen's current colour and add it. The authored Blender look uses `light_screen` teal (0.25, 0.85, 0.85).
+- Light = mix(lampOff, lampOn, lampMix) × lightmap_range + screenColour × screen × lightmap_screen_range.
+
+## Real-time reflections
+
+These are metal or glass, so in three.js they keep a small real-time environment reflection on top of their lightmap (bake rule 4):
+
+| Mesh | Material |
+| --- | --- |
+| `baked_lamp` | `lamp_trim_brass` (shade fittings) |
+| `baked_lamp_chain` | `brass` |
+| `baked_nameplate_brass` | `nameplate_brass` |
+| `screen_glass` | `crt_glass` |
+| `baked_icedcoffee_glass` | `icedcoffee_glass` |
+| `baked_window_glass` | `window_glass` |
+
 ## Rules
 
 - Name mismatches are fixed in Blender and re-exported, never aliased in code.
