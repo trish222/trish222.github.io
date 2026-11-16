@@ -10,7 +10,7 @@ The handoff between the Blender scene and the site code. If public/models/scene.
 | click_lamp_chain | Proxy around the pull chain | Lamp toggle |
 | click_project_01 … click_project_06 | Proxies on each floppy or CD | Open that project's window |
 | click_nameplate, click_treehouse | Proxies | Easter eggs or About window |
-| window_view | Quad behind the window glass | Night-city video texture |
+| window_view | Quad behind the window glass | Night-city video texture; until P5, its emissive texture is the baked city view, already display-referred (AgX), so show it unlit with tone mapping off |
 | lamp_bulb, crt_glow | Emissive meshes | Bloom sources; intensity tied to lamp state |
 | cam_overview, cam_screen, cam_mobile | Empties (or cameras) | Camera positions and look targets |
 | baked_* | All static scene meshes | Use the baked lightmap texture set |
@@ -36,6 +36,7 @@ The handoff between the Blender scene and the site code. If public/models/scene.
 - `lightmap_lampOn` includes everything lit with the lamp on, and `lightmap_lampOff` everything with the lamp off. Neither includes the screen.
 - `lightmap_screen` is greyscale: only the CRT screen's light, baked with neutral white emitters. Multiply it by the screen's current colour and add it. The authored Blender look uses `light_screen` teal (0.25, 0.85, 0.85).
 - Light = mix(lampOff, lampOn, lampMix) × lightmap_range + screenColour × screen × lightmap_screen_range.
+- Islands are packed tightly (2 texels apart at 2048 with a 1-texel bake margin), so sample the lightmaps without mipmaps, or the lower mips blend neighbouring islands.
 
 ## Real-time reflections
 
@@ -43,12 +44,15 @@ These are metal or glass, so in three.js they keep a small real-time environment
 
 | Mesh | Material |
 | --- | --- |
+| `baked_lamp` | `DefaultMaterial` (stand and base) |
 | `baked_lamp` | `lamp_trim_brass` (shade fittings) |
 | `baked_lamp_chain` | `brass` |
 | `baked_nameplate_brass` | `nameplate_brass` |
 | `screen_glass` | `crt_glass` |
 | `baked_icedcoffee_glass` | `icedcoffee_glass` |
 | `baked_window_glass` | `window_glass` |
+
+glTF drops procedural roughness and metallic (they export as 1.0), so `art/scripts/export_fixes.py` sets export-only constants on these materials (the Cycles source keeps its noise). The lamp shade's lamp-on glow ships as `emit_lamp` on `lamp_shade`; scale it by `lampMix`.
 
 ## Rules
 

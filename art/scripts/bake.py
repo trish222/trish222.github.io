@@ -1,9 +1,11 @@
 """Bake art/scene.blend for the site, then export art/export/scene-raw.glb.
 
-  blender -b art/scene.blend -P art/scripts/bake.py -- [--preview] [--force]
+  blender -b art/scene.blend -P art/scripts/bake.py -- [--preview] [--force] [--force-map NAME ...]
 
 Order matters: restored normals and albedo first so the lightmaps see them.
-Each map is saved as it finishes and reused on the next run unless --force.
+Each map is saved as it finishes and reused on the next run unless --force (all) or --force-map NAME (one map,
+repeatable, e.g. --force-map emit_window_view). Lightmaps re-bake by themselves
+when the UVMap_Light atlas changes.
 --preview bakes small and fast into art/bakes/preview/ and scene-raw-preview.glb.
 The .blend is never saved, so the procedural sources stay editable.
 """
@@ -33,6 +35,7 @@ def report(when):
 parser = argparse.ArgumentParser(prog='bake.py')
 parser.add_argument('--preview', action='store_true', help='512 px / 32 spp lightmaps, half-size maps')
 parser.add_argument('--force', action='store_true', help='re-bake maps that already exist')
+parser.add_argument('--force-map', action='append', default=[], metavar='NAME', help='re-bake this map only')
 opts = bc.Opts(**vars(parser.parse_args(sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else [])))
 
 report('before bake')

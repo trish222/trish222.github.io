@@ -8,6 +8,7 @@ would change nothing and be stripped anyway.
 import os
 
 import bpy
+import numpy as np
 
 import bake_common as bc
 
@@ -35,7 +36,7 @@ UNITS = [
     ('albedo_desk', ['baked_desk'], 2048, False),  # the nameplate reuses it on its tiled UVs
     ('albedo_lamp', ['baked_lamp'], 2048, False),
     ('albedo_notepads', ['baked_notepad', 'baked_paper_sheet', 'baked_paper_stack'], 1024, False),
-    ('albedo_mug', ['baked_mug'], 1024, False),
+    ('albedo_mug', ['baked_mug'], 1024, True),  # glaze spans all of UV0, under the coffee disc
     ('albedo_icedcoffee', ['baked_icedcoffee_drink'], 512, True),
     ('albedo_lamp_chain', ['baked_lamp_chain'], 256, True),
     ('albedo_walnut', ['baked_sill', 'baked_window_frame'], 1024, True),  # replaces tiled UVs
@@ -122,8 +123,26 @@ def use_image(mats, img):
         m.node_tree.links.new(tex.outputs['Color'], bc.bsdf(m).inputs['Base Color'])
 
 
+def glass_alpha(opts):
+    """icedcoffee_glass maps its condensation mask to alpha 0.12-0.2 with a Map Range,
+    which glTF drops, so the raw mask shipped and the drops rendered opaque. Write the
+    remapped alpha into its own image instead."""
+    mat = bpy.data.materials['icedcoffee_glass']
+    nt = mat.node_tree
+    rng = next(n for n in nt.nodes if n.type == 'MAP_RANGE')
+    tex = rng.inputs['Value'].links[0].from_node
+    s = bc.pixels(tex.image)[..., :1]
+    mask = np.where(s <= 0.04045, s / 12.92, ((s + 0.055) / 1.055) ** 2.4)  # sRGB, as the shader reads it
+    lo, hi = rng.inputs['To Min'].default_value, rng.inputs['To Max'].default_value
+    tex.image = bc.save_png('alpha_icedcoffee_glass', np.repeat(lo + (hi - lo) * mask, 3, -1),
+                            os.path.join(opts.out, 'alpha_icedcoffee_glass.png'))
+    nt.links.new(tex.outputs['Color'], bc.bsdf(mat).inputs['Alpha'])
+    nt.nodes.remove(rng)
+
+
 def run(opts):
     restore_normals()
+    glass_alpha(opts)
     bc.begin('albedo', len(UNITS))
     for name, obj_names, px, new_uv in UNITS:
         objs = [bpy.data.objects[n] for n in obj_names]

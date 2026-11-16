@@ -27,8 +27,11 @@ Z_FLAT = 0.953  # below this the face drops into the recess, so the paper hangs 
 CURL, CURL_ZONE = 0.0028, 0.008  # bottom-edge lift (m) and how far up it reaches
 HANG, HANG_ZONE = 0.0016, 0.010  # extra lift of the part past the bezel edge
 INK_PROUD, INK_WIDTH = 0.0002, 0.00062  # ink is a film on the paper; clears the chord between grid vertices
-RING_C, RING_R = (-0.285, 0.062), 0.040  # on the notepad, beside the glass base
-PAD_TOP = 0.76
+GLASS_C, GLASS_R = (-0.3001, 0.1074), 0.0350  # iced-coffee glass base (measured)
+RING_SHIFT, RING_SHIFT_DIR = 0.0025, math.radians(-20)  # a thin crescent peeks out right of the glass
+RING_C = (GLASS_C[0] + RING_SHIFT * math.cos(RING_SHIFT_DIR), GLASS_C[1] + RING_SHIFT * math.sin(RING_SHIFT_DIR))
+RING_R = GLASS_R - 0.0005  # the ring sits under the base, so it matches its rim
+PAD_TOP = 0.7598
 
 # Single-stroke glyphs: x right, y up, x-height 0.5, ascender 1.0, descender -0.5.
 # name: (advance, [strokes])
@@ -241,7 +244,7 @@ def build_ring(rng):
     bm = bmesh.new()
     stain = bm.faces.layers.float.new('stain')
     phase = (rng.uniform(0, 6.28), rng.uniform(0, 6.28))
-    segs, z = 160, PAD_TOP + 0.0003
+    segs, z = 160, PAD_TOP + 0.0001  # under the glass bottom (0.14 mm over the paper)
     # radial strips (offset from the edge, strength): a darker rim that fades inward
     bands = [(0.0006, 0.0), (0.0, 0.5), (-0.0010, 0.2), (-0.0022, 0.07)]
     rim = [[None] * (segs + 1) for _ in bands]

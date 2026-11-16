@@ -17,7 +17,7 @@ PLASTICS = ['Material.017', 'Material.018', 'Material.021', 'Material.022', 'mou
 INK = (0.10, 0.09, 0.075, 1)
 LED_GREEN = (0.12, 1.0, 0.3, 1)
 NOTE_PAPER = (0.74, 0.65, 0.22, 1)  # aged, slightly faded tan-yellow sticky note (lived_in.py)
-PEN = (0.075, 0.075, 0.08, 1)  # medium-gray HB graphite at full pressure, same note
+PEN = (0.18, 0.18, 0.19, 1)  # soft medium-grey graphite, L* ~50 (half again lighter than the first 0.075)
 CHIN_Z = 0.981
 BADGE_X = -0.011  # monitor centre
 

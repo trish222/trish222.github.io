@@ -5,14 +5,21 @@ The screen light is baked alone with every screen emitter set to neutral white,
 so the site can tint it with the UI's current colour without a re-bake.
 Lightmaps are 8-bit, dithered sqrt(sRGB(value / range)); the ranges go to scene extras.
 """
+import hashlib
 import math
 import os
 
 import bmesh
 import bpy
 import numpy as np
+from mathutils import Vector
+from mathutils.bvhtree import BVHTree
+from mathutils.interpolate import poly_3d_calc
 
 import bake_common as bc
+import bake_only
+import bake_window
+import export_fixes
 
 CONTRACT = ['screen_plane', 'screen_glass', 'click_crt', 'click_lamp_chain',
             *[f'click_project_0{i}' for i in range(1, 7)], 'click_nameplate', 'click_treehouse',
@@ -103,8 +110,42 @@ def texel_weight(o, f):
     return WEIGHTS[o.name]
 
 
+def mug_seams(o):
+    """Smart UV cut the mug's walls into panels whose lightmap seams showed as faint
+    vertical stripes. Cut it at its sharp edges only; the mesh is already split once
+    down the back, behind the handle (away from cam_overview)."""
+    bm = bmesh.new()
+    bm.from_mesh(o.data)
+    for e in bm.edges:
+        e.seam = e.is_manifold and e.calc_face_angle() > math.radians(45)
+    bm.to_mesh(o.data)
+    bm.free()
+
+
+def pen_on_note(mon):
+    """Give each pencil stroke the lightmap texels of the paper under it. As its own
+    islands (~1/3 texel per face) it picked up neighbouring dark texels."""
+    bm = bmesh.new()
+    bm.from_mesh(mon.data)
+    uv = bm.loops.layers.uv['UVMap_Light']
+    note, pen = bm.faces.layers.float['note'], bm.faces.layers.float['pen']
+    paper = [f for f in bm.faces if f[note]]
+    tree = BVHTree.FromPolygons([v.co for v in bm.verts], [[v.index for v in f.verts] for f in paper])
+    for f in [f for f in bm.faces if f[pen]]:
+        for loop in f.loops:
+            hit, _, i, _ = tree.find_nearest(loop.vert.co)
+            under = paper[i]
+            w = poly_3d_calc([v.co for v in under.verts], hit)
+            loop[uv].uv = sum((lp[uv].uv * k for lp, k in zip(under.loops, w)), Vector((0, 0)))
+    bm.to_mesh(mon.data)
+    bm.free()
+
+
 def build_uvs(objs, size, margin_px):
-    bc.smart_uv(objs, 'UVMap_Light', margin_px / size, texel_weight)
+    mug = bpy.data.objects['baked_mug']
+    mug_seams(mug)
+    bc.smart_uv(objs, 'UVMap_Light', margin_px / size, texel_weight, seamed=[mug])
+    pen_on_note(bpy.data.objects['baked_crt_monitor'])
     for o in objs:  # keep UV0 (if any) and UVMap_Light so the lightmap is TEXCOORD_lightmap_uv
         uvs = o.data.uv_layers
         for extra in [u for u in uvs if u.name != 'UVMap_Light' and not u.active_render]:
@@ -129,6 +170,15 @@ def density_report(objs, size):
                 cm2 += f.calc_area() * 1e4
             bm.free()
         print(f'  weight {w}: {math.sqrt(px2 / cm2):.2f} px/cm over {cm2 / 1e4:.2f} m2 ({len(names)} objects)')
+
+
+def uv_key(objs):
+    h = hashlib.sha1()
+    for o in objs:
+        uv = np.empty(len(o.data.loops) * 2, np.float32)
+        o.data.uv_layers['UVMap_Light'].data.foreach_get('uv', uv)
+        h.update(o.name.encode() + uv.tobytes())
+    return h.hexdigest()
 
 
 def encode(opts, on_img, off_img, screen_img):
@@ -181,30 +231,45 @@ def run(opts):
     join_props()
     objs = [bpy.data.objects[n] for n in WEIGHTS if n in bpy.data.objects]
     size, spp = (512, PREVIEW_SPP) if opts.preview else (2048, LIGHTMAP_SPP)
-    # ~27k islands (each LEGO brick face is one), so the packing gap must stay tiny;
-    # the bake still extends edges into the empty space around each island.
-    screen_size, gap, margin = (512, 1, 4) if opts.preview else (1024, 2, 16)
+    # ~27k islands (each LEGO brick face is one), so the packing gap must stay tiny.
+    # Blender applies the bake margin per object, over texels other objects already
+    # baked, so it may fill at most half the gap: a 16 px margin smeared neighbouring
+    # islands across the CRT parts' slivers (chrome-like streaks on keys and drive bays).
+    screen_size, gap = (512, 1) if opts.preview else (1024, 2)  # 2 px at 512 shrinks every island to nothing
     build_uvs(objs, size, gap)
 
+    bc.begin('lightmaps', 4)
+    window = bake_window.bake(opts)
     SCREEN_COLORS.update({n: tuple(bc.bsdf(bpy.data.materials[n]).inputs['Emission Color'].default_value)
                           for n in SCREEN_EMIT}, light_screen=tuple(bpy.data.objects['light_screen'].data.color))
     snap = snapshot_emitters()
     world, black = sc.world, bpy.data.worlds.new('tmp_black')
     black.color = (0, 0, 0)
+    # Lightmaps from another atlas would load fine and shade every texel wrongly.
+    key, key_path = uv_key(objs), os.path.join(opts.out, 'lightmap_uv.sha1')
+    if not os.path.exists(key_path) or open(key_path).read() != key:
+        print('UVMap_Light changed since the last lightmap bake: re-baking all lightmaps')
+        opts.force_maps |= {'lightmap_lampOn', 'lightmap_lampOff', 'lightmap_screen'}
     states = [
         ('lightmap_lampOn', size, AMBIENT_LIGHTS + LAMP_LIGHTS, AMBIENT_EMIT + LAMP_EMIT, False, world),
         ('lightmap_lampOff', size, AMBIENT_LIGHTS, AMBIENT_EMIT, False, world),
         ('lightmap_screen', screen_size, SCREEN_LIGHTS, SCREEN_EMIT, True, black),
     ]
-    bc.begin('lightmaps', len(states))
     baked = []
+    tricks = [bake_only.glass_shadow(), bake_only.pen_shadowless()]
     for name, px, lights, emitters, white, w in states:
         set_state(snap, lights, emitters, white, w)
         baked.append(bc.bake(opts, name, objs, px, 'DIFFUSE', spp, 'UVMap_Light', 'Linear Rec.709',
-                             hdr=True, margin=margin, pass_filter={'DIRECT', 'INDIRECT'}))
+                             hdr=True, margin=gap * px // size // 2, pass_filter={'DIRECT', 'INDIRECT'}))
+    for t in tricks:
+        t.restore()
+    with open(key_path, 'w') as f:
+        f.write(key)
     every = AMBIENT_LIGHTS + LAMP_LIGHTS + SCREEN_LIGHTS
     set_state(snap, every, list(snap), False, world)
 
     print('\n== Lightmap encoding')
     sc['lightmap_range'], sc['lightmap_screen_range'] = encode(opts, *baked)
+    bake_window.use_image(window)
+    export_fixes.run(opts)
     export(os.path.join(bc.ROOT, 'export', 'scene-raw-preview.glb' if opts.preview else 'scene-raw.glb'))

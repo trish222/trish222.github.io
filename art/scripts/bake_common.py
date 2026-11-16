@@ -16,10 +16,13 @@ LOG = []  # (step, map, kind, size, spp, seconds or None when reused)
 
 
 class Opts:
-    def __init__(self, preview, force):
-        self.preview, self.force = preview, force
+    def __init__(self, preview, force, force_map):
+        self.preview, self.force, self.force_maps = preview, force, set(force_map)
         self.out = os.path.join(ROOT, 'bakes', 'preview') if preview else os.path.join(ROOT, 'bakes')
         os.makedirs(self.out, exist_ok=True)
+
+    def forced(self, name):
+        return self.force or name in self.force_maps
 
     def px(self, size):
         return size // 2 if self.preview else size
@@ -55,12 +58,12 @@ def materials(objs):
 
 def bake(opts, name, objs, size, kind, spp, uv, colorspace='sRGB', hdr=False, margin=8,
          pass_filter=frozenset()):
-    """Bake one map onto each object's `uv` layer, or reuse the saved file unless --force.
+    """Bake one map onto each object's `uv` layer, or reuse the saved file unless forced.
     hdr=True bakes float and saves EXR (denoised for DIFFUSE); otherwise saves PNG."""
     _step['i'] += 1
     path = os.path.join(opts.out, name + ('.exr' if hdr else '.png'))
     tag = f"[{_step['name']} {_step['i']}/{_step['n']}] {name} {size}x{size} {spp} spp"
-    if os.path.exists(path) and not opts.force:
+    if os.path.exists(path) and not opts.forced(name):
         img = load(path, colorspace)
         if tuple(img.size) == (size, size):
             print(f'{tag}: reused {os.path.relpath(path, ROOT)}')
@@ -165,19 +168,51 @@ def save_png(name, rgb, path):
     return img
 
 
-def smart_uv(objs, layer, margin, weight=None):
-    """One joint Smart UV Project into `layer` (created if missing) across objs.
-    weight(obj, face) -> relative texel density; islands are rescaled and repacked."""
+def select(objs):
     bpy.ops.object.select_all(action='DESELECT')
+    for o in objs:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = objs[0]
+
+
+def uv_per_area(objs, layer):
+    uv_area = area = 0.0
+    for o in objs:
+        bm = bmesh.new()
+        bm.from_mesh(o.data)
+        bm.transform(o.matrix_world)
+        uv = bm.loops.layers.uv[layer]
+        for f in bm.faces:
+            c = [loop[uv].uv for loop in f.loops]
+            uv_area += abs(sum(a.x * b.y - b.x * a.y for a, b in zip(c, c[1:] + c[:1]))) / 2
+            area += f.calc_area()
+        bm.free()
+    return uv_area / area
+
+
+def smart_uv(objs, layer, margin, weight=None, seamed=()):
+    """One joint Smart UV Project into `layer` (created if missing) across objs.
+    weight(obj, face) -> relative texel density; islands are rescaled and repacked.
+    `seamed` objects are unwrapped along their marked seams instead, at the same density."""
     for o in objs:
         uvs = o.data.uv_layers
         uvs.active = uvs.get(layer) or uvs.new(name=layer)
-        o.select_set(True)
-    bpy.context.view_layer.objects.active = objs[0]
+    select(objs)
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.mesh.select_all(action='SELECT')
     bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=margin, scale_to_bounds=False)
     bpy.ops.object.mode_set(mode='OBJECT')
+    density = uv_per_area([o for o in objs if o not in seamed], layer) if seamed else 0
+    for o in seamed:
+        select([o])
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='SELECT')
+        bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0)
+        bpy.ops.object.mode_set(mode='OBJECT')
+        k = math.sqrt(density / uv_per_area([o], layer))
+        for d in o.data.uv_layers[layer].data:
+            d.uv *= k
+    select(objs)
     if not weight:
         return
     for o in objs:
