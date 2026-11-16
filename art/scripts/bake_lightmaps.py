@@ -134,13 +134,18 @@ def density_report(objs, size):
 def encode(opts, on_img, off_img, screen_img):
     """Float EXRs -> 8-bit PNGs (see the module docstring); returns the ranges."""
     on, off, scr = (bc.pixels(i)[..., :3] for i in (on_img, off_img, screen_img))
-    covered = on.max(-1) > 0
-    lamp_range = math.ceil(np.percentile(on.max(-1)[covered], 99.5) * 2) / 2
+    on_covered = on.max(-1) > 0
+
+    def covered(rgb):  # the shared atlas, so lamp-on coverage strided down to this map's size
+        k = on.shape[0] // rgb.shape[0]
+        return on_covered[::k, ::k]
+
+    lamp_range = math.ceil(np.percentile(on.max(-1)[on_covered], 99.5) * 2) / 2
     y = scr @ np.array([0.2126, 0.7152, 0.0722], np.float32)
-    screen_range = math.ceil(np.percentile(y[covered], 99.5) * 20) / 20
+    screen_range = math.ceil(np.percentile(y[covered(y)], 99.5) * 20) / 20
     for name, rgb, rng in (('lightmap_lampOn', on, lamp_range), ('lightmap_lampOff', off, lamp_range),
                            ('lightmap_screen', np.repeat(y[..., None], 3, axis=2), screen_range)):
-        clipped = (rgb.max(-1)[covered] > rng).mean() * 100
+        clipped = (rgb.max(-1)[covered(rgb)] > rng).mean() * 100
         bc.save_png(name + '_png', bc.quantise(np.sqrt(bc.srgb(rgb / rng))), os.path.join(opts.out, name + '.png'))
         print(f'  {name}: range {rng}, {clipped:.2f}% of covered texels clipped')
     return lamp_range, screen_range

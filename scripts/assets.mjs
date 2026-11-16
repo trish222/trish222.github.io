@@ -42,6 +42,8 @@ await io.write(withLightmaps, doc);
 for (const [name, size] of VARIANTS) {
   const [a, b, c] = ['resized', 'uastc', 'etc1s'].map(s => path.join(tmp, `${size}-${s}.glb`));
   gt('resize', withLightmaps, a, '--width', size, '--height', size);
+  // Download budget: the dimmer lamp-off light is smooth enough to ship at 1024 everywhere.
+  gt('resize', a, a, '--pattern', 'lightmap_lampOff', '--width', 1024, '--height', 1024);
   gt('uastc', a, b, '--pattern', 'lightmap*');
   // etc1s skips textures that are already KTX2.
   gt('etc1s', b, c);
