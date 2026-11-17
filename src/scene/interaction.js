@@ -3,7 +3,7 @@ import * as THREE from 'three';
 // One gesture stream and one nearest-hit picker for every 3D action.
 export function createInteraction({ canvas, camera, proxies, parallax,
   canOrbit, isDragging, canLeaveScreen, overScreen, beginParallax, endParallax,
-  setHover, onLamp, onEnter, onExit }) {
+  setHover, onLamp, onEnter, onProject, onExit }) {
   const CLICK_SLOP = 5;
   const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
   let press = { id: -1, x: 0, y: 0, target: null };
@@ -21,8 +21,10 @@ export function createInteraction({ canvas, camera, proxies, parallax,
     pickRay.setFromCamera(pickNdc, camera);
     if (shifted) endParallax();
 
-    const hits = pickRay.intersectObjects([proxies.lampChain, proxies.crt], false);
+    const hits = pickRay.intersectObjects([proxies.lampChain, proxies.crt, ...proxies.projects], false);
     if (!hits.length) return null;
+    const project = proxies.projects.indexOf(hits[0].object);
+    if (project >= 0) return `project:${project}`;
     return hits[0].object === proxies.lampChain ? "lamp" : "machine";
   }
 
@@ -69,6 +71,7 @@ export function createInteraction({ canvas, camera, proxies, parallax,
       if (!target || moved > CLICK_SLOP || !canOrbit()) return;
 
       if (target === "lamp") onLamp();
+      else if (target.startsWith("project:")) onProject(Number(target.slice(8)));
       else onEnter();
     };
     onCanvasCancel = () => {

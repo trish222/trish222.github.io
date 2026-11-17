@@ -2,17 +2,16 @@ import { createInteraction } from "./scene/interaction.js";
 import { createAnimationLoop } from "./scene/animation.js";
 import { createRoomScene } from "./scene/createScene.js";
 import { createNavigation } from "./scene/navigation.js";
-import { createLighting, NIGHT_LIGHTING } from "./scene/lighting.js";
 import { createCameraRig } from "./scene/camera.js";
 import { isDesktopFullscreen } from "./config/experience.js";
-import { createComposer } from "./scene/renderer.js";
 import { createParallax } from "./scene/parallax.js";
 import { createScreenProjection } from "./overlay/screenOverlay.js";
 import { createDesktopSnapshot } from "./overlay/desktopSnapshot.js";
 import { createLampState } from "./lamp.js";
 import * as THREE from "three";
 import { gsap } from "gsap/gsap-core";
-import { tonemapForward, tonemapPreimage, TONE_MAPPINGS } from "./tonemap.js";
+import { tonemapForward, TONE_MAPPINGS } from "./tonemap.js";
+import { PROJECTS } from "./config/projects.js";
 
 let interaction = null;
 
@@ -20,7 +19,7 @@ let interaction = null;
 
 
 
-const diagnosticNames = new Set(["__cam", "__camera", "__composer", "__diveTo", "__enter", "__flyFrom", "__flyTo", "__fov", "__lamp", "__orbit", "__pick", "__scene", "__stillReady", "__tonemap"]);
+const diagnosticNames = new Set(["__cam", "__camera", "__diveTo", "__enter", "__flyFrom", "__flyTo", "__fov", "__lamp", "__orbit", "__pick", "__scene", "__stillReady", "__tonemap"]);
 let sceneGeneration = 0;
 
 
@@ -59,13 +58,10 @@ const MOBILE_BP = 760;
 
 const LAMP_START_ON = true;
 
-const LAMP_FADE_S = 0.4;
+const LAMP_FADE_S = 0.3; // P4 done-when: the crossfade lands in under 400 ms
 
-const OFF_DARKNESS = 0.52;
-const HEMI_GROUND_OFF = 0x2a2a3e;
 const BACKGROUND = "#1c1a2a";
 
-const TONE_EXPOSURE = 1.45;
 
 const HOVER_RATE = 7; // hover easing, per second
 
@@ -78,12 +74,11 @@ function scenePixelRatio() {
 
 // Keep drawing buffers allocated across camera motion: even a single canvas
 // resize can synchronize with the GPU (100ms+ on the measured Metal path).
-// Only a real DPR or viewport breakpoint change resizes the canvas and composer.
+// Only a real DPR or viewport breakpoint change resizes the canvas.
 function syncRenderQuality() {
   const ratio = scenePixelRatio();
   if (renderer.getPixelRatio() === ratio) return;
   renderer.setPixelRatio(ratio);
-  composer?.setPixelRatio(ratio);
 }
 
 // LOOKING AROUND
@@ -126,19 +121,15 @@ let fly = { value: 0, dir: 0 };
 
 let dive = { value: 0, dir: 0 };
 let camera = null;
-let composer = null;
 let stage = null;
 
 let lampLevel = LAMP_START_ON ? 1 : 0;
 let lampBtn = null;
 let onLampBtn = null;
 
-const HEMI_GROUND_WARM = new THREE.Color(NIGHT_LIGHTING.hemiGround);
-const HEMI_GROUND_COOL = new THREE.Color(HEMI_GROUND_OFF);
 
 let hover = { target: 0, value: 0 };
 
-let lights = null;
 
 // World units at the viewport edges, with a radial cap for diagonals.
 // Smoothness is a time constant in seconds: smaller values respond faster.
@@ -201,10 +192,7 @@ const isHandheld = isDesktopFullscreen;
 
 function applyLampLevel(level) {
   lampLevel = level;
-  if (!lights) return;
-  const dim = OFF_DARKNESS + (1 - OFF_DARKNESS) * level;
-  lights.hemi.intensity = NIGHT_LIGHTING.hemiIntensity * dim;
-  lights.hemi.groundColor.copy(HEMI_GROUND_COOL).lerp(HEMI_GROUND_WARM, level);
+  stage?.setLampMix(level);
 }
 
 const lampState = createLampState({ startOn: LAMP_START_ON, fadeS: LAMP_FADE_S, onLevel: applyLampLevel });
@@ -227,9 +215,7 @@ function initLampButton() {
 
 function applyVoidColor() {
   if (!scene || !renderer) return;
-  scene.background = composer
-    ? tonemapPreimage(new THREE.Color(BACKGROUND), renderer.toneMapping, renderer.toneMappingExposure)
-    : new THREE.Color(BACKGROUND);
+  scene.background = new THREE.Color(BACKGROUND);
 }
 
 // CAMERA
@@ -286,6 +272,13 @@ function canLeaveScreen() {
     !screenBrokenOut() &&
     !document.body.classList.contains("menu-open")
   );
+}
+
+// A floppy flies in like the CRT, then asks the desktop for its window on arrival.
+let pendingProject = null;
+function openProject(i) {
+  pendingProject = PROJECTS[i];
+  enterScreen();
 }
 
 function enterScreen() {
@@ -400,10 +393,6 @@ function updateScreenOverlay(transformOnly = false) {
   set("--blur", `${blur.toFixed(2)}px`);
 }
 
-function buildComposer() {
-  return createComposer({ renderer, scene, camera });
-}
-
 // HOVER, AND THE CURSOR
 
 // THE FLY-IN
@@ -415,8 +404,7 @@ function render() {
   if (shifted || parallaxPresented) updateScreenOverlay(true);
   parallaxPresented = shifted;
   try {
-    if (composer) composer.render();
-    else renderer.render(scene, camera);
+    renderer.render(scene, camera);
   } finally {
     if (shifted) endParallax();
   }
@@ -463,6 +451,8 @@ function arrive() {
   hover.target = 0;
 
   updateScreenOverlay();
+  if (pendingProject) document.dispatchEvent(new CustomEvent("desk:open", { detail: pendingProject }));
+  pendingProject = null;
 
   if (!document.body.classList.contains("signed-in")) {
     document.getElementById("login-user")?.focus({ preventScroll: true });
@@ -472,6 +462,7 @@ function arrive() {
 
 function depart() {
   fly.dir = 0;
+  pendingProject = null;
   document.body.classList.remove("screen-active", "screen-zooming");
   applyFade(0);
   showStill(false);
@@ -777,8 +768,8 @@ export async function initScene(canvas) {
 
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = TONE_EXPOSURE;
+  // AgX at exposure 1, as the bake previews (preview_baked.py) and the Cycles references use.
+  renderer.toneMapping = THREE.AgXToneMapping;
   renderer.setPixelRatio(scenePixelRatio());
   renderer.setSize(w, h, false);
 
@@ -789,7 +780,6 @@ export async function initScene(canvas) {
   scene = stage.scene;
   performance.mark('room:assets-ready');
   rig.resetPath();
-  lights = createLighting(scene);
   applyLampLevel(lampLevel);
   performance.mark('room:geometry-ready');
   camera = buildCamera();
@@ -802,15 +792,6 @@ export async function initScene(canvas) {
   const facingAngle = Math.atan2(screenNormal.x, screenNormal.z);
   applyFly(0, w, h);
 
-  if (!isMobile() && !prefersReducedMotion()) {
-    try {
-      composer = buildComposer();
-    } catch {
-      composer?.dispose();
-      composer = null; // fall back to a straight render
-    }
-  }
-
   applyVoidColor();
 
   // Diagnostics load only for development or an explicit review URL.
@@ -819,7 +800,7 @@ export async function initScene(canvas) {
       import('./debug/geometry.js'), import('./debug/experience.js'),
     ]);
     if (generation !== sceneGeneration) return false;
-    disposeDiagnostics = installGeometryDiagnostics({ scene, camera, renderer, composer, background: BACKGROUND, render });
+    disposeDiagnostics = installGeometryDiagnostics({ scene, camera, renderer, background: BACKGROUND, render });
     installExperienceDiagnostics({
       get FACING() { return facingAngle; },
       get LAMP_FADE_S() { return LAMP_FADE_S; },
@@ -830,7 +811,6 @@ export async function initScene(canvas) {
       get camera() { return camera; },
       get canvasEl() { return canvasEl; },
       get clamp01() { return clamp01; },
-      get composer() { return composer; },
       get dive() { return dive; },
       get diveState() { return diveState; },
       get diveTl() { return diveTl; },
@@ -847,6 +827,7 @@ export async function initScene(canvas) {
       get fov() { return currentFov(); },
       get lampBtn() { return lampBtn; },
       get lampLevel() { return lampLevel; },
+      get lampMix() { return stage.lampMix; },
       get lampOn() { return lampState.on; },
       get lampP() { return lampState.progress; },
       get navigation() { return navigation; },
@@ -872,7 +853,6 @@ export async function initScene(canvas) {
     if (!width || !height) return;
     syncRenderQuality();
     renderer.setSize(width, height, false);
-    composer?.setSize(width, height);
 
     buildFlyPath(width, height);
 
@@ -908,7 +888,7 @@ export async function initScene(canvas) {
     canOrbit: () => navigation.allowed(), isDragging: () => navigation.dragging,
     canLeaveScreen, overScreen, beginParallax, endParallax,
     setHover: value => { hover.target = value; }, onLamp: () => setLampOn(!lampState.on),
-    onEnter: enterScreen, onExit: flyFromScreen });
+    onEnter: enterScreen, onProject: openProject, onExit: flyFromScreen });
 
   initLampButton();
   performance.mark('room:interactive');
@@ -978,7 +958,6 @@ export function disposeScene() {
   flyStart = null;
   flyFrom = FLY_FROM;
   fovOverride = null;
-  lights = null;
   if (lampBtn && onLampBtn) lampBtn.removeEventListener("click", onLampBtn);
   if (lampBtn) {
     lampBtn.hidden = true;
@@ -1030,10 +1009,8 @@ export function disposeScene() {
   dive = { value: 0, dir: 0 };
   screenEl = null;
   canvasEl = null;
-  composer?.passes.forEach((pass) => pass.dispose());
-  composer?.dispose();
   renderer?.dispose();
   hover = { target: 0, value: 0 };
-  renderer = scene = camera = composer = null;
+  renderer = scene = camera = null;
   onResize = onScreenInput = null;
 }

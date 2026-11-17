@@ -8,7 +8,6 @@ export function installExperienceDiagnostics(context) {
      model's true corners rather than the conservative box `__fit`
      reports — needs the camera `__fit` projects against. */
   window.__camera = context.camera;
-  window.__composer = context.composer;
   window.__stillReady = () => !!context.snapshot.canvas;
   /* Where the furniture lands in the frame, in NDC — ±1 is the edge.
      This is the knob FRUSTUM and ISO_TARGET are set against: "does the
@@ -111,13 +110,12 @@ export function installExperienceDiagnostics(context) {
     return {
       tonemap: found ? found[0] : context.renderer.toneMapping,
       exposure: context.renderer.toneMappingExposure,
-      path: context.composer ? "composer" : "direct",
       void: context.background,
       /* What the clear is actually set to, and what the void would
          have come out as with no pre-image — the error this is all
          here to remove. */
       background: `#${context.scene.background.getHexString()}`,
-      untreated: `#${context.tonemapForward(target, context.composer ? context.renderer.toneMapping : THREE.NoToneMapping, context.renderer.toneMappingExposure).getHexString()}`,
+      untreated: `#${context.tonemapForward(target, THREE.NoToneMapping, context.renderer.toneMappingExposure).getHexString()}`,
     };
   };
 
@@ -126,6 +124,7 @@ export function installExperienceDiagnostics(context) {
     return {
       on: context.lampOn,
       level: Number(context.lampLevel.toFixed(4)),
+      mix: context.lampMix(),
       p: Number(context.lampP.toFixed(4)),
       fadeSeconds: context.LAMP_FADE_S,
       exposure: context.renderer.toneMappingExposure,

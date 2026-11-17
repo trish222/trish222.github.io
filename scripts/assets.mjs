@@ -2,6 +2,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { crc32 } from 'node:zlib';
 import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 
@@ -19,6 +20,34 @@ if (!existsSync(INPUT)) {
 if (spawnSync('toktx', ['--version']).error) {
   console.error('toktx not found. Install KTX-Software from github.com/KhronosGroup/KTX-Software/releases (macOS .pkg); brew has no ktx formula.');
   process.exit(1);
+}
+
+// Blender tags every PNG sRGB (even Non-Color ones), and ktx create then converts the
+// lightmaps' encoded codes to linear, crushing the darks. Retag them linear (gAMA 1.0)
+// after every resize, which re-encodes the PNG, so the codes ship unchanged.
+function linearPng(png) {
+  const chunks = [png.subarray(0, 8)];
+  for (let at = 8; at < png.length;) {
+    const end = at + 12 + png.readUInt32BE(at);
+    const type = png.toString('latin1', at + 4, at + 8);
+    if (!['sRGB', 'gAMA', 'cHRM', 'iCCP'].includes(type)) chunks.push(png.subarray(at, end));
+    if (type === 'IHDR') {
+      const gama = Buffer.from([...Buffer.from('gAMA'), 0, 1, 0x86, 0xa0]);
+      const chunk = Buffer.alloc(16);
+      chunk.writeUInt32BE(4, 0);
+      gama.copy(chunk, 4);
+      chunk.writeUInt32BE(crc32(gama), 12);
+      chunks.push(chunk);
+    }
+    at = end;
+  }
+  return Buffer.concat(chunks);
+}
+
+async function retagLightmaps(file) {
+  const doc = await io.read(file);
+  for (const t of doc.getRoot().listTextures()) if (LIGHTMAPS.includes(t.getName())) t.setImage(linearPng(Buffer.from(t.getImage())));
+  await io.write(file, doc);
 }
 
 const tmp = mkdtempSync(path.join(tmpdir(), 'assets-'));
@@ -42,13 +71,14 @@ await io.write(withLightmaps, doc);
 for (const [name, size] of VARIANTS) {
   const [a, b, c] = ['resized', 'uastc', 'etc1s'].map(s => path.join(tmp, `${size}-${s}.glb`));
   gt('resize', withLightmaps, a, '--width', size, '--height', size);
-  // Download budget: the dimmer lamp-off light is smooth enough to ship at 1024 everywhere.
-  gt('resize', a, a, '--pattern', 'lightmap_lampOff', '--width', 1024, '--height', 1024);
-  // Mobile download budget: lamp-off and screen light are the smoothest maps.
-  if (size < 2048) {
-    for (const map of ['lightmap_lampOff', 'lightmap_screen']) gt('resize', a, a, '--pattern', map, '--width', 512, '--height', 512);
-  }
-  gt('uastc', a, b, '--pattern', 'lightmap*');
+  // Download budget: lamp-off light ships at half size (1024; 512 on mobile) with RDO. The screen
+  // light stays at 1024 in both builds: at 512 the CRT and keyboard islands blotch in lamp-off.
+  // lampOn, the hero map, stays at full size without RDO.
+  gt('resize', a, a, '--pattern', 'lightmap_lampOff', '--width', size / 2, '--height', size / 2);
+  gt('resize', a, a, '--pattern', 'lightmap_screen', '--width', 1024, '--height', 1024);
+  await retagLightmaps(a);
+  gt('uastc', a, b, '--pattern', 'lightmap_lampOff', '--rdo');
+  for (const map of ['lightmap_lampOn', 'lightmap_screen']) gt('uastc', b, b, '--pattern', map);
   // etc1s skips textures that are already KTX2.
   gt('etc1s', b, c);
   gt('meshopt', c, path.join('public/models', name));

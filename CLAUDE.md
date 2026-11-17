@@ -71,7 +71,7 @@ The full contract and bake rules are in [docs/scene-contract.md](docs/scene-cont
 
 | Metric                            | Desktop            | Mobile                                |
 | --------------------------------- | ------------------ | ------------------------------------- |
-| Total download before first frame | ≤ 10 MB            | ≤ 6 MB (lower-res texture set)        |
+| Total download before first frame | ≤ 11.5 MB          | ≤ 6.5 MB (lower-res texture set)      |
 | Draw calls                        | ≤ 80               | ≤ 50                                  |
 | Texture memory                    | ≤ 256 MB           | ≤ 128 MB                              |
 | Frame rate (idle, overview)       | 60 fps             | 30 fps or better on a mid-range phone |

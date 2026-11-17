@@ -1,5 +1,6 @@
 import { desktopEvents } from './session.js';
 import * as roomScene from '../scene.js';
+import { initProjectLinks, openPendingProject } from './projects.js';
 import { WINDOWS, resetWindows, openWindow, closeWindow, blurWindows, updateTaskbar, fitAllWindows, initDragging, initWindowControls } from './windows.js';
 
 /* ==========================================
@@ -283,6 +284,7 @@ function signIn() {
      Re-fit whatever was left open from a previous session. */
   fitAllWindows();
   updateTaskbar();
+  openPendingProject();
 }
 
 function logOff() {
@@ -341,10 +343,7 @@ function initLoginScreen() {
     /* The scene owns the reduced-motion decision for the move it may
        be about to make — it has the still and the render loop — and
        calls back either way. */
-    const go = () => {
-      if (sceneApi) sceneApi.diveToDesktop(signIn);
-      else signIn();
-    };
+    const go = () => (sceneApi ? sceneApi.diveToDesktop(signIn) : signIn());
     if (prefersReducedMotion()) go();
     else desktopEvents.timeout(go, SIGN_IN_MS);
   });
@@ -407,6 +406,7 @@ export function initDesktop() {
   initPointerKind();
   initDesktopIcons();
   initRecycleBin();
+  initProjectLinks(signedIn);
 
   /* A window positioned for a desktop viewport is off-stage once the
      viewport is a phone's — and crossing the PHONE breakpoint in either
@@ -430,9 +430,7 @@ export function initDesktop() {
            hidden unless the scene actually came up. */
         const ready = await scene.initScene(canvas);
         if (generation !== desktopGeneration) return;
-        if (ready) {
-          initScreenControls(scene);
-        }
+        if (ready) initScreenControls(scene);
         else initWithoutScene();
       })
       /* A throw anywhere in the scene's build lands here and the page

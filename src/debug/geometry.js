@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-export function installGeometryDiagnostics({ scene, camera, renderer, composer, background, render }) {
+export function installGeometryDiagnostics({ scene, camera, renderer, background, render }) {
   window.__fit = (...names) => {
     const box = new THREE.Box3();
     for (const n of names.length ? names : ["screen_plane"]) {
@@ -95,7 +95,6 @@ export function installGeometryDiagnostics({ scene, camera, renderer, composer, 
     const want = [bg.r, bg.g, bg.b].map((v) => Math.round(v * 255));
     const hex = (a) => "#" + a.map((v) => v.toString(16).padStart(2, "0")).join("");
     return {
-      path: composer ? "composer" : "direct",
       got: hex(got),
       want: hex(want),
       err: Math.max(...got.map((v, i) => Math.abs(v - want[i]))),

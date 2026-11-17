@@ -1,17 +1,12 @@
 import * as THREE from 'three';
 import { loadScene } from './loadScene.js';
+import { createBakedLighting } from './bakedMaterial.js';
+import { labelFloppies } from './floppyLabels.js';
+import { PROJECTS } from '../config/projects.js';
 
-const REQUIRED = ['screen_plane', 'click_crt', 'click_lamp_chain', 'cam_overview', 'cam_screen', 'cam_mobile'];
-
-// Flat albedo until the lightmaps land; keeps the GLB's map, tint, vertex colours and alpha.
-function flatten(root) {
-  root.traverse((o) => {
-    if (!o.isMesh) return;
-    const { map, color, vertexColors, transparent, opacity, alphaTest, side } = o.material;
-    o.material.dispose();
-    o.material = new THREE.MeshBasicMaterial({ map, color, vertexColors, transparent, opacity, alphaTest, side });
-  });
-}
+const REQUIRED = ['screen_plane', 'window_view', 'baked_floppy_labels',
+  'click_crt', 'click_lamp_chain', 'cam_overview', 'cam_screen', 'cam_mobile',
+  ...PROJECTS.map((_, i) => `click_project_0${i + 1}`)];
 
 // The DOM quad's corners are the plane's UV corners, TL TR BR BL; glTF UVs start top-left.
 function screenSurface(mesh) {
@@ -39,14 +34,28 @@ function pose(node) {
   return { position, forward, fov: node.isCamera ? node.fov : null };
 }
 
+// Already graded and AgX-mapped in the bake, so it must bypass lighting and tone mapping.
+function unlitView(mesh) {
+  const map = mesh.material.emissiveMap;
+  mesh.material.dispose();
+  mesh.material = new THREE.MeshBasicMaterial({ map, toneMapped: false });
+}
+
 export async function createRoomScene({ renderer }) {
-  const { scene, named } = await loadScene(renderer);
+  const { scene, named, lightmaps, extras } = await loadScene(renderer);
   for (const name of REQUIRED) if (!named.has(name)) throw new Error(`scene.glb is missing "${name}"`);
-  for (const [name, node] of named) if (name.startsWith('baked_')) flatten(node);
+  const lighting = createBakedLighting(lightmaps, extras);
+  for (const [name, node] of named) {
+    if (!name.startsWith('baked_') || !('lightmap_uv' in node.userData)) continue;
+    node.traverse((o) => { if (o.isMesh) lighting.bake(o, node.userData.lightmap_uv); });
+  }
+  unlitView(named.get('window_view'));
+  await labelFloppies(named.get('baked_floppy_labels').material);
 
   const screenPlane = named.get('screen_plane');
-  const proxies = { crt: named.get('click_crt'), lampChain: named.get('click_lamp_chain') };
-  for (const proxy of Object.values(proxies)) proxy.material.visible = false;
+  const projects = PROJECTS.map((_, i) => named.get(`click_project_0${i + 1}`));
+  const proxies = { crt: named.get('click_crt'), lampChain: named.get('click_lamp_chain'), projects };
+  for (const proxy of [proxies.crt, proxies.lampChain, ...projects]) proxy.material.visible = false;
 
   scene.updateMatrixWorld(true);
   const cams = { overview: pose(named.get('cam_overview')), screen: pose(named.get('cam_screen')),
@@ -73,9 +82,12 @@ export async function createRoomScene({ renderer }) {
 
   const dispose = () => {
     clearStill();
+    lighting.dispose();
+    named.get('baked_floppy_labels').material.userData.labelText.dispose();
     scene.traverse((o) => { o.geometry?.dispose(); o.material?.dispose(); });
   };
 
   return { scene, screenPlane, proxies, cams, setStill, clearStill, dispose,
+    setLampMix: lighting.setLampMix, lampMix: () => lighting.uniforms.lampMix.value,
     projectionSurface: screenSurface(screenPlane) };
 }
