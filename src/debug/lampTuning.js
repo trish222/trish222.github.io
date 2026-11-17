@@ -60,13 +60,14 @@ export function installLampTuning(context, stage) {
       apply();
     });
     label.append(caption, input);
-    panel.append(label);
+    list.append(label);
   }
 
   const button = (name, onClick) => {
     const b = Object.assign(document.createElement('button'), { type: 'button', textContent: name });
     b.addEventListener('click', onClick);
-    panel.append(b, ' ');
+    bar.append(b, ' ');
+    return b;
   };
   button('lamp', () => context.setLampOn(!context.lampOn, false));
 
@@ -88,10 +89,16 @@ export function installLampTuning(context, stage) {
     context.updateScreenOverlay();
     context.render();
   });
-  button('copy', () => {
+  const copy = button('copy', async () => {
     const json = JSON.stringify(LOOK, null, 2);
-    navigator.clipboard?.writeText(json);
     console.log(json);
+    try {
+      await navigator.clipboard.writeText(json);
+      copy.textContent = 'copied';
+    } catch {
+      copy.textContent = 'copy failed (see console)';
+    }
+    setTimeout(() => { copy.textContent = 'copy'; }, 1500);
   });
 
   document.body.append(panel);
