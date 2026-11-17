@@ -37,11 +37,24 @@ function pose(node) {
 }
 
 // Already graded and AgX-mapped in the bake, so it must bypass lighting and tone mapping.
+// The look adds saturation and a contrast curve pivoting on mid-grey.
 function unlitView(mesh) {
   const map = mesh.material.emissiveMap;
   mesh.material.dispose();
-  mesh.material = new THREE.MeshBasicMaterial({ map, toneMapped: false });
-  return mesh.material;
+  const material = mesh.material = new THREE.MeshBasicMaterial({ map, toneMapped: false });
+  const grade = { windowSaturation: { value: 1 }, windowContrast: { value: 1 } };
+  material.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, grade);
+    shader.fragmentShader = `uniform float windowSaturation, windowContrast;\n${shader.fragmentShader}`
+      .replace('#include <map_fragment>', `#include <map_fragment>
+  diffuseColor.rgb = max(mix(vec3(dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722))), diffuseColor.rgb, windowSaturation), 0.0);
+  diffuseColor.rgb = 0.18 * pow(diffuseColor.rgb / 0.18, vec3(windowContrast));`);
+  };
+  return () => {
+    material.color.setScalar(LOOK.windowGain);
+    grade.windowSaturation.value = LOOK.windowSaturation;
+    grade.windowContrast.value = LOOK.windowContrast;
+  };
 }
 
 export async function createRoomScene({ renderer }) {
@@ -57,8 +70,8 @@ export async function createRoomScene({ renderer }) {
       if (!material.isMeshBasicMaterial) lit.push(material);
     });
   }
-  const windowView = unlitView(named.get('window_view'));
-  windowView.color.setScalar(LOOK.windowGain);
+  const gradeWindow = unlitView(named.get('window_view'));
+  gradeWindow();
   await labelFloppies(named.get('baked_floppy_labels').material);
 
   const screenPlane = named.get('screen_plane');
@@ -68,7 +81,7 @@ export async function createRoomScene({ renderer }) {
 
   scene.updateMatrixWorld(true);
   const reflections = createReflections({ renderer, scene, bulb: named.get('lamp_bulb'), materials: lit, lighting });
-  const applyLook = () => { windowView.color.setScalar(LOOK.windowGain); reflections.applyLook(); };
+  const applyLook = () => { gradeWindow(); reflections.applyLook(); };
   const cams = { overview: pose(named.get('cam_overview')), screen: pose(named.get('cam_screen')),
     mobile: pose(named.get('cam_mobile')) };
 

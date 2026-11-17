@@ -33,13 +33,17 @@ def bake(opts):
     # A fresh bake's in-memory image reads ~80x the saved EXR (mean ~23 vs 0.28, the
     # true emission), so both paths read the file. Not bc.load: check_existing would
     # return that in-memory image.
-    exr = bpy.data.images.load(os.path.join(opts.out, 'emit_window_view.exr'))
-    exr.colorspace_settings.name = 'Linear Rec.709'
+    exr_path = os.path.join(opts.out, 'emit_window_view.exr')
     sc = bpy.context.scene
     fmt = sc.render.image_settings
     fmt.file_format, fmt.color_mode, fmt.color_depth = 'PNG', 'RGB', '8'
     path = os.path.join(opts.out, 'emit_window_view.png')
-    exr.save_render(path, scene=sc)  # through the scene's view transform (AgX)
+    # Through the scene's view transform (AgX), with the EXR's default tag: that reading
+    # is what Cycles renders (it matches r14). The Linear retag below reads ~80x darker,
+    # and AgX then lifts the night sky to a flat grey.
+    bpy.data.images.load(exr_path, check_existing=False).save_render(path, scene=sc)
+    exr = bpy.data.images.load(exr_path)
+    exr.colorspace_settings.name = 'Linear Rec.709'
     nt, em = emission()
     for link in list(em.inputs['Color'].links):
         nt.links.remove(link)

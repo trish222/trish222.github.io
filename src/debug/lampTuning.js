@@ -6,14 +6,19 @@ import { LOOK } from '../config/look.js';
 const SLIDERS = [
   ['envIntensity', 0, 4, 0.05],
   ['glassEnvIntensity', 0, 8, 0.05],
-  ['specIntensity', 0, 4, 0.01],
-  ['specOffset', -0.3, 0.3, 0.005, 0], ['specOffset', -0.3, 0.3, 0.005, 1], ['specOffset', -0.3, 0.3, 0.005, 2],
+  ['specIntensity', 0, 300, 1],
+  ['specOffset', -1, 1, 0.01, 0], ['specOffset', -1, 1, 0.01, 1], ['specOffset', -1, 1, 0.01, 2],
+  ['shadeColor', 0, 1.5, 0.01, 0], ['shadeColor', 0, 1.5, 0.01, 1], ['shadeColor', 0, 1.5, 0.01, 2],
+  ['shadeSaturation', 0, 2, 0.01],
+  ['shadeEnvIntensity', 0, 8, 0.05],
   ['shadeRoughness', 0, 1, 0.01],
   ['clearcoat', 0, 1, 0.01],
   ['clearcoatRoughness', 0, 1, 0.01],
   ['shadeEmissive', 0, 5, 0.01],
   ['lampOffGain', 0, 4, 0.05],
-  ['windowGain', 0, 1, 0.005],
+  ['windowGain', 0, 2, 0.01],
+  ['windowSaturation', 0, 2, 0.01],
+  ['windowContrast', 0.5, 1.5, 0.01],
   ['overviewZoom', 0.9, 1.3, 0.005],
 ];
 // Frames the lamp like the r14 lamp panel (art/previews/b2-lamp-before-after.png).

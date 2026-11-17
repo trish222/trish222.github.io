@@ -33,6 +33,11 @@ const GLASS_ALPHA = /* glsl */`
   diffuseColor.a = mix(diffuseColor.a, 1.0, clamp(max(max(totalSpecular.r, totalSpecular.g), totalSpecular.b), 0.0, 1.0));
 #endif
 #include <opaque_fragment>`;
+const SHADE_SATURATION = /* glsl */`
+#include <map_fragment>
+#ifdef LM_SHADE
+  diffuseColor.rgb = max(mix(vec3(dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722))), diffuseColor.rgb, shadeSaturation), 0.0);
+#endif`;
 
 // The light-reflecting materials from the contract's "Real-time reflections" table, plus the shade.
 export const LIT = new Set(['DefaultMaterial', 'lamp_trim_brass', 'brass', 'nameplate_brass',
@@ -55,6 +60,7 @@ export function createBakedLighting({ lightmap_lampOn, lightmap_lampOff, lightma
     lmScreenRange: { value: extras.lightmap_screen_range },
     screenTint: { value: SCREEN_TINT.clone() },
     envMapOff: { value: null },
+    shadeSaturation: { value: 1 },
   };
   // lightMap only switches on USE_LIGHTMAP and vLightMapUv; its channel picks the UV set.
   const channels = [0, 1].map((channel) => Object.assign(lightmap_lampOn.clone(), { channel }));
@@ -81,10 +87,12 @@ export function createBakedLighting({ lightmap_lampOn, lightmap_lampOff, lightma
     material.aoMap = null; // the bake already holds the occlusion
     if (channel !== undefined) material.lightMap = channels[channel];
     if (material.transparent) material.defines = { LM_GLASS: '' };
+    if (material.name === 'lamp_shade') material.defines = { LM_SHADE: '' };
     material.onBeforeCompile = (shader) => {
       Object.assign(shader.uniforms, uniforms);
       shader.fragmentShader = shader.fragmentShader
-        .replace('#include <lightmap_pars_fragment>', `#include <lightmap_pars_fragment>\n${channel === undefined ? 'uniform float lampMix;' : DECODE}`)
+        .replace('#include <lightmap_pars_fragment>', `#include <lightmap_pars_fragment>\nuniform float shadeSaturation;\n${channel === undefined ? 'uniform float lampMix;' : DECODE}`)
+        .replace('#include <map_fragment>', SHADE_SATURATION)
         .replace('#include <envmap_physical_pars_fragment>', THREE.ShaderChunk.envmap_physical_pars_fragment
           .replace('#ifdef USE_ENVMAP', `#ifdef USE_ENVMAP\n#ifdef ENVMAP_TYPE_CUBE_UV\n${ENV_BLEND}\n#endif`)
           .replaceAll('textureCubeUV( envMap,', 'lmEnv('))

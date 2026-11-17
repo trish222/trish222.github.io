@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RectAreaLightUniformsLib } from 'three/examples/jsm/lights/RectAreaLightUniformsLib.js';
 import { LOOK } from '../config/look.js';
 
 const CUBE_SIZE = 128;
@@ -11,7 +12,10 @@ const UNMODELED = new THREE.Color(0.05, 0.03, 0.018);
 export function createReflections({ renderer, scene, bulb, materials, lighting }) {
   const shade = materials.find((m) => m.name === 'lamp_shade');
   const bulbAt = bulb.getWorldPosition(new THREE.Vector3());
-  const spec = new THREE.PointLight(0xffd2a0, 0, 0, 2);
+  // Blender's light_shade_spec: a 25 x 12 cm softbox front-above the lamp. Its long,
+  // sharp streak on the shade needs an area light; a point light only gives a dot.
+  RectAreaLightUniformsLib.init();
+  const spec = new THREE.RectAreaLight(0xffedd1, 0, 0.25, 0.12);
   scene.add(spec);
 
   const cubeTarget = new THREE.WebGLCubeRenderTarget(CUBE_SIZE, { type: THREE.HalfFloatType });
@@ -53,9 +57,13 @@ export function createReflections({ renderer, scene, bulb, materials, lighting }
 
   function applyLook() {
     spec.position.copy(bulbAt).add(new THREE.Vector3(...LOOK.specOffset));
+    spec.lookAt(bulbAt);
     lighting.uniforms.lmOffGain.value = LOOK.lampOffGain;
     for (const m of materials) m.envMapIntensity = m.transparent ? LOOK.glassEnvIntensity : LOOK.envIntensity;
+    lighting.uniforms.shadeSaturation.value = LOOK.shadeSaturation;
     if (shade) {
+      shade.color.setRGB(...LOOK.shadeColor);
+      shade.envMapIntensity = LOOK.shadeEnvIntensity;
       shade.roughness = LOOK.shadeRoughness;
       shade.clearcoat = LOOK.clearcoat;
       shade.clearcoatRoughness = LOOK.clearcoatRoughness;

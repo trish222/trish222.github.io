@@ -11,6 +11,9 @@ import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 const INPUT = process.argv[2] ?? 'art/export/scene-raw.glb';
 const BAKES = INPUT.endsWith('-preview.glb') ? 'art/bakes/preview' : 'art/bakes';
 const LIGHTMAPS = ['lightmap_lampOn', 'lightmap_lampOff', 'lightmap_screen'];
+// Hero maps ETC1S visibly damages (Trish's call): blocks on the lamp's metal, a grey city.
+// UASTC with RDO, at these sizes on mobile to stay in its download budget.
+const DETAIL = { albedo_lamp: 512, DefaultMaterial_metallicRoughness: 256, emit_window_view: 512 };
 const VARIANTS = [['scene.glb', 2048], ['scene-mobile.glb', 1024]];
 
 if (!existsSync(INPUT)) {
@@ -76,8 +79,10 @@ for (const [name, size] of VARIANTS) {
   // lampOn, the hero map, stays at full size without RDO.
   gt('resize', a, a, '--pattern', 'lightmap_lampOff', '--width', size / 2, '--height', size / 2);
   gt('resize', a, a, '--pattern', 'lightmap_screen', '--width', 1024, '--height', 1024);
+  if (size < 2048) for (const [map, px] of Object.entries(DETAIL)) gt('resize', a, a, '--pattern', map, '--width', px, '--height', px);
   await retagLightmaps(a);
   gt('uastc', a, b, '--pattern', 'lightmap_lampOff', '--rdo');
+  for (const map of Object.keys(DETAIL)) gt('uastc', b, b, '--pattern', map, '--rdo');
   for (const map of ['lightmap_lampOn', 'lightmap_screen']) gt('uastc', b, b, '--pattern', map);
   // etc1s skips textures that are already KTX2.
   gt('etc1s', b, c);
