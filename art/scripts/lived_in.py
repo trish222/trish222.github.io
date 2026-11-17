@@ -5,6 +5,10 @@ No new material slots (mobile draw-call budget): the note paper and pen are
 face attributes `note` and `pen` on baked_crt_monitor (read by plastic_detail,
 see crt_details.py) and the ring is a face attribute `stain` on baked_notepad.
 The handwriting is single-stroke pencil paths with seeded jitter, not a font.
+The shipped lightmap atlas was packed with the ATLAS_LINES strokes, so those are
+kept as the mesh `lived_note_atlas` (fake user, not in the scene) and stand in for
+the real strokes while bake_lightmaps packs UVMap_Light: a text change alone then
+needs no lightmap re-bake. Set ATLAS_LINES = LINES at the next lightmap re-bake.
 Rerunning strips the previous note and ring and rebuilds them. Run
 crt_details.py first (it owns the plastic_detail group), then:
 Run inside Blender: exec(open(path).read()).
@@ -32,6 +36,10 @@ RING_SHIFT, RING_SHIFT_DIR = 0.0025, math.radians(-20)  # a thin crescent peeks 
 RING_C = (GLASS_C[0] + RING_SHIFT * math.cos(RING_SHIFT_DIR), GLASS_C[1] + RING_SHIFT * math.sin(RING_SHIFT_DIR))
 RING_R = GLASS_R - 0.0005  # the ring sits under the base, so it matches its rim
 PAD_TOP = 0.7598
+# (pen x in metres, baseline y, text); the box is the checkbox
+LINES = [(0.0075, 0.0345, '\u2610finish'), (0.0100, 0.0163, 'website')]
+ATLAS_LINES = [(0.0075, 0.0345, '\u2610finish'), (0.0100, 0.0163, 'portfolio')]
+ATLAS_MESH = 'lived_note_atlas'
 
 # Single-stroke glyphs: x right, y up, x-height 0.5, ascender 1.0, descender -0.5.
 # name: (advance, [strokes])
@@ -50,6 +58,11 @@ GLYPHS = {
     'r': (0.3, [[(0.0, 0.5), (0.0, 0.0)], [(0.0, 0.36), (0.1, 0.5), (0.26, 0.48)]]),
     't': (0.32, [[(0.12, 0.86), (0.1, 0.12), (0.2, 0.0), (0.3, 0.06)], [(0.0, 0.5), (0.3, 0.5)]]),
     'l': (0.24, [[(0.05, 1.0), (0.04, 0.22), (0.13, 0.0)]]),
+    'w': (0.5, [[(0.0, 0.5), (0.1, 0.0), (0.22, 0.4), (0.34, 0.0), (0.46, 0.52)]]),
+    'e': (0.36, [[(0.04, 0.26), (0.31, 0.3), (0.28, 0.46), (0.14, 0.52), (0.03, 0.38), (0.04, 0.12),
+                  (0.16, 0.0), (0.32, 0.06)]]),
+    'b': (0.4, [[(0.02, 1.0), (0.0, 0.0)],
+                [(0.0, 0.22), (0.12, 0.46), (0.28, 0.48), (0.36, 0.28), (0.28, 0.04), (0.12, 0.0), (0.0, 0.08)]]),
 }
 BOX = [(0.02, 0.0), (0.74, 0.03), (0.72, 0.7), (0.0, 0.68), (0.03, -0.04)]  # corners overshoot
 TICK = [(0.12, 0.38), (0.3, 0.06), (0.62, 0.55), (1.0, 1.02)]
@@ -70,13 +83,12 @@ def smooth(pts, per=5):
     return out
 
 
-def handwriting(rng):
+def handwriting(rng, lines):
     """Return [(polyline in metres, local to the note's lower-left)]."""
     unit = 0.0106  # two lines with a generous margin on the 60x56 mm note
     strokes = []
-    lines = [(0.0075, 0.0345, [('box', 1.0)] + [(c, None) for c in 'finish']),
-             (0.0100, 0.0163, [(c, None) for c in 'portfolio'])]
-    for x, pen_y, items in lines:  # x is the pen position in metres
+    for x, pen_y, text in lines:  # x is the pen position in metres
+        items = [('box', 1.0) if c == '\u2610' else (c, None) for c in text]
         for n, (name, adv) in enumerate(items):
             scale = unit * rng.uniform(0.94, 1.06)
             slant = math.tan(math.radians(rng.uniform(5, 11)))
@@ -120,20 +132,21 @@ def point(mon, u, v, proud):
     return Vector((x, surface(mon, x, z) - SHEET_GAP - proud - curl(v, x), z))
 
 
-def build_note(mon, rng):
-    me = bpy.data.meshes.new('lived_note')
-    bm = bmesh.new()
-    note = bm.faces.layers.float.new('note')
-    pen = bm.faces.layers.float.new('pen')
+def build_note(mon, bm, lines):
+    """The paper (unless bm already has it) and the pencil strokes of `lines`."""
+    note = bm.faces.layers.float.get('note') or bm.faces.layers.float.new('note')
+    pen = bm.faces.layers.float.get('pen') or bm.faces.layers.float.new('pen')
     rows, cols = 48, 24  # columns follow the bezel's sideways slope
-    grid = [[bm.verts.new(point(mon, NOTE_W * i / cols, NOTE_H * j / rows, 0)) for i in range(cols + 1)]
-            for j in range(rows + 1)]
-    for j in range(rows):
-        for i in range(cols):
-            f = bm.faces.new((grid[j][i], grid[j][i + 1], grid[j + 1][i + 1], grid[j + 1][i]))
-            f[note] = 1.0
+    if not bm.faces:
+        grid = [[bm.verts.new(point(mon, NOTE_W * i / cols, NOTE_H * j / rows, 0)) for i in range(cols + 1)]
+                for j in range(rows + 1)]
+        for j in range(rows):
+            for i in range(cols):
+                f = bm.faces.new((grid[j][i], grid[j][i + 1], grid[j + 1][i + 1], grid[j + 1][i]))
+                f[note] = 1.0
+    rng = random.Random(7)
     press = random.Random(13)  # HB pencil: uneven pressure, some strokes fainter
-    for line in handwriting(rng):
+    for line in handwriting(rng, lines):
         weight = press.uniform(0.55, 1.0)
         width = INK_WIDTH * rng.uniform(0.85, 1.15)
         left, right = [], []
@@ -151,7 +164,6 @@ def build_note(mon, rng):
     for f in bm.faces:
         if f.normal.y > 0:  # face the room
             f.normal_flip()
-    return bm, me
 
 
 def strip(obj, names):
@@ -189,12 +201,30 @@ def join_piece(obj, bm, me, uv_from):
         bpy.ops.object.join()
 
 
+def atlas_strokes(mon):
+    """The ATLAS_LINES strokes alone, as built on a bare bezel (see the module docstring)."""
+    paper = bmesh.new()
+    build_note(mon, paper, [])
+    n = len(paper.faces)
+    build_note(mon, paper, ATLAS_LINES)
+    paper.faces.ensure_lookup_table()
+    bmesh.ops.delete(paper, geom=list(paper.faces[:n]), context='FACES')
+    me = bpy.data.meshes.get(ATLAS_MESH) or bpy.data.meshes.new(ATLAS_MESH)
+    paper.to_mesh(me)
+    paper.free()
+    if not me.uv_layers:
+        me.uv_layers.new(name='UVMap')
+    me.use_fake_user = True
+
+
 def add_note():
     mon = bpy.data.objects[MONITOR]
     strip(mon, ['note', 'pen'])
     wire_matte(mon.material_slots[0].material)
-    bm, me = build_note(mon, random.Random(7))
-    join_piece(mon, bm, me, ((NOTE_C[0], -0.4, NOTE_C[1]), (0, 1, 0)))
+    atlas_strokes(mon)
+    bm = bmesh.new()
+    build_note(mon, bm, LINES)
+    join_piece(mon, bm, bpy.data.meshes.new('lived_note'), ((NOTE_C[0], -0.4, NOTE_C[1]), (0, 1, 0)))
     flags = [mon.data.attributes[a].data for a in ('note', 'pen')]
     for p in mon.data.polygons:  # smooth, or the curl shows as stripes
         if any(f[p.index].value for f in flags):
@@ -295,6 +325,51 @@ def wire_stain(mat):
     nt.links.new(mix.outputs[2], bsdf.inputs['Base Color'])
 
 
+def grime_bezel():
+    """Grime in the bezel's crevices (where it meets the glass, round the button, LED and
+    badge) and slow yellowing patches. Monitor only (Material.018); it feeds plastic_detail,
+    whose note, ink and LED tints still paint over it."""
+    nt = bpy.data.materials['Material.018'].node_tree
+    if any(n.label == 'bezel_grime' for n in nt.nodes):
+        return
+    group = next(n for n in nt.nodes if n.type == 'GROUP' and n.node_tree.name == 'plastic_detail')
+    src = group.inputs['Color'].links[0].from_socket
+
+    def new(kind, **inputs):
+        node = nt.nodes.new(kind)
+        node.label = 'bezel_grime'
+        for k, v in inputs.items():
+            sock = node.inputs[int(k) if k.isdigit() else k]
+            if isinstance(v, bpy.types.NodeSocket):
+                nt.links.new(v, sock)
+            else:
+                sock.default_value = v
+        return node
+
+    obj = new('ShaderNodeTexCoord').outputs['Object']
+    patches = new('ShaderNodeTexNoise', Vector=obj, Scale=6.0, Detail=2.0)
+    age = new('ShaderNodeMapRange', Value=patches.outputs[0], **{'From Min': 0.42, 'From Max': 0.62, 'To Max': 0.16})
+    yellow = new('ShaderNodeMix', Factor=age.outputs[0])
+    yellow.data_type, yellow.blend_type = 'RGBA', 'MULTIPLY'
+    nt.links.new(src, yellow.inputs[6])
+    yellow.inputs[7].default_value = (1.0, 0.88, 0.62, 1)
+
+    ao = new('ShaderNodeAmbientOcclusion', Distance=0.012)  # the glass counts, so its edge collects grime
+    ao.samples = 16
+    crevice = new('ShaderNodeMapRange', Value=ao.outputs['AO'], **{'From Min': 0.5, 'From Max': 0.92, 'To Min': 1.0, 'To Max': 0.0})
+    speck = new('ShaderNodeTexNoise', Vector=obj, Scale=140.0, Detail=4.0)
+    breakup = new('ShaderNodeMapRange', Value=speck.outputs[0], **{'From Min': 0.35, 'From Max': 0.65, 'To Min': 0.35, 'To Max': 1.0})
+    mask = new('ShaderNodeMath', **{'0': crevice.outputs[0], '1': breakup.outputs[0]})
+    mask.operation = 'MULTIPLY'
+    amount = new('ShaderNodeMath', **{'0': mask.outputs[0], '1': 0.55})
+    amount.operation = 'MULTIPLY'
+    grime = new('ShaderNodeMix', Factor=amount.outputs[0])
+    grime.data_type, grime.blend_type = 'RGBA', 'MULTIPLY'
+    nt.links.new(yellow.outputs[2], grime.inputs[6])
+    grime.inputs[7].default_value = (0.42, 0.34, 0.24, 1)
+    nt.links.new(grime.outputs[2], group.inputs['Color'])
+
+
 def dust_glass():
     """Smudge streaks and sparse dust: they spread the reflection, nothing else."""
     mat = bpy.data.materials['crt_glass']
@@ -358,4 +433,5 @@ def dust_glass():
 
 add_note()
 add_ring()
+grime_bezel()
 dust_glass()

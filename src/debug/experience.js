@@ -149,6 +149,17 @@ export function installExperienceDiagnostics(context) {
      refit of the curve's first knot, or the walk home, included.
      flyToScreen skips both; this is the one the review scripts want. */
   window.__enter = () => context.enterScreen();
+  // Parks the camera at a close-up for review captures; the overlay follows.
+  window.__view = (position, target) => {
+    context.navigation.killReturn();
+    context.navigation.cancelIdle();
+    context.navigation.setEnabled(false);
+    context.camera.position.fromArray(position);
+    context.camera.lookAt(...target);
+    context.camera.updateMatrixWorld();
+    context.updateScreenOverlay();
+    context.render();
+  };
 
   window.__flyTo = (x) => {
     if (!context.flyTl) return null;

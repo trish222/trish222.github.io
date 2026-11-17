@@ -13,13 +13,21 @@ export function createCameraRig({ getStage, getCamera, getFov, getFlightStart,
   const orbitSpherical = new THREE.Spherical();
   const cams = () => getStage().cams;
   const surface = () => getStage().projectionSurface;
-  // The GLB pose dollied back along its line of sight by LOOK.overviewZoom: wider, same lens.
-  const homePose = { position: new THREE.Vector3(), forward: null };
+  // The GLB pose orbited up by LOOK.overviewPitch (deg) around the point it looks at (as far out as
+  // the screen), so it sees the desk more from above and stays centred, then dollied back along
+  // its line of sight by LOOK.overviewZoom (wider, same lens) and raised by LOOK.overviewHeight (m).
+  const UP = new THREE.Vector3(0, 1, 0);
+  const homePose = { position: new THREE.Vector3(), forward: new THREE.Vector3() };
+  const right = new THREE.Vector3();
+  const pivot = new THREE.Vector3();
   function home() {
     const cam = isMobile() ? cams().mobile : cams().overview;
-    const back = (LOOK.overviewZoom - 1) * cam.position.distanceTo(surface().center);
-    homePose.position.copy(cam.position).addScaledVector(cam.forward, -back);
-    homePose.forward = cam.forward;
+    const dist = cam.position.distanceTo(surface().center);
+    pivot.copy(cam.position).addScaledVector(cam.forward, dist);
+    right.crossVectors(cam.forward, UP).normalize();
+    homePose.forward.copy(cam.forward).applyAxisAngle(right, -THREE.MathUtils.degToRad(LOOK.overviewPitch));
+    homePose.position.copy(pivot).addScaledVector(homePose.forward, -LOOK.overviewZoom * dist)
+      .addScaledVector(UP, LOOK.overviewHeight);
     return homePose;
   }
 

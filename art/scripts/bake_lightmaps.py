@@ -141,17 +141,75 @@ def pen_on_note(mon):
     bm.free()
 
 
+def strip_pen(mon):
+    bm = bmesh.new()
+    bm.from_mesh(mon.data)
+    pen = bm.faces.layers.float['pen']
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if f[pen]], context='FACES')
+    bm.to_mesh(mon.data)
+    bm.free()
+
+
+def join_into(target, obj):
+    bc.select([target, obj])
+    bpy.context.view_layer.objects.active = target
+    bpy.ops.object.join()
+
+
+def atlas_strokes_in(mon):
+    """Swap the note's strokes for the ones the lightmap atlas was packed with (lived_in.py,
+    ATLAS_LINES), so a text change keeps UVMap_Light. Returns the real strokes, set aside."""
+    bc.select([mon])
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='DESELECT')
+    bpy.ops.object.mode_set(mode='OBJECT')
+    pen = mon.data.attributes['pen'].data
+    for p in mon.data.polygons:
+        p.select = pen[p.index].value > 0
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.separate(type='SELECTED')
+    bpy.ops.object.mode_set(mode='OBJECT')
+    real = next(o for o in bpy.context.selected_objects if o is not mon)
+    stand_in = bpy.data.objects.new('atlas_strokes', bpy.data.meshes['lived_note_atlas'].copy())
+    bpy.context.collection.objects.link(stand_in)
+    join_into(mon, stand_in)
+    return real
+
+
+def note_uvs(mon):
+    """UVMap_Light corners of the note's paper faces and of its stroke vertices."""
+    bm = bmesh.new()
+    bm.from_mesh(mon.data)
+    uv = bm.loops.layers.uv['UVMap_Light']
+    note, pen = bm.faces.layers.float['note'], bm.faces.layers.float['pen']
+    paper = [[tuple(lp[uv].uv) for lp in f.loops] for f in bm.faces if f[note]]
+    ink = [tuple(lp[uv].uv) for f in bm.faces if f[pen] for lp in f.loops]
+    bm.free()
+    return paper, ink
+
+
 def build_uvs(objs, size, margin_px):
+    """Packs UVMap_Light; returns its key (uv_key) as packed, before the real strokes return,
+    and the note's UVs for unink()."""
     mug = bpy.data.objects['baked_mug']
     mug_seams(mug)
+    mon = bpy.data.objects['baked_crt_monitor']
+    real = atlas_strokes_in(mon)
     bc.smart_uv(objs, 'UVMap_Light', margin_px / size, texel_weight, seamed=[mug])
-    pen_on_note(bpy.data.objects['baked_crt_monitor'])
+    pen_on_note(mon)
+    key = uv_key(objs)
+    paper, ink = note_uvs(mon)
+    strip_pen(mon)
+    join_into(mon, real)
+    pen_on_note(mon)
+    ink += note_uvs(mon)[1]
     for o in objs:  # keep UV0 (if any) and UVMap_Light so the lightmap is TEXCOORD_lightmap_uv
         uvs = o.data.uv_layers
         for extra in [u for u in uvs if u.name != 'UVMap_Light' and not u.active_render]:
             uvs.remove(extra)
         o['lightmap_uv'] = uvs.find('UVMap_Light')
     density_report(objs, size)
+    return key, (paper, ink)
 
 
 def density_report(objs, size):
@@ -181,9 +239,45 @@ def uv_key(objs):
     return h.hexdigest()
 
 
-def encode(opts, on_img, off_img, screen_img):
+def unink(rgb, note):
+    """The strokes share the paper's texels (pen_on_note), so the bake wrote their own darker
+    light there: the text showed as a blurred shadow, and a ghost once the text changed.
+    Refill those paper texels (one texel of margin) from the paper light around them."""
+    paper, ink = note
+    size = rgb.shape[0]
+    inside = np.zeros((size, size), bool)
+    for poly in paper:
+        p = np.array(poly) * size - 0.5  # texel-centre coordinates
+        (x0, y0), (x1, y1) = np.floor(p.min(0)).astype(int), np.ceil(p.max(0)).astype(int) + 1
+        ys, xs = np.mgrid[y0:y1, x0:x1]
+        for a, b, c in ((p[0], p[i], p[i + 1]) for i in range(1, len(p) - 1)):
+            d = (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1])
+            if d:
+                l1 = ((b[1] - c[1]) * (xs - c[0]) + (c[0] - b[0]) * (ys - c[1])) / d
+                l2 = ((c[1] - a[1]) * (xs - c[0]) + (a[0] - c[0]) * (ys - c[1])) / d
+                hit = (l1 >= -1e-6) & (l2 >= -1e-6) & (l1 + l2 <= 1 + 1e-6)
+                inside[ys[hit], xs[hit]] = True
+    hole = np.zeros_like(inside)
+    t = np.clip((np.array(ink) * size).astype(int), 0, size - 1)
+    hole[t[:, 1], t[:, 0]] = True
+    hole = np.pad(hole, 1)
+    hole = np.logical_or.reduce([hole[1 + dy:size + 1 + dy, 1 + dx:size + 1 + dx]
+                                 for dy in (-1, 0, 1) for dx in (-1, 0, 1)]) & inside
+    out = rgb.copy()
+    out[hole] = rgb[inside & ~hole].mean(0)
+    for _ in range(400):  # Jacobi: each hole texel becomes the mean of its paper neighbours
+        acc, n = np.zeros_like(out), np.zeros(inside.shape + (1,), np.float32)
+        for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            m = np.roll(inside, (dy, dx), (0, 1))[..., None]
+            acc += np.roll(out, (dy, dx), (0, 1)) * m
+            n += m
+        out[hole] = (acc / np.maximum(n, 1))[hole]
+    return out
+
+
+def encode(opts, on_img, off_img, screen_img, note):
     """Float EXRs -> 8-bit PNGs (see the module docstring); returns the ranges."""
-    on, off, scr = (bc.pixels(i)[..., :3] for i in (on_img, off_img, screen_img))
+    on, off, scr = (unink(bc.pixels(i)[..., :3], note) for i in (on_img, off_img, screen_img))
     on_covered = on.max(-1) > 0
 
     def covered(rgb):  # the shared atlas, so lamp-on coverage strided down to this map's size
@@ -236,7 +330,7 @@ def run(opts):
     # baked, so it may fill at most half the gap: a 16 px margin smeared neighbouring
     # islands across the CRT parts' slivers (chrome-like streaks on keys and drive bays).
     screen_size, gap = (512, 1) if opts.preview else (1024, 2)  # 2 px at 512 shrinks every island to nothing
-    build_uvs(objs, size, gap)
+    key, note = build_uvs(objs, size, gap)
 
     bc.begin('lightmaps', 4)
     window = bake_window.bake(opts)
@@ -246,7 +340,7 @@ def run(opts):
     world, black = sc.world, bpy.data.worlds.new('tmp_black')
     black.color = (0, 0, 0)
     # Lightmaps from another atlas would load fine and shade every texel wrongly.
-    key, key_path = uv_key(objs), os.path.join(opts.out, 'lightmap_uv.sha1')
+    key_path = os.path.join(opts.out, 'lightmap_uv.sha1')
     if not os.path.exists(key_path) or open(key_path).read() != key:
         print('UVMap_Light changed since the last lightmap bake: re-baking all lightmaps')
         opts.force_maps |= {'lightmap_lampOn', 'lightmap_lampOff', 'lightmap_screen'}
@@ -269,7 +363,7 @@ def run(opts):
     set_state(snap, every, list(snap), False, world)
 
     print('\n== Lightmap encoding')
-    sc['lightmap_range'], sc['lightmap_screen_range'] = encode(opts, *baked)
+    sc['lightmap_range'], sc['lightmap_screen_range'] = encode(opts, *baked, note)
     bake_window.use_image(window)
     export_fixes.run(opts)
     export(os.path.join(bc.ROOT, 'export', 'scene-raw-preview.glb' if opts.preview else 'scene-raw.glb'))

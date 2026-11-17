@@ -16,5 +16,11 @@ export const LOOK = {
   windowGain: 1,
   windowSaturation: 1.3,
   windowContrast: 1,
-  overviewZoom: 1.12,
+  overviewZoom: 1.15,
+  overviewHeight: 0,
+  overviewPitch: 3,
+  plasticBrightness: 0.92,
+  plasticTint: [0.98, 0.85, 0.66],
+  plasticEnvIntensity: 0.3,
+  plasticSpec: 0.3,
 };

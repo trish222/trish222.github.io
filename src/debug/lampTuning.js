@@ -20,7 +20,14 @@ const SLIDERS = [
   ['windowSaturation', 0, 2, 0.01],
   ['windowContrast', 0.5, 1.5, 0.01],
   ['overviewZoom', 0.9, 1.3, 0.005],
+  ['overviewHeight', -0.2, 0.3, 0.005],
+  ['overviewPitch', -5, 15, 0.1],
+  ['plasticBrightness', 0.5, 1.2, 0.01],
+  ['plasticTint', 0.5, 1.2, 0.01, 0], ['plasticTint', 0.5, 1.2, 0.01, 1], ['plasticTint', 0.5, 1.2, 0.01, 2],
+  ['plasticEnvIntensity', 0, 2, 0.01],
+  ['plasticSpec', 0, 2, 0.01],
 ];
+const CAMERA = ['overviewZoom', 'overviewHeight', 'overviewPitch'];
 // Frames the lamp like the r14 lamp panel (art/previews/b2-lamp-before-after.png).
 const CLOSE_UP = { position: new THREE.Vector3(-0.45, 1.12, 0.85), target: new THREE.Vector3(-0.54, 0.93, -0.04) };
 
@@ -30,14 +37,13 @@ export function installLampTuning(context, stage) {
     + 'font:11px/1.3 monospace;color:#eee;background:#000c;border-radius:4px';
   panel.addEventListener('pointerdown', (e) => e.stopPropagation());
 
-  // A resize re-poses the camera but keeps the orbit radius, so scale that with the dolly.
-  let zoom = LOOK.overviewZoom;
+  // Camera keys re-frame the home pose (and the orbit around it).
+  let pose = CAMERA.map((k) => LOOK[k]).join();
   function apply() {
     stage.applyLook();
-    if (zoom === LOOK.overviewZoom) return;
-    context.navigation.home.radius *= LOOK.overviewZoom / zoom;
-    zoom = LOOK.overviewZoom;
-    window.dispatchEvent(new Event('resize'));
+    if (pose === CAMERA.map((k) => LOOK[k]).join()) return;
+    pose = CAMERA.map((k) => LOOK[k]).join();
+    context.setFov(null);
   }
 
   for (const [key, min, max, step, index] of SLIDERS) {

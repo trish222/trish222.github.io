@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RectAreaLightUniformsLib } from 'three/examples/jsm/lights/RectAreaLightUniformsLib.js';
 import { LOOK } from '../config/look.js';
+import { PLASTIC } from './bakedMaterial.js';
 
 const CUBE_SIZE = 128;
 // The room is open behind the camera; reflections see this dim warm fill there, not black.
@@ -23,8 +24,10 @@ export function createReflections({ renderer, scene, bulb, materials, lighting }
   cubeCamera.position.copy(bulbAt);
   const pmrem = new THREE.PMREMGenerator(renderer);
 
+  // Hidden while capturing; the plastics stay, as part of the room the metals reflect.
   const meshes = [];
-  scene.traverse((o) => { if (o.isMesh && materials.includes(o.material)) meshes.push(o); });
+  scene.traverse((o) => { if (o.isMesh && materials.includes(o.material) && !PLASTIC.has(o.material.name)) meshes.push(o); });
+  const plastics = materials.filter((m) => PLASTIC.has(m.name));
 
   function capture(mix) {
     lighting.setLampMix(mix);
@@ -60,6 +63,11 @@ export function createReflections({ renderer, scene, bulb, materials, lighting }
     spec.lookAt(bulbAt);
     lighting.uniforms.lmOffGain.value = LOOK.lampOffGain;
     for (const m of materials) m.envMapIntensity = m.transparent ? LOOK.glassEnvIntensity : LOOK.envIntensity;
+    for (const m of plastics) {
+      m.envMapIntensity = LOOK.plasticEnvIntensity;
+      m.color.setRGB(...LOOK.plasticTint).multiplyScalar(LOOK.plasticBrightness);
+    }
+    lighting.uniforms.plasticSpec.value = LOOK.plasticSpec;
     lighting.uniforms.shadeSaturation.value = LOOK.shadeSaturation;
     if (shade) {
       shade.color.setRGB(...LOOK.shadeColor);

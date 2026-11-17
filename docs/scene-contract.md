@@ -54,6 +54,8 @@ These are metal or glass, so in three.js they keep a small real-time environment
 | `baked_icedcoffee_glass` | `icedcoffee_glass` |
 | `baked_window_glass` | `window_glass` |
 
+The CRT plastics (`Material.018` monitor, `Material.017` case, `Material.021` keyboard and mouse, `Material.022` keycaps) take the same lit path, so their baked `normal_crt_*` grain and `rough_crt_*` satin catch the room capture and the spec light, scaled down by `LOOK.plasticEnvIntensity` / `plasticSpec`. They stay in the room capture rather than being hidden from it.
+
 glTF drops procedural roughness and metallic (they export as 1.0), so `art/scripts/export_fixes.py` sets export-only constants on these materials (the Cycles source keeps its noise). The lamp shade's lamp-on glow ships as `emit_lamp` on `lamp_shade`; scale it by `lampMix`.
 
 ## Rules

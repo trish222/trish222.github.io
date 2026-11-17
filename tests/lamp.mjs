@@ -12,7 +12,8 @@ try {
   await page.goto(url);
   await page.waitForFunction(() => performance.getEntriesByName('room:interactive').length);
 
-  // Screen points (0-1): the desk just in front of the lamp, and the upper-left of the city view.
+  // Screen points (0-1): the desk beside the lamp base (in front of it, the raised overview sees
+  // the nameplate), and the upper-left of the city view.
   const probes = await page.evaluate(() => {
     const { __scene: scene, __camera: camera } = window;
     const V = camera.position.constructor;
@@ -23,8 +24,9 @@ try {
     };
     const screen = (p) => { const n = p.project(camera); return { u: (n.x + 1) / 2, v: (1 - n.y) / 2 }; };
     const bulb = scene.getObjectByName('lamp_bulb').getWorldPosition(new V());
-    const toCamera = camera.position.clone().sub(bulb).setY(0).normalize().multiplyScalar(0.15);
-    const desk = bulb.clone().add(toCamera).setY(box('baked_desk').max.y);
+    const toCamera = camera.position.clone().sub(bulb).setY(0).normalize();
+    const desk = bulb.clone().addScaledVector(toCamera, 0.05)
+      .addScaledVector(new V(-toCamera.z, 0, toCamera.x), 0.15).setY(box('baked_desk').max.y);
     const view = box('window_view');
     const corner = new V().lerpVectors(view.min, view.max, 0.5).setX(view.min.x + 0.25 * (view.max.x - view.min.x))
       .setY(view.max.y - 0.1 * (view.max.y - view.min.y));

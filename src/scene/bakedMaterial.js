@@ -12,10 +12,28 @@ vec3 lmDecode(sampler2D map, vec2 uv) {
   s *= s;
   return mix(s / 12.92, pow((s + 0.055) / 1.055, vec3(2.4)), step(0.04045, s));
 }
-vec3 lmLight() {
-  return mix(lmDecode(lmOff, vLightMapUv) * lmOffGain, lmDecode(lmOn, vLightMapUv), lampMix) * lmRange
-    + screenTint * lmDecode(lmScreen, vLightMapUv) * lmScreenRange;
+vec3 lmAt(vec2 uv) {
+  return mix(lmDecode(lmOff, uv) * lmOffGain, lmDecode(lmOn, uv), lampMix) * lmRange
+    + screenTint * lmDecode(lmScreen, uv) * lmScreenRange;
 }
+#ifdef LM_SOFT
+// The curtains sit at room texel density, where the bake's noise reads as warm/grey blotches
+// on the folds: keep only blurred luminance, with the lamp's light given one warm hue
+// (the screen's light barely reaches them).
+const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
+vec3 lmSoftAt(vec2 uv) {
+  return mix(vec3(dot(lmDecode(lmOff, uv), LUMA)) * lmOffGain, dot(lmDecode(lmOn, uv), LUMA) * vec3(1.2, 0.96, 0.8), lampMix);
+}
+// Four bilinear taps half a texel out on the diagonals cover the 3x3 neighbourhood.
+vec3 lmLight() {
+  vec2 t = 0.5 / vec2(textureSize(lmOn, 0));
+  vec2 u = vec2(t.x, -t.y);
+  return (lmSoftAt(vLightMapUv + t) + lmSoftAt(vLightMapUv - t) + lmSoftAt(vLightMapUv + u) + lmSoftAt(vLightMapUv - u))
+    * 0.25 * lmRange;
+}
+#else
+vec3 lmLight() { return lmAt(vLightMapUv); }
+#endif
 `;
 const BASIC_LIGHT = /vec4 lightMapTexel[^\n]*\n[^\n]*RECIPROCAL_PI;/;
 const LIT_LIGHT = /vec4 lightMapTexel[^\n]*\n[^\n]*\n\s*irradiance \+= lightMapIrradiance;/;
@@ -39,9 +57,12 @@ const SHADE_SATURATION = /* glsl */`
   diffuseColor.rgb = max(mix(vec3(dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722))), diffuseColor.rgb, shadeSaturation), 0.0);
 #endif`;
 
-// The light-reflecting materials from the contract's "Real-time reflections" table, plus the shade.
+// Old matte plastic, lit so its baked grain and roughness maps catch the room and the spec light:
+// monitor (with the sticky note), case, keyboard (with the mouse) and keycaps.
+export const PLASTIC = new Set(['Material.018', 'Material.017', 'Material.021', 'Material.022']);
+// The light-reflecting materials from the contract's "Real-time reflections" table, the shade and the plastics.
 export const LIT = new Set(['DefaultMaterial', 'lamp_trim_brass', 'brass', 'nameplate_brass',
-  'icedcoffee_glass', 'window_glass', 'crt_glass', 'lamp_shade']);
+  'icedcoffee_glass', 'window_glass', 'crt_glass', 'lamp_shade', ...PLASTIC]);
 
 // The authored Blender look: light_screen in Win98 teal (linear).
 const SCREEN_TINT = new THREE.Color(0.25, 0.85, 0.85);
@@ -61,16 +82,18 @@ export function createBakedLighting({ lightmap_lampOn, lightmap_lampOff, lightma
     screenTint: { value: SCREEN_TINT.clone() },
     envMapOff: { value: null },
     shadeSaturation: { value: 1 },
+    plasticSpec: { value: 1 },
   };
   // lightMap only switches on USE_LIGHTMAP and vLightMapUv; its channel picks the UV set.
   const channels = [0, 1].map((channel) => Object.assign(lightmap_lampOn.clone(), { channel }));
 
   // Flat albedo × lightmap; keeps the GLB's map, tint, vertex colours and alpha.
   function bakeBasic(mesh, channel) {
-    const { map, color, vertexColors, transparent, opacity, alphaTest, side } = mesh.material;
+    const { name, map, color, vertexColors, transparent, opacity, alphaTest, side } = mesh.material;
     mesh.material.dispose();
-    const material = new THREE.MeshBasicMaterial({ map, color, vertexColors, transparent, opacity, alphaTest, side,
+    const material = new THREE.MeshBasicMaterial({ name, map, color, vertexColors, transparent, opacity, alphaTest, side,
       lightMap: channels[channel] });
+    if (name === 'curtain_sheer') material.defines = { LM_SOFT: '' };
     material.onBeforeCompile = (shader) => {
       Object.assign(shader.uniforms, uniforms);
       shader.fragmentShader = shader.fragmentShader
@@ -88,17 +111,19 @@ export function createBakedLighting({ lightmap_lampOn, lightmap_lampOff, lightma
     if (channel !== undefined) material.lightMap = channels[channel];
     if (material.transparent) material.defines = { LM_GLASS: '' };
     if (material.name === 'lamp_shade') material.defines = { LM_SHADE: '' };
+    if (PLASTIC.has(material.name)) material.defines = { LM_PLASTIC: '' };
     material.onBeforeCompile = (shader) => {
       Object.assign(shader.uniforms, uniforms);
       shader.fragmentShader = shader.fragmentShader
-        .replace('#include <lightmap_pars_fragment>', `#include <lightmap_pars_fragment>\nuniform float shadeSaturation;\n${channel === undefined ? 'uniform float lampMix;' : DECODE}`)
+        .replace('#include <lightmap_pars_fragment>', `#include <lightmap_pars_fragment>\nuniform float shadeSaturation, plasticSpec;\n${channel === undefined ? 'uniform float lampMix;' : DECODE}`)
         .replace('#include <map_fragment>', SHADE_SATURATION)
         .replace('#include <envmap_physical_pars_fragment>', THREE.ShaderChunk.envmap_physical_pars_fragment
           .replace('#ifdef USE_ENVMAP', `#ifdef USE_ENVMAP\n#ifdef ENVMAP_TYPE_CUBE_UV\n${ENV_BLEND}\n#endif`)
           .replaceAll('textureCubeUV( envMap,', 'lmEnv('))
         .replace('#include <lights_fragment_maps>', THREE.ShaderChunk.lights_fragment_maps
           .replace(LIT_LIGHT, 'irradiance += lmLight() * PI;') + '\niblIrradiance = vec3(0.0);')
-        .replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\nreflectedLight.directDiffuse = vec3(0.0);')
+        .replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\nreflectedLight.directDiffuse = vec3(0.0);\n'
+          + '#ifdef LM_PLASTIC\nreflectedLight.directSpecular *= plasticSpec;\n#endif')
         .replace('#include <opaque_fragment>', GLASS_ALPHA);
     };
     material.customProgramCacheKey = () => 'baked-lit';
