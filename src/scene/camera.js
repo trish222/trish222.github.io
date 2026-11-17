@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { LOOK } from '../config/look.js';
 
 // Arrival fits the screen with a margin; the dive just covers the viewport.
 const ARRIVE_PAD = 1.2;
@@ -12,7 +13,15 @@ export function createCameraRig({ getStage, getCamera, getFov, getFlightStart,
   const orbitSpherical = new THREE.Spherical();
   const cams = () => getStage().cams;
   const surface = () => getStage().projectionSurface;
-  const home = () => (isMobile() ? cams().mobile : cams().overview);
+  // The GLB pose dollied back along its line of sight by LOOK.overviewZoom: wider, same lens.
+  const homePose = { position: new THREE.Vector3(), forward: null };
+  function home() {
+    const cam = isMobile() ? cams().mobile : cams().overview;
+    const back = (LOOK.overviewZoom - 1) * cam.position.distanceTo(surface().center);
+    homePose.position.copy(cam.position).addScaledVector(cam.forward, -back);
+    homePose.forward = cam.forward;
+    return homePose;
+  }
 
   function applyCameraSize(cam, width, height) {
     cam.aspect = width / height;

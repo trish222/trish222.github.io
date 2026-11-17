@@ -21,6 +21,19 @@ try {
     assert.ok(overview.flat, 'screen_plane is a flat quad');
     assert.ok(overview.error < TOLERANCE, `overview overlay within ${TOLERANCE} px: ${overview.error}`);
 
+    // The widened overview (LOOK.overviewZoom) never shows the void past the room, even at full parallax.
+    for (const [x, y] of touch ? [[width / 2, height / 2]] : [[1, 1], [width - 2, 1], [1, height - 2], [width - 2, height - 2]]) {
+      await page.mouse.move(x, y);
+      await page.waitForTimeout(500);
+      const voidPixels = await page.evaluate(() => {
+        const canvas = document.querySelector('#scene');
+        return canvas.width * canvas.height - window.__histogram().roomPixels;
+      });
+      assert.equal(voidPixels, 0, `overview shows ${voidPixels} void pixels with the pointer at ${x},${y}`);
+    }
+    await page.mouse.move(width / 2, height / 2);
+    await page.waitForTimeout(500);
+
     // A point on the casing below the glass, so the press lands on click_crt, not #screen.
     const press = await page.evaluate(() => {
       const box = new window.__camera.position.constructor();

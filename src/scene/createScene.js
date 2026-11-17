@@ -2,9 +2,11 @@ import * as THREE from 'three';
 import { loadScene } from './loadScene.js';
 import { createBakedLighting } from './bakedMaterial.js';
 import { labelFloppies } from './floppyLabels.js';
+import { createReflections } from './reflections.js';
+import { LOOK } from '../config/look.js';
 import { PROJECTS } from '../config/projects.js';
 
-const REQUIRED = ['screen_plane', 'window_view', 'baked_floppy_labels',
+const REQUIRED = ['screen_plane', 'screen_glass', 'window_view', 'lamp_bulb', 'baked_floppy_labels',
   'click_crt', 'click_lamp_chain', 'cam_overview', 'cam_screen', 'cam_mobile',
   ...PROJECTS.map((_, i) => `click_project_0${i + 1}`)];
 
@@ -39,17 +41,24 @@ function unlitView(mesh) {
   const map = mesh.material.emissiveMap;
   mesh.material.dispose();
   mesh.material = new THREE.MeshBasicMaterial({ map, toneMapped: false });
+  return mesh.material;
 }
 
 export async function createRoomScene({ renderer }) {
   const { scene, named, lightmaps, extras } = await loadScene(renderer);
   for (const name of REQUIRED) if (!named.has(name)) throw new Error(`scene.glb is missing "${name}"`);
   const lighting = createBakedLighting(lightmaps, extras);
+  const lit = [lighting.litMaterial(named.get('screen_glass').material)];
   for (const [name, node] of named) {
     if (!name.startsWith('baked_') || !('lightmap_uv' in node.userData)) continue;
-    node.traverse((o) => { if (o.isMesh) lighting.bake(o, node.userData.lightmap_uv); });
+    node.traverse((o) => {
+      if (!o.isMesh) return;
+      const material = lighting.bake(o, node.userData.lightmap_uv);
+      if (!material.isMeshBasicMaterial) lit.push(material);
+    });
   }
-  unlitView(named.get('window_view'));
+  const windowView = unlitView(named.get('window_view'));
+  windowView.color.setScalar(LOOK.windowGain);
   await labelFloppies(named.get('baked_floppy_labels').material);
 
   const screenPlane = named.get('screen_plane');
@@ -58,6 +67,8 @@ export async function createRoomScene({ renderer }) {
   for (const proxy of [proxies.crt, proxies.lampChain, ...projects]) proxy.material.visible = false;
 
   scene.updateMatrixWorld(true);
+  const reflections = createReflections({ renderer, scene, bulb: named.get('lamp_bulb'), materials: lit, lighting });
+  const applyLook = () => { windowView.color.setScalar(LOOK.windowGain); reflections.applyLook(); };
   const cams = { overview: pose(named.get('cam_overview')), screen: pose(named.get('cam_screen')),
     mobile: pose(named.get('cam_mobile')) };
 
@@ -82,12 +93,13 @@ export async function createRoomScene({ renderer }) {
 
   const dispose = () => {
     clearStill();
+    reflections.dispose();
     lighting.dispose();
     named.get('baked_floppy_labels').material.userData.labelText.dispose();
     scene.traverse((o) => { o.geometry?.dispose(); o.material?.dispose(); });
   };
 
   return { scene, screenPlane, proxies, cams, setStill, clearStill, dispose,
-    setLampMix: lighting.setLampMix, lampMix: () => lighting.uniforms.lampMix.value,
+    setLampMix: reflections.setLampMix, applyLook, lampMix: () => lighting.uniforms.lampMix.value,
     projectionSurface: screenSurface(screenPlane) };
 }

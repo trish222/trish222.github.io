@@ -1,15 +1,23 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 import { registration as screenRegistration } from './screenRegistration.mjs';
+import { LOOK } from '../src/config/look.js';
 
-// The camera sits exactly on the GLB's opening camera and looks along it.
-const atOpeningPose = () => {
+// The camera sits on the GLB's opening camera dollied back along its own axis by
+// LOOK.overviewZoom × its distance to the screen centre, and looks along it.
+const atOpeningPose = (zoom) => {
   const name = innerWidth <= 760 ? 'cam_mobile' : 'cam_overview';
   const cam = window.__scene.getObjectByName(name);
   const camera = window.__camera;
-  const forward = camera.position.clone().set(0, 0, -1).transformDirection(cam.matrixWorld);
-  const looking = camera.getWorldDirection(camera.position.clone());
-  return camera.position.distanceTo(cam.getWorldPosition(camera.position.clone())) < 1e-4 && looking.angleTo(forward) < 1e-4;
+  const V = camera.position.constructor;
+  const forward = new V(0, 0, -1).transformDirection(cam.matrixWorld);
+  const from = cam.getWorldPosition(new V());
+  const plane = window.__scene.getObjectByName('screen_plane');
+  plane.geometry.computeBoundingBox();
+  const center = plane.geometry.boundingBox.getCenter(new V()).applyMatrix4(plane.matrixWorld);
+  const expected = from.clone().addScaledVector(forward, -(zoom - 1) * from.distanceTo(center));
+  const looking = camera.getWorldDirection(new V());
+  return camera.position.distanceTo(expected) < 1e-4 && looking.angleTo(forward) < 1e-4;
 };
 const url = process.argv[2] || 'http://127.0.0.1:4320/?diagnostics=1';
 const browser = await chromium.launch({ channel: 'chromium' });
@@ -111,7 +119,7 @@ try {
     }
     await page.evaluate(() => window.__orbit(0, 0));
     const home = await page.evaluate(() => window.__camera.position.toArray());
-    assert.ok(await page.evaluate(atOpeningPose), 'opening uses the cam_overview (cam_mobile) pose from scene.glb');
+    assert.ok(await page.evaluate(atOpeningPose, LOOK.overviewZoom), 'opening uses the cam_overview (cam_mobile) pose from scene.glb');
     await page.mouse.move(width / 2, height / 2);
     await page.waitForTimeout(1200);
     await page.evaluate(() => {
@@ -240,7 +248,7 @@ try {
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => document.body.classList.contains('orbit-live'));
     const back = await page.evaluate(() => window.__camera.position.toArray());
-    assert.ok(await page.evaluate(atOpeningPose), 'return navigation restores the cam_overview view');
+    assert.ok(await page.evaluate(atOpeningPose, LOOK.overviewZoom), 'return navigation restores the cam_overview view');
     assert.ok(back.every((v, i) => Math.abs(v - home[i]) < .001), 'screen exit restores the seated camera position');
     const overviewLimits = await page.evaluate(() => window.__orbit().limits.swing);
     assert.ok(Math.abs(overviewLimits[0] + 7) < .01 && Math.abs(overviewLimits[1] - 7) < .01,

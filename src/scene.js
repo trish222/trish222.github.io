@@ -15,24 +15,8 @@ import { PROJECTS } from "./config/projects.js";
 
 let interaction = null;
 
-
-
-
-
 const diagnosticNames = new Set(["__cam", "__camera", "__diveTo", "__enter", "__flyFrom", "__flyTo", "__fov", "__lamp", "__orbit", "__pick", "__scene", "__stillReady", "__tonemap"]);
 let sceneGeneration = 0;
-
-
-
-
-
-
-
-
-
-
-
-
 
 // Experience state and rendering configuration
 
@@ -801,7 +785,7 @@ export async function initScene(canvas) {
     ]);
     if (generation !== sceneGeneration) return false;
     disposeDiagnostics = installGeometryDiagnostics({ scene, camera, renderer, background: BACKGROUND, render });
-    installExperienceDiagnostics({
+    const diagnostics = {
       get FACING() { return facingAngle; },
       get LAMP_FADE_S() { return LAMP_FADE_S; },
       get TONE_MAPPINGS() { return TONE_MAPPINGS; },
@@ -844,7 +828,15 @@ export async function initScene(canvas) {
       get tanHalfFov() { return tanHalfFov(); },
       get tonemapForward() { return tonemapForward; },
       get updateScreenOverlay() { return updateScreenOverlay; },
-    });
+    };
+    installExperienceDiagnostics(diagnostics);
+    if (import.meta.env.DEV && new URLSearchParams(location.search).has('debug')) {
+      const { installLampTuning } = await import('./debug/lampTuning.js');
+      if (generation !== sceneGeneration) return false;
+      const disposeGeometry = disposeDiagnostics;
+      const disposeTuning = installLampTuning(diagnostics, stage);
+      disposeDiagnostics = () => { disposeTuning(); disposeGeometry?.(); };
+    }
   }
 
   onResize = () => {

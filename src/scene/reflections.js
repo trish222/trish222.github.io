@@ -1,0 +1,68 @@
+import * as THREE from 'three';
+import { LOOK } from '../config/look.js';
+
+const CUBE_SIZE = 128;
+// The room is open behind the camera; reflections see this dim warm fill there, not black.
+const UNMODELED = new THREE.Color(0.05, 0.03, 0.018);
+
+// Metals and glass reflect the lit room, not an HDRI (decided at B2): the
+// lightmapped scene is captured from the bulb with the lamp on and off, once,
+// and the lit materials blend the two by lampMix, so a toggle costs no renders.
+export function createReflections({ renderer, scene, bulb, materials, lighting }) {
+  const shade = materials.find((m) => m.name === 'lamp_shade');
+  const bulbAt = bulb.getWorldPosition(new THREE.Vector3());
+  const spec = new THREE.PointLight(0xffd2a0, 0, 0, 2);
+  scene.add(spec);
+
+  const cubeTarget = new THREE.WebGLCubeRenderTarget(CUBE_SIZE, { type: THREE.HalfFloatType });
+  const cubeCamera = new THREE.CubeCamera(0.02, 20, cubeTarget);
+  cubeCamera.position.copy(bulbAt);
+  const pmrem = new THREE.PMREMGenerator(renderer);
+
+  const meshes = [];
+  scene.traverse((o) => { if (o.isMesh && materials.includes(o.material)) meshes.push(o); });
+
+  function capture(mix) {
+    lighting.setLampMix(mix);
+    cubeCamera.update(renderer, scene);
+    return pmrem.fromCubemap(cubeTarget.texture);
+  }
+  const keepMix = lighting.uniforms.lampMix.value;
+  lighting.uniforms.lmOffGain.value = LOOK.lampOffGain;
+  for (const m of meshes) m.visible = false;
+  bulb.visible = false;
+  const background = scene.background;
+  scene.background = UNMODELED;
+  const envOn = capture(1);
+  const envOff = capture(0);
+  for (const m of meshes) m.visible = true;
+  bulb.visible = true;
+  scene.background = background;
+  lighting.setLampMix(keepMix);
+  cubeTarget.dispose();
+  pmrem.dispose();
+
+  lighting.uniforms.envMapOff.value = envOff.texture;
+  for (const m of materials) m.envMap = envOn.texture;
+
+  function setLampMix(v) {
+    lighting.setLampMix(v);
+    spec.intensity = LOOK.specIntensity * v;
+    if (shade) shade.emissiveIntensity = LOOK.shadeEmissive * v;
+  }
+
+  function applyLook() {
+    spec.position.copy(bulbAt).add(new THREE.Vector3(...LOOK.specOffset));
+    lighting.uniforms.lmOffGain.value = LOOK.lampOffGain;
+    for (const m of materials) m.envMapIntensity = m.transparent ? LOOK.glassEnvIntensity : LOOK.envIntensity;
+    if (shade) {
+      shade.roughness = LOOK.shadeRoughness;
+      shade.clearcoat = LOOK.clearcoat;
+      shade.clearcoatRoughness = LOOK.clearcoatRoughness;
+    }
+    setLampMix(lighting.uniforms.lampMix.value);
+  }
+  applyLook();
+
+  return { setLampMix, applyLook, dispose() { envOn.dispose(); envOff.dispose(); scene.remove(spec); } };
+}
