@@ -1,9 +1,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { gsap } from 'gsap/gsap-core';
-const ORBIT_HORIZONTAL = THREE.MathUtils.degToRad(7);
-const ORBIT_DOWN = THREE.MathUtils.degToRad(4);
-const ORBIT_UP = THREE.MathUtils.degToRad(4);
+import { LOOK } from '../config/look.js';
+const rad = THREE.MathUtils.degToRad;
 const ORBIT_DAMPING = 0.075;
 const ORBIT_SPEED = 0.16;
 const IDLE_MS = 0;
@@ -37,8 +36,8 @@ export function createNavigation({ homeTarget, isAtDesk, reducedMotion, hasFrame
   const orbitLeash = { min: 0, max: 0, softMin: 0, softMax: 0 };
 
   function applyOrbitLimits() {
-    orbitLeash.softMin = orbitHome.theta - ORBIT_HORIZONTAL;
-    orbitLeash.softMax = orbitHome.theta + ORBIT_HORIZONTAL;
+    orbitLeash.softMin = orbitHome.theta - rad(LOOK.yawLimit);
+    orbitLeash.softMax = orbitHome.theta + rad(LOOK.yawLimit);
     if (orbitLeash.softMin > orbitHome.theta || orbitLeash.softMax < orbitHome.theta) {
       orbitLeash.softMin = orbitLeash.softMax = orbitHome.theta;
     }
@@ -46,8 +45,8 @@ export function createNavigation({ homeTarget, isAtDesk, reducedMotion, hasFrame
     orbitLeash.max = orbitLeash.softMax;
     controls.minAzimuthAngle = orbitLeash.min;
     controls.maxAzimuthAngle = orbitLeash.max;
-    controls.minPolarAngle = orbitHome.phi - ORBIT_UP;
-    controls.maxPolarAngle = orbitHome.phi + ORBIT_DOWN;
+    controls.minPolarAngle = orbitHome.phi - rad(LOOK.pitchUpLimit);
+    controls.maxPolarAngle = orbitHome.phi + rad(LOOK.pitchDownLimit);
   }
 
   function orbitOffHome() {
@@ -210,8 +209,7 @@ export function createNavigation({ homeTarget, isAtDesk, reducedMotion, hasFrame
     get returning() { return !!orbitTween; },
     get moving() { return orbitDragging || !!orbitTween || performance.now() - orbitChangedAt < ORBIT_SETTLE_MS; },
     cancelIdle() { orbitIdleAt = 0; },
-    get riseLimits() { return [-THREE.MathUtils.radToDeg(ORBIT_DOWN), THREE.MathUtils.radToDeg(ORBIT_UP)]; },
-    get downAngle() { return ORBIT_DOWN; },
+    get riseLimits() { return [-LOOK.pitchDownLimit, LOOK.pitchUpLimit]; },
     dispose() {
       killReturn();
       controls?.disconnect();

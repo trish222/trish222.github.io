@@ -980,6 +980,8 @@ body {
   transform-origin: 0 0;
   z-index: 1;
   overflow: hidden;
+  /* The tube's rounded, pillowed outline; clicks outside it fall through to the canvas. */
+  clip-path: var(--crt-clip, none);
   background: var(--desktop);
   cursor: pointer;
   will-change: transform;
@@ -1047,36 +1049,16 @@ body.screen-focused #screen-page {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: calc(1 - var(--zoom));
-  /* --zoom is written every frame of the flight. Promoting the layer
-     keeps that a compositor op rather than a repaint of the gradients
-     underneath it. */
-  will-change: opacity;
+  /* The same raster the CRT shader draws on the plane (src/config/crt.js), so the live page
+     takes over from it unchanged: fine scanlines and an edge vignette. */
   background-image:
-    /* scanlines */
-    repeating-linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0.28) 0 calc(var(--scan) * 0.42),
-      rgba(0, 0, 0, 0) calc(var(--scan) * 0.42) var(--scan)
-    ),
-    /* the room in the glass */
-    linear-gradient(
-      158deg,
-      rgba(255, 255, 255, 0.13) 0%,
-      rgba(255, 255, 255, 0.03) 26%,
-      rgba(255, 255, 255, 0) 44%
-    ),
-    /* tube vignette */
+    repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0.14) 0, rgba(0, 0, 0, 0) 1.5px, rgba(0, 0, 0, 0.14) 3px),
     radial-gradient(
-      116% 116% at 50% 47%,
-      rgba(0, 0, 0, 0) 54%,
-      rgba(0, 0, 0, 0.52) 100%
+      ellipse farthest-corner at 50% 50%,
+      rgba(0, 0, 0, 0) 42%,
+      rgba(0, 0, 0, 0.19) 66%,
+      rgba(0, 0, 0, 0.38) 89%
     );
-  /* The lip stands between the glass and the key light, so the recess
-     is deepest down the left and across the top. */
-  box-shadow:
-    inset 7% 6% 9% -2% rgba(0, 0, 0, 0.55),
-    inset -3% -3% 7% -2% rgba(0, 0, 0, 0.3);
 }
 
 /* ================================
@@ -1185,6 +1167,7 @@ body.glass-fullscreen #screen {
      (see `screenBrokenOut`). */
   width: auto !important;
   height: auto !important;
+  clip-path: none;
   cursor: default;
 }
 
@@ -1339,8 +1322,14 @@ body.no-scene #screen {
   transform: none;
   opacity: 1;
   cursor: default;
-  --zoom: 1; /* no scanlines, no vignette: there is no tube here */
+  clip-path: none;
   --blur: 0px;
+}
+
+/* No tube in either: the page is the whole screen. */
+body.no-scene #screen .crt-fx,
+body.glass-fullscreen #screen .crt-fx {
+  display: none;
 }
 
 body.no-scene #screen-page {

@@ -153,9 +153,15 @@ Generated in P0 from [visual-plan.md](visual-plan.md). Work the first unchecked 
 
 ## P5 — CRT and window
 
-- [ ] Create `src/scene/crtMaterial.js`: the snapshot texture with barrel distortion, scanlines, RGB mask, vignette, bloom-friendly brightness and subtle flicker. When zoomed in, hide it and show the live DOM with a CSS scanline/vignette overlay. Done when: the zoom transition has no visible pop.
-- [ ] `window_view` plays the muted looping `public/media/window.mp4` with a poster fallback, plus a rain-droplets-on-glass shader. Done when: it plays, and with reduced motion it shows only the poster/static frame.
-- [ ] Convex CRT look when zoomed in, per `docs/refs/design/ref-curved-screen.png`: content bulges, edges curve inward, corners rounded. Propose options before implementing; text must stay crisp and clicks must land where they appear.
+- [x] Create `src/scene/crtMaterial.js`: the snapshot texture with barrel distortion, scanlines, RGB mask, vignette, glow and subtle flicker. When zoomed in, hide it and show the live DOM with a CSS scanline/vignette overlay. Done when: the zoom transition has no visible pop.
+  - Note (2026-11-17): the shader is on `screen_plane` in the overview and in flight; the live `#screen` is hidden until `screen-active` (arrival fades it in), so the DOM overlay no longer shows over the room. The snapshot is the texture at all times (`onDraw` pushes each redraw; `showStill` is gone). Barrel (centre magnified, edges pinned) and glow fade with the fly value so frame p=1 matches the flat DOM; mask, scanlines (3 box px) and vignette are shared through `src/config/crt.js` and `.crt-fx`. `crt_glass` exports opaque (BLEND, alpha 1) and hid the picture, so `createScene.js` sets its opacity to 0 (reflections only); fix the export in Blender when convenient. Tuning in `?debug` (`crt*` sliders). Frames: `.review-artifacts/p5/zoom-sequence.png`, `mobile.png`. 41 draws desktop / 22 mobile per frame, 60 fps (headless), unchanged from before.
+- [x] Window: keep the baked night city (no video; the `window.mp4` plan is dropped). Animated rain-on-glass shader in `src/scene/windowView.js`: droplets that grow and fade with slight refraction of the city, gentle streaks, tunable in `?debug` (`rain*`), off under `prefers-reduced-motion`. Done when: it animates and reduced motion shows the static baked frame.
+  - Note (2026-11-17): the rain runs inside `window_view`'s unlit material, so refraction samples the city itself. `tests/crt.mjs` checks that two frames 2.5 s apart are identical under reduce and differ otherwise. Close-up: `.review-artifacts/p5/window.png`.
+- [x] Convex CRT look when zoomed in, per `docs/refs/design/ref-curved-screen.png`: content bulges, edges curve inward, corners rounded. Text stays crisp and clicks land where they appear.
+  - Options weighed: (A, chosen) flat live DOM clipped to a rounded superellipse (`clip-path: polygon(%)`, same curve as the shader), with edge-vignette shading and the shader's barrel on the zoomed-out plane fading to zero at arrival. Text is unfiltered and pixel-crisp; the clip also clips hit-testing, so clicks match what is drawn; works in Safari/iOS (plain polygon clip-path, no filters). Cost: no true bulge on the arrived DOM, only the rounded outline and shading. (B) barrel-distort the DOM with an SVG `feDisplacementMap` or CSS 3D: blurs text, breaks click mapping near the edges (hit-testing ignores filters), slow and unreliable on Safari/iOS. (C) re-render the DOM into WebGL each frame: crisp but loses native input and is costly on mobile. Tune the outline with `CRT.edge` in `src/config/crt.js`.
+- [x] The desk's screen tint (`lightmap_screen`) follows the shown picture: `setScreenColor` shifts the authored teal by the snapshot's average colour minus the plain desktop. Done when: opening white windows changes the tint.
+- [x] Look-around range: yaw ±20°, pitch +10° up / -9° down (`LOOK.yawLimit`, `pitchUpLimit`, `pitchDownLimit`, sliders in `?debug`); soft ease-back unchanged; mouse parallax scales with `yawLimit / 7`. New `tests/lookaround.mjs` checks no void at every extreme and corner at 1920x1080, 1440x900, 1024x768, 650x900, 390x844, 360x640 and 844x390 (cam_mobile among them).
+  - Note: down 10° exposed 5 px of void in the bottom-right corner at yaw +20 on 16:10 and 16:9 desktops only (1440x900, 1920x1080); capped at -9°. Mobile and 4:3 pass at the full ±20 / 10.
 
 ## P6 — Look-dev
 
@@ -249,7 +255,6 @@ Saved in `art/scene.blend`; nothing exported to `public/`, nothing committed.
 - split src/style.css (1628 lines; capped)
 - `public/textures/desk-wood-*` are orphaned since the procedural desk was deleted; remove them or reuse in P2/P4.
 - `src/style.css` comments reference `VOID` in `room.js` and `SCREEN_W/H` in `computer.js`; fix them when P1 touches those values.
-- `window_view` is a flat teal placeholder; needs a real night-city photo/video (P5).
 - Treehouse canopy is a round blob; flatten and tier it like `docs/refs/design/cherryblossom.png`. (Rebuilt tiered in B1 round 2; awaiting Trish's review.)
 - Plaster wall reads grey; warm it toward the palette. (Tinted deep warm brown in B1 round 2; awaiting review.)
 - Floppy labels show the Verbatim brand; replace with project labels (P8).

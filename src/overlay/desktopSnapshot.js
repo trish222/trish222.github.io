@@ -1,5 +1,5 @@
 /* DOM rasterization for the CRT flight texture. No Three.js or camera state. */
-export function createDesktopSnapshot({ width, height }) {
+export function createDesktopSnapshot({ width, height, onDraw }) {
   let generation = 0;
   let idle = 0;
   let timer = 0;
@@ -155,6 +155,7 @@ export function createDesktopSnapshot({ width, height }) {
       if (version !== generation) return false;
       stillCanvas = canvas;
       stillDirty = false;
+      onDraw?.(canvas);
       return true;
     } catch (err) {
       /* Every exit here is survivable — showStill() will not switch the

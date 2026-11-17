@@ -22,6 +22,17 @@ const SLIDERS = [
   ['overviewZoom', 0.9, 1.3, 0.005],
   ['overviewHeight', -0.2, 0.3, 0.005],
   ['overviewPitch', -5, 15, 0.1],
+  ['yawLimit', 0, 40, 0.5],
+  ['pitchUpLimit', 0, 25, 0.5],
+  ['pitchDownLimit', 0, 25, 0.5],
+  ['crtBarrel', 0, 0.3, 0.005],
+  ['crtGlow', 0, 0.6, 0.01],
+  ['crtMask', 0, 0.5, 0.01],
+  ['crtFlicker', 0, 0.06, 0.001],
+  ['rainAmount', 0, 1.5, 0.01],
+  ['rainSpeed', 0, 4, 0.05],
+  ['rainRefraction', 0, 0.08, 0.001],
+  ['rainStreaks', 0, 2, 0.01],
   ['plasticBrightness', 0.5, 1.2, 0.01],
   ['plasticTint', 0.5, 1.2, 0.01, 0], ['plasticTint', 0.5, 1.2, 0.01, 1], ['plasticTint', 0.5, 1.2, 0.01, 2],
   ['plasticEnvIntensity', 0, 2, 0.01],
@@ -41,6 +52,8 @@ export function installLampTuning(context, stage) {
   let pose = CAMERA.map((k) => LOOK[k]).join();
   function apply() {
     stage.applyLook();
+    context.navigation.applyLimits();
+    context.render();
     if (pose === CAMERA.map((k) => LOOK[k]).join()) return;
     pose = CAMERA.map((k) => LOOK[k]).join();
     context.setFov(null);

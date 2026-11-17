@@ -177,7 +177,6 @@ export function installExperienceDiagnostics(context) {
     const moving = t > 0 && t < 1;
     document.body.classList.toggle("screen-active", t > 0);
     document.body.classList.toggle("screen-zooming", moving);
-    context.showStill(moving);
     context.fly.dir = 0; // parked: --scan and --blur resolve exactly
     /* Parked anywhere but the establishing shot, the camera is the
        flight's — same as during a real one, so the hint and the
@@ -207,7 +206,6 @@ export function installExperienceDiagnostics(context) {
     const moving = t > 0 && t < 1;
     document.body.classList.toggle("screen-zooming", moving);
     document.body.classList.toggle("screen-focused", !moving);
-    context.showStill(moving);
     context.applyFade(moving ? 0 : 1);
     context.dive.dir = 0; // parked
     /* Timeline progress, like __flyTo — so the two differ from the

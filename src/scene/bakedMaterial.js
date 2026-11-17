@@ -66,6 +66,10 @@ export const LIT = new Set(['DefaultMaterial', 'lamp_trim_brass', 'brass', 'name
 
 // The authored Blender look: light_screen in Win98 teal (linear).
 const SCREEN_TINT = new THREE.Color(0.25, 0.85, 0.85);
+// The plain Win98 desktop (#008080, linear) is what the authored tint was baked against; the bake's
+// emission is about 4x the picture's own linear value.
+const DESKTOP = new THREE.Color(0, 0.216, 0.216);
+const EMISSION = 4.25;
 
 export function createBakedLighting({ lightmap_lampOn, lightmap_lampOff, lightmap_screen }, extras) {
   if (!(extras.lightmap_range > 0 && extras.lightmap_screen_range > 0)) {
@@ -139,6 +143,12 @@ export function createBakedLighting({ lightmap_lampOn, lightmap_lampOff, lightma
     bake,
     litMaterial,
     uniforms,
+    // Authored teal, shifted by how far the picture's average colour is from the plain desktop.
+    setScreenColor(average) {
+      const t = uniforms.screenTint.value;
+      t.copy(SCREEN_TINT).add(average.clone().sub(DESKTOP).multiplyScalar(EMISSION));
+      t.r = Math.max(t.r, 0); t.g = Math.max(t.g, 0); t.b = Math.max(t.b, 0);
+    },
     setLampMix(v) { uniforms.lampMix.value = v; },
     dispose() { for (const t of [...channels, lightmap_lampOn, lightmap_lampOff, lightmap_screen]) t.dispose(); },
   };

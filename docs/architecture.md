@@ -2,7 +2,7 @@
 
 This is the authoritative specification for the existing workstation portfolio. It supersedes historical theme briefs and agent instructions. Visual redesign is a separate task.
 
-The visitor opens at a seated first-person desk view: 28° field of view, 12° downward angle, and a gentle 10° view around the CRT front. Fine mouse pointers produce smooth inverted parallax without changing the permanent camera pose. Manual rotation stays within ±7° horizontally and ±4° vertically and returns to neutral after release. Touch and reduced motion disable passive parallax. Reduced motion renders on demand rather than running an ambient loop.
+The visitor opens at a seated first-person desk view: 28° field of view, 12° downward angle, and a gentle 10° view around the CRT front. Fine mouse pointers produce smooth inverted parallax without changing the permanent camera pose. Manual rotation stays within ±20° horizontally and +10°/-9° vertically (`LOOK` in `src/config/look.js`; parallax scales with it) and returns to neutral after release. Touch and reduced motion disable passive parallax. Reduced motion renders on demand rather than running an ambient loop.
 
 The monitor press flies into a live HTML login/desktop. Desktop windows open, focus, drag, minimize, maximize, close, resize, and scroll without moving the camera. Login remains distinct from monitor navigation. Leaving the monitor by Escape, the back bar, or the surrounding room returns to the seated desk view; leaving does not log off. On phones, Log Off first reverses the additional fullscreen dolly. A menu consumes its dismissal gesture before navigation. A lamp press toggles only the lamp. Picking uses the nearest hit across lamp and computer.
 

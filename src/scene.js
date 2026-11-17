@@ -6,6 +6,7 @@ import { createCameraRig } from "./scene/camera.js";
 import { isDesktopFullscreen } from "./config/experience.js";
 import { createParallax } from "./scene/parallax.js";
 import { createScreenProjection } from "./overlay/screenOverlay.js";
+import { crtClipPath } from "./config/crt.js";
 import { createDesktopSnapshot } from "./overlay/desktopSnapshot.js";
 import { createLampState } from "./lamp.js";
 import * as THREE from "three";
@@ -94,7 +95,6 @@ export const SCREEN_BASE_W = 900;
 let screenBaseH = 0;
 
 const BLUR_STEP = 0.5;
-const SCAN_STEP = 2;
 
 let renderer = null;
 let canvasEl = null;
@@ -325,7 +325,9 @@ function setScreenTransform(t) {
 
 function syncScreenVisibility() {
   if (!screenEl) return;
-  const v = stillHidden || screenAway ? "hidden" : "";
+  // Only parked at or flying to the screen: from the room the CRT shader shows the same picture.
+  const onGlass = document.body.classList.contains("screen-active");
+  const v = stillHidden || screenAway || !onGlass ? "hidden" : "";
   if (v === screenHidden) return; // don't invalidate style for a repeat
   screenHidden = v;
   screenEl.style.visibility = v;
@@ -367,13 +369,10 @@ function updateScreenOverlay(transformOnly = false) {
   set("--zoom", fly.value.toFixed(4));
 
   const snap = (v, step) => Math.round(v / step) * step;
-  let scan = Math.max(8, 3 / scale);
   let blur = (0.9 / scale) * (1 - fly.value);
   if (cameraMoving()) {
-    scan = snap(scan, SCAN_STEP);
     blur = snap(blur, BLUR_STEP);
   }
-  set("--scan", `${scan.toFixed(2)}px`);
   set("--blur", `${blur.toFixed(2)}px`);
 }
 
@@ -383,6 +382,7 @@ function updateScreenOverlay(transformOnly = false) {
 
 function render() {
   syncRenderQuality();
+  if (!prefersReducedMotion()) stage.setTime(performance.now() / 1000);
   const shifted = beginParallax();
   // HTML and WebGL share the same presentation pose, never the base pose.
   if (shifted || parallaxPresented) updateScreenOverlay(true);
@@ -396,6 +396,7 @@ function render() {
 
 function setFly(p) {
   fly.value = p;
+  stage.crt.setZoom(p);
   applyFly(p, canvasEl.clientWidth, canvasEl.clientHeight);
   updateScreenOverlay();
 
@@ -431,7 +432,6 @@ function arrive() {
   document.body.classList.add("screen-focused");
 
   applyFade(1);
-  showStill(false);
   hover.target = 0;
 
   updateScreenOverlay();
@@ -449,7 +449,6 @@ function depart() {
   pendingProject = null;
   document.body.classList.remove("screen-active", "screen-zooming");
   applyFade(0);
-  showStill(false);
 
   if (flyStart) {
     flyStart = null;
@@ -476,15 +475,6 @@ function applyFade(v) {
 // THE STILL
 
 let snapshot = null;
-
-function showStill(on) {
-  if (!stage) return;
-  if (on) {
-    if (snapshot.canvas) stage.setStill(snapshot.canvas);
-  } else {
-    stage.clearStill();
-  }
-}
 
 // THE TIMELINE
 
@@ -593,7 +583,6 @@ function diveSettled() {
 
   setDive(dive.value);
   applyFade(1);
-  showStill(false);
 
   render();
 }
@@ -624,7 +613,6 @@ export function diveToDesktop(onLanded) {
   onDiveLanded = onLanded ?? null;
   document.body.classList.remove("screen-focused");
 
-  showStill(true);
   applyFade(0);
   if (prefersReducedMotion()) return jumpDive(1);
   document.body.classList.add("screen-zooming");
@@ -636,7 +624,6 @@ export function riseFromDesktop() {
   if (!screenEl || !diveTl || dive.value === 0) return;
   onDiveLanded = null;
   document.body.classList.remove("screen-focused");
-  showStill(true);
   applyFade(0);
   if (prefersReducedMotion()) return jumpDive(0);
   document.body.classList.add("screen-zooming");
@@ -679,7 +666,6 @@ export function flyToScreen() {
   }
   document.body.classList.add("screen-active", "screen-zooming");
   if (prefersReducedMotion()) return jumpFly(1);
-  showStill(true);
   fly.dir = 1;
   flyTl.play();
 }
@@ -697,7 +683,6 @@ export function flyFromScreen() {
   document.body.classList.remove("screen-focused");
   if (prefersReducedMotion()) return jumpFly(0);
   document.body.classList.add("screen-zooming");
-  showStill(true);
   fly.dir = -1;
   flyTl.reverse();
 }
@@ -715,6 +700,7 @@ function initScreenOverlay() {
 
   screenEl.style.width = `${SCREEN_BASE_W}px`;
   screenEl.style.height = `${screenBaseH}px`;
+  screenEl.style.setProperty("--crt-clip", crtClipPath());
   screenEl.hidden = false;
   screenEl.addEventListener("click", onScreenClick);
 
@@ -758,7 +744,7 @@ export async function initScene(canvas) {
   renderer.setSize(w, h, false);
 
   performance.mark('room:renderer-ready');
-  const loaded = await createRoomScene({ renderer });
+  const loaded = await createRoomScene({ renderer, boxWidth: SCREEN_BASE_W, animated: !prefersReducedMotion() });
   if (generation !== sceneGeneration) { loaded.dispose(); return false; }
   stage = loaded;
   scene = stage.scene;
@@ -772,7 +758,7 @@ export async function initScene(canvas) {
   SCREEN_TARGET.copy(stage.projectionSurface.center);
   const { width: screenW, height: screenH, normal: screenNormal } = stage.projectionSurface;
   screenBaseH = (SCREEN_BASE_W * screenH) / screenW;
-  snapshot = createDesktopSnapshot({ width: SCREEN_BASE_W, height: screenBaseH });
+  snapshot = createDesktopSnapshot({ width: SCREEN_BASE_W, height: screenBaseH, onDraw: (canvas) => { stage?.setStill(canvas); render(); } });
   const facingAngle = Math.atan2(screenNormal.x, screenNormal.z);
   applyFly(0, w, h);
 
@@ -823,7 +809,6 @@ export async function initScene(canvas) {
       get setDive() { return setDive; },
       get setFov() { return setFov; },
       get setLampOn() { return setLampOn; },
-      get showStill() { return showStill; },
       get snapshot() { return snapshot; },
       get tanHalfFov() { return tanHalfFov(); },
       get tonemapForward() { return tonemapForward; },

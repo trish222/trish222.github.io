@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { loadScene } from './loadScene.js';
 import { createBakedLighting } from './bakedMaterial.js';
 import { labelFloppies } from './floppyLabels.js';
+import { createWindowView } from './windowView.js';
+import { createCrtMaterial } from './crtMaterial.js';
 import { createReflections } from './reflections.js';
 import { LOOK } from '../config/look.js';
 import { PROJECTS } from '../config/projects.js';
@@ -11,6 +13,16 @@ const REQUIRED = ['screen_plane', 'screen_glass', 'window_view', 'lamp_bulb', 'b
   ...PROJECTS.map((_, i) => `click_project_0${i + 1}`)];
 
 // The DOM quad's corners are the plane's UV corners, TL TR BR BL; glTF UVs start top-left.
+function averageColor(canvas) {
+  const small = Object.assign(document.createElement('canvas'), { width: 8, height: 8 });
+  const ctx = small.getContext('2d');
+  ctx.drawImage(canvas, 0, 0, 8, 8);
+  const { data } = ctx.getImageData(0, 0, 8, 8);
+  const sum = new THREE.Color(0, 0, 0);
+  for (let i = 0; i < data.length; i += 4) sum.add(new THREE.Color().setRGB(data[i] / 255, data[i + 1] / 255, data[i + 2] / 255, THREE.SRGBColorSpace));
+  return sum.multiplyScalar(4 / data.length);
+}
+
 function screenSurface(mesh) {
   const { position, uv } = mesh.geometry.attributes;
   const corners = [[0, 0], [1, 0], [1, 1], [0, 1]].map(([u, v]) => {
@@ -36,32 +48,14 @@ function pose(node) {
   return { position, forward, fov: node.isCamera ? node.fov : null };
 }
 
-// Already graded and AgX-mapped in the bake, so it must bypass lighting and tone mapping.
-// The look adds saturation and a contrast curve pivoting on mid-grey.
-function unlitView(mesh) {
-  const map = mesh.material.emissiveMap;
-  mesh.material.dispose();
-  const material = mesh.material = new THREE.MeshBasicMaterial({ map, toneMapped: false });
-  const grade = { windowSaturation: { value: 1 }, windowContrast: { value: 1 } };
-  material.onBeforeCompile = (shader) => {
-    Object.assign(shader.uniforms, grade);
-    shader.fragmentShader = `uniform float windowSaturation, windowContrast;\n${shader.fragmentShader}`
-      .replace('#include <map_fragment>', `#include <map_fragment>
-  diffuseColor.rgb = max(mix(vec3(dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722))), diffuseColor.rgb, windowSaturation), 0.0);
-  diffuseColor.rgb = 0.18 * pow(diffuseColor.rgb / 0.18, vec3(windowContrast));`);
-  };
-  return () => {
-    material.color.setScalar(LOOK.windowGain);
-    grade.windowSaturation.value = LOOK.windowSaturation;
-    grade.windowContrast.value = LOOK.windowContrast;
-  };
-}
-
-export async function createRoomScene({ renderer }) {
+export async function createRoomScene({ renderer, boxWidth, animated }) {
   const { scene, named, lightmaps, extras } = await loadScene(renderer);
   for (const name of REQUIRED) if (!named.has(name)) throw new Error(`scene.glb is missing "${name}"`);
   const lighting = createBakedLighting(lightmaps, extras);
-  const lit = [lighting.litMaterial(named.get('screen_glass').material)];
+  // crt_glass exports opaque (BLEND, alpha 1); the glass is for reflections only, so the picture shows through.
+  const glass = named.get('screen_glass').material;
+  glass.opacity = 0;
+  const lit = [lighting.litMaterial(glass)];
   for (const [name, node] of named) {
     if (!name.startsWith('baked_') || !('lightmap_uv' in node.userData)) continue;
     node.traverse((o) => {
@@ -70,8 +64,8 @@ export async function createRoomScene({ renderer }) {
       if (!material.isMeshBasicMaterial) lit.push(material);
     });
   }
-  const gradeWindow = unlitView(named.get('window_view'));
-  gradeWindow();
+  const windowView = createWindowView(named.get('window_view'), animated);
+  windowView.applyLook();
   await labelFloppies(named.get('baked_floppy_labels').material);
 
   const screenPlane = named.get('screen_plane');
@@ -81,38 +75,34 @@ export async function createRoomScene({ renderer }) {
 
   scene.updateMatrixWorld(true);
   const reflections = createReflections({ renderer, scene, bulb: named.get('lamp_bulb'), materials: lit, lighting });
-  const applyLook = () => { gradeWindow(); reflections.applyLook(); };
+  const applyLook = () => { windowView.applyLook(); crt.applyLook(); reflections.applyLook(); };
+  const setTime = (t) => { crt.setTime(t); windowView.setTime(t); };
   const cams = { overview: pose(named.get('cam_overview')), screen: pose(named.get('cam_screen')),
     mobile: pose(named.get('cam_mobile')) };
 
-  // Unlit until P5's CRT shader: teal when idle, the still at full value in flight.
-  const idle = screenPlane.material.color.clone();
+  // The desktop snapshot on the tube; the average colour of what it shows tints the desk's screen light.
+  const projectionSurface = screenSurface(screenPlane);
+  const crt = createCrtMaterial(screenPlane.material.color.clone(), boxWidth * projectionSurface.height / projectionSurface.width);
   screenPlane.material.dispose();
-  const screenMat = screenPlane.material = new THREE.MeshBasicMaterial({ color: idle });
+  screenPlane.material = crt.material;
   const setStill = (canvas) => {
-    screenMat.map?.dispose();
-    screenMat.color.set(0xffffff);
-    screenMat.map = new THREE.CanvasTexture(canvas);
-    screenMat.map.colorSpace = THREE.SRGBColorSpace;
-    screenMat.map.flipY = false;
-    screenMat.needsUpdate = true;
-  };
-  const clearStill = () => {
-    screenMat.map?.dispose();
-    screenMat.map = null;
-    screenMat.color.copy(idle);
-    screenMat.needsUpdate = true;
+    crt.material.uniforms.map.value?.dispose();
+    const map = new THREE.CanvasTexture(canvas);
+    map.colorSpace = THREE.SRGBColorSpace;
+    map.flipY = false;
+    crt.setMap(map);
+    lighting.setScreenColor(averageColor(canvas));
   };
 
   const dispose = () => {
-    clearStill();
+    crt.material.uniforms.map.value?.dispose();
     reflections.dispose();
     lighting.dispose();
     named.get('baked_floppy_labels').material.userData.labelText.dispose();
     scene.traverse((o) => { o.geometry?.dispose(); o.material?.dispose(); });
   };
 
-  return { scene, screenPlane, proxies, cams, setStill, clearStill, dispose,
+  return { scene, screenPlane, proxies, cams, setStill, crt, setTime, dispose,
     setLampMix: reflections.setLampMix, applyLook, lampMix: () => lighting.uniforms.lampMix.value,
-    projectionSurface: screenSurface(screenPlane) };
+    projectionSurface };
 }
