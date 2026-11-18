@@ -2,9 +2,11 @@
 // (src/style.css, `--crt-clip`), so the hand-over at arrival has nothing to give away.
 export const CRT = {
   edge: 16,        // superellipse exponent of the rounded picture outline
+  soft: 0.025,     // the picture fades into the tube glass over this much of the half-width
   scanPx: 3,       // scanline pitch in the desktop box's own pixels
   scanDark: 0.14,
   vignette: 0.38,
+  tint: [1, 0.93, 0.84], // warm phosphor white, scaled in by LOOK.crtTint
 };
 
 // |x|^n + |y|^n <= 1 over the box, as a percentage polygon: crisp, hit-testable, Safari-safe.

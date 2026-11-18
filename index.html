@@ -46,6 +46,9 @@
     250px wide and skewed 37 degrees.
   -->
   <div id="screen" hidden>
+    <!-- Tube glass, picture, raster, glare: see src/overlay/crt.css. -->
+    <div class="crt-tube" aria-hidden="true"></div>
+    <div id="screen-glass">
     <div id="screen-page" class="ui98">
       <div class="login-dialog win98" role="dialog" aria-labelledby="login-title">
         <div class="title-bar">
@@ -136,20 +139,7 @@
           <div class="window-menubar">
             <span>File</span><span>Edit</span><span>View</span><span>Help</span>
           </div>
-          <div class="window-body">
-            <div class="about-content">
-              <div class="profile-section">
-                <div class="profile-pic">👩‍💻</div>
-                <div class="profile-info">
-                  <h1>Trish Nguyen</h1>
-                  <p class="tagline">Software Developer</p>
-                </div>
-              </div>
-              <div class="divider-raised"></div>
-              <p>Hi! I'm Trish — a web developer who loves building things for the web.</p>
-              <p style="margin-top:6px;">Welcome to my portfolio, circa 1995.</p>
-            </div>
-          </div>
+          <div class="window-body"><!-- src/content/content.js, via src/desktop/windowContent.js --></div>
           <div class="window-statusbar"><span>Ready</span></div>
         </div>
 
@@ -166,93 +156,10 @@
           <div class="window-menubar">
             <span>File</span><span>Edit</span><span>View</span><span>Help</span>
           </div>
-          <div class="window-body">
-            <div class="file-explorer">
-              <div class="project-card" data-project="moneyflow">
-                <div class="project-icon">💻</div>
-                <div class="project-info">
-                  <strong>Project One</strong>
-                  <p>A web app built with React and Node.js. Replace this with your real project description.</p>
-                  <div class="project-tags">
-                    <span class="tag">React</span>
-                    <span class="tag">Node.js</span>
-                    <span class="tag">PostgreSQL</span>
-                  </div>
-                </div>
-              </div>
-              <div class="project-card" data-project="cook">
-                <div class="project-icon">🌐</div>
-                <div class="project-info">
-                  <strong>Project Two</strong>
-                  <p>Another cool project. Replace this with your real project description.</p>
-                  <div class="project-tags">
-                    <span class="tag">Python</span>
-                    <span class="tag">Flask</span>
-                  </div>
-                </div>
-              </div>
-              <div class="project-card" data-project="microlearning">
-                <div class="project-icon">📱</div>
-                <div class="project-info">
-                  <strong>Project Three</strong>
-                  <p>Mobile-friendly application. Replace this with your real project description.</p>
-                  <div class="project-tags">
-                    <span class="tag">TypeScript</span>
-                    <span class="tag">Vue</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <div class="window-body"><!-- src/content/content.js, via src/desktop/windowContent.js --></div>
           <div class="window-statusbar"><span>3 objects</span></div>
         </div>
 
-        <!-- ===== SKILLS WINDOW ===== -->
-        <div class="window hidden" id="window-skills" style="top:90px; left:250px; width:400px;">
-          <div class="window-titlebar" data-drag="window-skills">
-            <span class="window-title">Skills</span>
-            <div class="window-controls">
-              <button class="win-btn minimize-btn" type="button" data-target="skills" aria-label="Minimize">_</button>
-              <button class="win-btn maximize-btn" type="button" data-target="skills" aria-label="Maximize">□</button>
-              <button class="win-btn close-btn" type="button" data-target="skills" aria-label="Close">✕</button>
-            </div>
-          </div>
-          <div class="window-body">
-            <div class="skills-content">
-              <div class="skill-group">
-                <div class="skill-group-label">Languages</div>
-                <div class="skill-list">
-                  <div class="skill-item">
-                    <span>JavaScript</span>
-                    <div class="skill-bar"><div class="skill-fill" style="width:90%"></div></div>
-                  </div>
-                  <div class="skill-item">
-                    <span>TypeScript</span>
-                    <div class="skill-bar"><div class="skill-fill" style="width:80%"></div></div>
-                  </div>
-                  <div class="skill-item">
-                    <span>Python</span>
-                    <div class="skill-bar"><div class="skill-fill" style="width:75%"></div></div>
-                  </div>
-                </div>
-              </div>
-              <div class="skill-group" style="margin-top:12px;">
-                <div class="skill-group-label">Frameworks</div>
-                <div class="skill-list">
-                  <div class="skill-item">
-                    <span>React</span>
-                    <div class="skill-bar"><div class="skill-fill" style="width:85%"></div></div>
-                  </div>
-                  <div class="skill-item">
-                    <span>Node.js</span>
-                    <div class="skill-bar"><div class="skill-fill" style="width:80%"></div></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="window-statusbar"><span>5 skills</span></div>
-        </div>
 
         <!-- ===== CONTACT WINDOW ===== -->
         <div class="window hidden" id="window-contact" style="top:110px; left:310px; width:360px;">
@@ -264,33 +171,7 @@
               <button class="win-btn close-btn" type="button" data-target="contact" aria-label="Close">✕</button>
             </div>
           </div>
-          <div class="window-body">
-            <div class="contact-content">
-              <div class="contact-item">
-                <span class="contact-label">Email:</span>
-                <a href="mailto:hello@example.com">hello@example.com</a>
-              </div>
-              <div class="contact-item">
-                <span class="contact-label">GitHub:</span>
-                <a href="https://github.com/trish222" target="_blank">github.com/trish222</a>
-              </div>
-              <div class="contact-item">
-                <span class="contact-label">LinkedIn:</span>
-                <a href="#" target="_blank">linkedin.com/in/trish</a>
-              </div>
-              <div class="divider-raised" style="margin:10px 0;"></div>
-              <p style="font-weight:bold; margin-bottom:6px;">Send a Message:</p>
-              <div class="form-field">
-                <label>Name:</label>
-                <input type="text" class="win-input" placeholder="Your name">
-              </div>
-              <div class="form-field">
-                <label>Message:</label>
-                <textarea class="win-input" rows="3" placeholder="Your message..."></textarea>
-              </div>
-              <button class="win-button">Send</button>
-            </div>
-          </div>
+          <div class="window-body"><!-- src/content/content.js, via src/desktop/windowContent.js --></div>
           <div class="window-statusbar"><span>Ready</span></div>
         </div>
 
@@ -299,7 +180,7 @@
              The one window set in Departure Mono. Everything else on this
              desktop is chrome or copy; a resume is a *document*, and the
              mono face is what makes it read as one rather than as another
-             panel of UI. Content follows Trish_Nguyen_Resume.pdf.
+             panel of UI.
         -->
         <div class="window hidden" id="window-resume" style="top:40px; left:360px; width:520px;">
           <div class="window-titlebar" data-drag="window-resume">
@@ -313,115 +194,7 @@
           <div class="window-menubar">
             <span>File</span><span>Edit</span><span>View</span><span>Help</span>
           </div>
-          <div class="window-body">
-            <article class="resume">
-              <header class="resume-head">
-                <h1>Trish Nguyen</h1>
-                <p class="resume-meta"><a href="mailto:trishnguyen955@gmail.com">trishnguyen955@gmail.com</a> &middot; <a href="tel:+19842425156">984-242-5156</a></p>
-                <p class="resume-meta"><a href="https://www.linkedin.com/in/trish-nguyen-a69350243/" target="_blank" rel="noopener noreferrer">linkedin.com/in/trish-nguyen-a69350243</a></p>
-              </header>
-
-              <section class="resume-section">
-                <h2>Education</h2>
-                <div class="resume-entry">
-                  <p class="resume-line">
-                    <strong>North Carolina State University</strong><span class="resume-when">Aug 2024 &ndash; Dec 2027</span>
-                  </p>
-                  <p class="resume-where">Raleigh, NC</p>
-                  <p class="resume-skills">Bachelor of Computer Science</p>
-                  <p class="resume-skills">Coursework: Software Development Fundamentals, Data Structures and Algorithms, C and Software Tools, Operating Systems</p>
-                </div>
-                <div class="resume-entry">
-                  <p class="resume-line">
-                    <strong>Wake Technical Community College</strong><span class="resume-when">Aug 2022 &ndash; May 2024</span>
-                  </p>
-                  <p class="resume-where">Raleigh, NC</p>
-                  <p class="resume-skills">Associate in Science, Associate in Engineering</p>
-                </div>
-              </section>
-
-              <section class="resume-section">
-                <h2>Skills</h2>
-                <p class="resume-skills"><strong>Languages &amp; Frameworks:</strong> Java, Python, C, HTML, CSS, JavaScript, React</p>
-                <p class="resume-skills"><strong>AI &amp; Developer Tools:</strong> GitHub Copilot, Claude Code, Copilot CLI, Git/GitHub, Docker</p>
-                <p class="resume-skills"><strong>Workflows:</strong> Agile (Scrum, Kanban), Jira, sprint planning, code reviews</p>
-                <p class="resume-skills"><strong>Tools &amp; Platforms:</strong> Visual Studio Code, Eclipse, JUnit, Jenkins, SolidWorks, Adobe Photoshop</p>
-                <p class="resume-skills"><strong>IT &amp; Systems:</strong> ServiceNow, PXE boot imaging, Windows, macOS</p>
-              </section>
-
-              <section class="resume-section">
-                <h2>Experience</h2>
-                <div class="resume-entry">
-                  <p class="resume-line">
-                    <strong>Software Engineering Intern</strong><span class="resume-when">May 2026 &ndash; Present</span>
-                  </p>
-                  <p class="resume-where">SAS Institute &middot; Cary, NC</p>
-                  <ul>
-                    <li>Developed an agentic testing pipeline leveraging Copilot skills and an internal RAG architecture for the Customer Intelligence 360 Web/Mobile team</li>
-                    <li>Generated unit, integration, and e2e test scaffolds to fill missing coverage, flagged by automated quality audits of modules with as low as ~70% coverage</li>
-                    <li>Worked in Agile/Scrum sprints, tracking tasks in Jira and participating in daily stand-ups and sprint reviews</li>
-                  </ul>
-                </div>
-                <div class="resume-entry">
-                  <p class="resume-line">
-                    <strong>Student Web Developer</strong><span class="resume-when">Sep 2025 &ndash; Present</span>
-                  </p>
-                  <p class="resume-where">North Carolina State University &middot; Raleigh, NC</p>
-                  <ul>
-                    <li>Contributing to the redesign of the College of Engineering’s legacy event-logging website from PHP to a Laravel and Vue.js stack, improving usability and functionality for 85+ active users</li>
-                    <li>Applying and expanding web development skills in PHP, Laravel, JavaScript, HTML/CSS, and Vue.js</li>
-                    <li>Using Git/GitHub for version control, code reviews, and maintaining an organized development workflow</li>
-                  </ul>
-                </div>
-                <div class="resume-entry">
-                  <p class="resume-line">
-                    <strong>IT Service Desk Student Technician</strong><span class="resume-when">Dec 2024 &ndash; Sep 2025</span>
-                  </p>
-                  <p class="resume-where">North Carolina State University &middot; Raleigh, NC</p>
-                  <ul>
-                    <li>Provided technical support for students, staff, and faculty for the 9 departments of the College of Engineering</li>
-                    <li>Deployed and reimaged Windows systems using PXE boot, imaging tools, and secure data wipes</li>
-                    <li>Troubleshot software/hardware issues and managed tickets in ServiceNow</li>
-                  </ul>
-                </div>
-                <div class="resume-entry">
-                  <p class="resume-line">
-                    <strong>Restaurant Team Member</strong><span class="resume-when">May 2023 &ndash; Mar 2025</span>
-                  </p>
-                  <p class="resume-where">Chipotle &middot; Morrisville, NC</p>
-                  <ul>
-                    <li>Prepared and served meals for an average of 150+ customers per shift, ensuring consistent quality and presentation according to company standards</li>
-                    <li>Addressed guest needs quickly and courteously during high-volume shifts while adhering to food safety guidelines</li>
-                  </ul>
-                </div>
-                <div class="resume-entry">
-                  <p class="resume-line">
-                    <strong>Cashier</strong><span class="resume-when">Dec 2021 &ndash; Aug 2022</span>
-                  </p>
-                  <p class="resume-where">Taco Bell &middot; Morrisville, NC</p>
-                  <ul>
-                    <li>Took 100+ customer orders per shift accurately and processed cash and credit transactions using the point-of-sale system, and resolved complaints in front-of-house and drive-thru settings</li>
-                  </ul>
-                </div>
-              </section>
-
-              <section class="resume-section">
-                <h2>Activities</h2>
-                <div class="resume-entry">
-                  <p class="resume-line">
-                    <strong>Member and Mentee</strong><span class="resume-when">2024 &ndash; Present</span>
-                  </p>
-                  <p class="resume-where">Women in Computer Science (WiCS)</p>
-                </div>
-                <div class="resume-entry">
-                  <p class="resume-line">
-                    <strong>Guatemala Water &amp; Sanitation Project Team Member</strong><span class="resume-when">2025</span>
-                  </p>
-                  <p class="resume-where">Engineers Without Borders (EWB)</p>
-                </div>
-              </section>
-            </article>
-          </div>
+          <div class="window-body"><!-- src/content/content.js, via src/desktop/windowContent.js --></div>
           <div class="window-statusbar"><span>resume.txt</span></div>
         </div>
 
@@ -517,10 +290,10 @@
         </div>
       </div>
     </div><!-- /#screen-shell -->
-
-    <!-- Phosphor, scanlines, glass and the shadow the bezel lip casts
-         into the recess. All of it fades out as the camera arrives. -->
+    <div class="crt-bloom" aria-hidden="true"></div>
+    </div><!-- /#screen-glass -->
     <div class="crt-fx" aria-hidden="true"></div>
+    <div class="crt-glare" aria-hidden="true"></div>
   </div><!-- /#screen -->
 
   <!-- DRAG TO LOOK AROUND

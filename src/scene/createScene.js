@@ -6,11 +6,11 @@ import { createWindowView } from './windowView.js';
 import { createCrtMaterial } from './crtMaterial.js';
 import { createReflections } from './reflections.js';
 import { LOOK } from '../config/look.js';
-import { PROJECTS } from '../config/projects.js';
+import { FLOPPIES } from '../content/content.js';
 
 const REQUIRED = ['screen_plane', 'screen_glass', 'window_view', 'lamp_bulb', 'baked_floppy_labels',
   'click_crt', 'click_lamp_chain', 'cam_overview', 'cam_screen', 'cam_mobile',
-  ...PROJECTS.map((_, i) => `click_project_0${i + 1}`)];
+  ...FLOPPIES.map((_, i) => `click_project_0${i + 1}`)];
 
 // The DOM quad's corners are the plane's UV corners, TL TR BR BL; glTF UVs start top-left.
 function averageColor(canvas) {
@@ -69,7 +69,7 @@ export async function createRoomScene({ renderer, boxWidth, animated }) {
   await labelFloppies(named.get('baked_floppy_labels').material);
 
   const screenPlane = named.get('screen_plane');
-  const projects = PROJECTS.map((_, i) => named.get(`click_project_0${i + 1}`));
+  const projects = FLOPPIES.map((_, i) => named.get(`click_project_0${i + 1}`));
   const proxies = { crt: named.get('click_crt'), lampChain: named.get('click_lamp_chain'), projects };
   for (const proxy of [proxies.crt, proxies.lampChain, ...projects]) proxy.material.visible = false;
 

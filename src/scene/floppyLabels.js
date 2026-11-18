@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { PROJECTS } from '../config/projects.js';
+import { FLOPPIES } from '../content/content.js';
 
 // The floppy_labels atlas: 3×2 cells of 512×384, row-major from the top-left, cell i on
 // click_project_0i, a 70 px colour band on top (docs/scene-contract.md, "Floppy labels").
@@ -13,7 +13,7 @@ async function drawTitles() {
   ctx.fillStyle = '#1b1a22';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  PROJECTS.forEach(({ title }, i) => {
+  FLOPPIES.forEach(({ title }, i) => {
     ctx.font = `700 80px ${FONT}`;
     const size = Math.min(80, 80 * (CELL_W - 2 * PAD) / ctx.measureText(title).width);
     ctx.font = `700 ${size}px ${FONT}`;
@@ -22,7 +22,7 @@ async function drawTitles() {
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.flipY = false;
-  texture.userData.titles = PROJECTS.map((p) => p.title);
+  texture.userData.titles = FLOPPIES.map((p) => p.title);
   return texture;
 }
 

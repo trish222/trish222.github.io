@@ -7,7 +7,6 @@ export const WINDOWS = {
   resume:   { title: 'Resume',      icon: 'resume' },
   contact:  { title: 'Contact',     icon: 'contact' },
   recycle:  { title: 'Recycle Bin', icon: 'recycle-bin' },
-  skills:   { title: 'Skills',      icon: 'resume' },
 };
 
 let zCounter = 100;

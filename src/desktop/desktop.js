@@ -1,6 +1,7 @@
 import { desktopEvents } from './session.js';
 import * as roomScene from '../scene.js';
 import { initProjectLinks, openPendingProject } from './projects.js';
+import { renderWindowContent } from './windowContent.js';
 import { WINDOWS, resetWindows, openWindow, closeWindow, blurWindows, updateTaskbar, fitAllWindows, initDragging, initWindowControls } from './windows.js';
 
 /* ==========================================
@@ -400,6 +401,7 @@ export function initDesktop() {
   disposeDesktop();
   const generation = ++desktopGeneration;
   desktopEvents.reset();
+  renderWindowContent();
   initDragging();
   initStartMenu();
   initWindowControls();

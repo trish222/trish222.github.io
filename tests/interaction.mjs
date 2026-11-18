@@ -23,8 +23,8 @@ const atOpeningPose = ({ overviewZoom: zoom, overviewHeight: height, overviewPit
   const looking = camera.getWorldDirection(new V());
   return camera.position.distanceTo(expected) < 1e-4 && looking.angleTo(forward) < 1e-4;
 };
-// Parallax scales with the look-around yaw limit, tuned against the original 7 degrees (src/scene/parallax.js).
-const widen = LOOK.yawLimit / 7;
+// Parallax scales with the look-around yaw limit (tuned against the original 7 degrees) and LOOK.parallaxStrength.
+const widen = LOOK.yawLimit / 7 * LOOK.parallaxStrength;
 const url = process.argv[2] || 'http://127.0.0.1:4320/?diagnostics=1';
 const browser = await chromium.launch({ channel: 'chromium' });
 try {

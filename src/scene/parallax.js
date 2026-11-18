@@ -1,7 +1,8 @@
 import * as THREE from "three";
 import { LOOK } from "../config/look.js";
 
-// Parallax was tuned against the original 7° look-around; it widens with the yaw limit.
+// Parallax was tuned against the original 7° look-around; it widens with the yaw limit
+// and is scaled by LOOK.parallaxStrength (0.5: half the original lean).
 const BASE_YAW = 7;
 
 export function createParallax() {
@@ -18,7 +19,7 @@ const parallaxUp = new THREE.Vector3();
 
 
 function tick(dt, active) {
-  const widen = LOOK.yawLimit / BASE_YAW;
+  const widen = LOOK.yawLimit / BASE_YAW * LOOK.parallaxStrength;
   let targetX = active ? -parallaxPointer.x * parallaxStrengthX * widen : 0;
   let targetY = active ? -parallaxPointer.y * parallaxStrengthY * widen : 0;
   const distance = Math.hypot(targetX, targetY);

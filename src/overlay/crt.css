@@ -1,0 +1,155 @@
+/* ================================
+   THE TUBE AROUND THE LIVE PICTURE
+
+   #screen is the transformed box the overlay maps onto `screen_plane`. Inside it, back to front:
+
+   .crt-tube     dark tube glass over the whole box, feathered into the bezel recess at the box
+                 edge, so the rounded corners outside the picture read as glass, not as a cut-out.
+   #screen-glass the live picture, clipped to the tube outline (--crt-clip, the shader's
+                 superellipse) and chromatic-aberrated toward the edges (--crt-ca-filter, an SVG
+                 filter built in crtFx.js). Hit-testing follows the clip; filters move pixels by
+                 at most --crt-ca px at the very edge, so clicks land where things appear.
+   .crt-bloom    soft glow on bright UI: the picture behind it, thresholded and blurred, screened
+                 back on top.
+   .crt-fx       one multiply layer: warm phosphor tint, RGB mask, scanlines, vignette and edge
+                 darkening, plus grain (::before) and flicker (::after).
+   .crt-glare    a faint reflection on the glass, over picture and tube alike.
+
+   Every strength is a custom property written by crtFx.js from LOOK (the ?debug sliders).
+   ================================ */
+#screen .crt-tube,
+#screen .crt-glare {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  --feather: 1%;
+  mask-image:
+    linear-gradient(to right, transparent, #000 var(--feather), #000 calc(100% - var(--feather)), transparent),
+    linear-gradient(to bottom, transparent, #000 var(--feather), #000 calc(100% - var(--feather)), transparent);
+  mask-composite: intersect;
+  -webkit-mask-composite: source-in;
+}
+
+#screen .crt-tube {
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 45%, #1b2523 0%, #0d1312 55%, #060808 100%);
+}
+
+#screen-glass {
+  position: absolute;
+  inset: 0;
+  clip-path: var(--crt-clip, none);
+  filter: var(--crt-ca-filter, none);
+  mask: var(--crt-soft, none) 0 0 / 100% 100%;
+}
+
+#screen .crt-bloom {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* Only what is near white survives the threshold, so the teal desktop and the
+     text do not glow, the white windows and the grey chrome do. */
+  backdrop-filter: brightness(0.7) contrast(4) blur(5px);
+  -webkit-backdrop-filter: brightness(0.7) contrast(4) blur(5px);
+  mix-blend-mode: screen;
+  opacity: var(--crt-glow, 0);
+}
+
+#screen .crt-fx {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  clip-path: var(--crt-clip, none);
+  mix-blend-mode: multiply;
+  --edge: rgb(0 0 0 / var(--crt-edge, 0));
+  /* The same raster the CRT shader draws on the plane (src/scene/crtMaterial.js), so the
+     live page takes over from it unchanged. */
+  background-color: var(--crt-tint, #fff);
+  background-image:
+    linear-gradient(to right, var(--edge), transparent 6%, transparent 94%, var(--edge)),
+    linear-gradient(to bottom, var(--edge), transparent 6%, transparent 94%, var(--edge)),
+    radial-gradient(ellipse farthest-corner at 50% 50%,
+      transparent 42%, rgb(0 0 0 / 0.19) 66%, rgb(0 0 0 / 0.38) 89%),
+    repeating-linear-gradient(to bottom, rgb(0 0 0 / 0.14) 0, transparent 1.5px, rgb(0 0 0 / 0.14) 3px),
+    repeating-linear-gradient(to right,
+      rgb(255 0 0 / var(--crt-mask, 0)) 0, rgb(0 255 0 / var(--crt-mask, 0)) 1px,
+      rgb(0 0 255 / var(--crt-mask, 0)) 2px, rgb(255 0 0 / var(--crt-mask, 0)) 3px);
+}
+
+#screen .crt-fx::before,
+#screen .crt-fx::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+#screen .crt-fx::before {
+  inset: -50%;
+  opacity: var(--crt-grain, 0);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1.8 0 0 0 -.7'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: crt-grain 0.5s steps(1) infinite;
+}
+
+#screen .crt-fx::after {
+  inset: 0;
+  background: rgb(0 0 0 / calc(var(--crt-flicker, 0) * 3));
+  opacity: 0;
+  animation: crt-flicker 1.7s steps(1) infinite;
+}
+
+@keyframes crt-grain {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-11%, 7%); }
+  40% { transform: translate(8%, -13%); }
+  60% { transform: translate(-4%, 12%); }
+  80% { transform: translate(13%, 4%); }
+}
+
+@keyframes crt-flicker {
+  0% { opacity: 0.4; }
+  13% { opacity: 1; }
+  21% { opacity: 0.2; }
+  47% { opacity: 0.7; }
+  58% { opacity: 0; }
+  76% { opacity: 0.9; }
+  88% { opacity: 0.3; }
+}
+
+#screen .crt-glare {
+  mix-blend-mode: screen;
+  opacity: var(--crt-glare, 0);
+  background:
+    radial-gradient(ellipse 55% 38% at 27% 15%, rgb(255 255 255 / 0.5), transparent 70%),
+    linear-gradient(118deg, transparent 30%, rgb(255 255 255 / 0.16) 38%, transparent 50%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #screen .crt-fx::before,
+  #screen .crt-fx::after {
+    animation: none;
+  }
+}
+
+/* The tube's rounded corners (plus the soft edge) take about 28 box px off each end of the
+   taskbar's row, so Start and the clock move in clear of them. */
+body:not(.glass-fullscreen):not(.no-scene) #screen #taskbar {
+  padding-inline: 28px;
+}
+
+body:not(.glass-fullscreen):not(.no-scene) #screen #start-menu {
+  left: 28px;
+}
+
+/* No tube on a phone's full-page desktop or without WebGL: the page is the whole screen. */
+body.no-scene #screen-glass,
+body.glass-fullscreen #screen-glass {
+  clip-path: none;
+  filter: none;
+  mask: none;
+}
+
+body.no-scene #screen :is(.crt-tube, .crt-bloom, .crt-fx, .crt-glare),
+body.glass-fullscreen #screen :is(.crt-tube, .crt-bloom, .crt-fx, .crt-glare) {
+  display: none;
+}

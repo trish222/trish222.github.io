@@ -735,44 +735,6 @@ body {
 }
 
 /* ================================
-   SKILLS CONTENT
-   ================================ */
-.skills-content { display: flex; flex-direction: column; }
-
-.skill-group-label {
-  font-weight: bold;
-  font-size: 11px;
-  margin-bottom: 6px;
-  padding-bottom: 2px;
-  border-bottom: 1px solid var(--dark);
-}
-
-.skill-list { display: flex; flex-direction: column; gap: 6px; }
-
-.skill-item { display: flex; align-items: center; gap: 8px; }
-
-.skill-item span {
-  width: 90px;
-  font-size: 11px;
-  flex-shrink: 0;
-}
-
-.skill-bar {
-  flex: 1;
-  height: 14px;
-  background: white;
-  border-top: 1px solid var(--dark);
-  border-left: 1px solid var(--dark);
-  border-right: 1px solid var(--white);
-  border-bottom: 1px solid var(--white);
-}
-
-.skill-fill {
-  height: 100%;
-  background: linear-gradient(to bottom, #000080, #1084d0);
-}
-
-/* ================================
    CONTACT CONTENT
    ================================ */
 .contact-content {
@@ -980,10 +942,9 @@ body {
   transform-origin: 0 0;
   z-index: 1;
   overflow: hidden;
-  /* The tube's rounded, pillowed outline; clicks outside it fall through to the canvas. */
-  clip-path: var(--crt-clip, none);
-  background: var(--desktop);
-  cursor: pointer;
+  /* Only the clipped picture inside (#screen-glass) takes clicks; the tube glass around it
+     falls through to the canvas. */
+  pointer-events: none;
   will-change: transform;
 
   /* All driven from scene.js. --zoom every frame; --scan and --blur are
@@ -1040,25 +1001,6 @@ body.screen-zooming #screen {
 
 body.screen-focused #screen-page {
   pointer-events: auto;
-}
-
-/* Phosphor, scanlines, glass and the shadow the bezel lip throws into
-   the recess — the things that say "tube" rather than "div". All of it
-   is gone by the time the page fills the viewport. */
-#screen .crt-fx {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  /* The same raster the CRT shader draws on the plane (src/config/crt.js), so the live page
-     takes over from it unchanged: fine scanlines and an edge vignette. */
-  background-image:
-    repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0.14) 0, rgba(0, 0, 0, 0) 1.5px, rgba(0, 0, 0, 0.14) 3px),
-    radial-gradient(
-      ellipse farthest-corner at 50% 50%,
-      rgba(0, 0, 0, 0) 42%,
-      rgba(0, 0, 0, 0.19) 66%,
-      rgba(0, 0, 0, 0.38) 89%
-    );
 }
 
 /* ================================
@@ -1167,8 +1109,6 @@ body.glass-fullscreen #screen {
      (see `screenBrokenOut`). */
   width: auto !important;
   height: auto !important;
-  clip-path: none;
-  cursor: default;
 }
 
 body.glass-fullscreen #scene {
@@ -1321,15 +1261,7 @@ body.no-scene #screen {
   height: auto !important;
   transform: none;
   opacity: 1;
-  cursor: default;
-  clip-path: none;
   --blur: 0px;
-}
-
-/* No tube in either: the page is the whole screen. */
-body.no-scene #screen .crt-fx,
-body.glass-fullscreen #screen .crt-fx {
-  display: none;
 }
 
 body.no-scene #screen-page {
@@ -1338,7 +1270,6 @@ body.no-scene #screen-page {
 
 body.screen-active #screen {
   z-index: 3000;
-  cursor: default;
 }
 
 /* ================================

@@ -6,13 +6,13 @@ import { createCameraRig } from "./scene/camera.js";
 import { isDesktopFullscreen } from "./config/experience.js";
 import { createParallax } from "./scene/parallax.js";
 import { createScreenProjection } from "./overlay/screenOverlay.js";
-import { crtClipPath } from "./config/crt.js";
+import { installScreenFx, disposeScreenFx } from "./overlay/crtFx.js";
 import { createDesktopSnapshot } from "./overlay/desktopSnapshot.js";
 import { createLampState } from "./lamp.js";
 import * as THREE from "three";
 import { gsap } from "gsap/gsap-core";
 import { tonemapForward, TONE_MAPPINGS } from "./tonemap.js";
-import { PROJECTS } from "./config/projects.js";
+import { FLOPPIES } from "./content/content.js";
 
 let interaction = null;
 
@@ -261,7 +261,7 @@ function canLeaveScreen() {
 // A floppy flies in like the CRT, then asks the desktop for its window on arrival.
 let pendingProject = null;
 function openProject(i) {
-  pendingProject = PROJECTS[i];
+  pendingProject = FLOPPIES[i];
   enterScreen();
 }
 
@@ -700,7 +700,7 @@ function initScreenOverlay() {
 
   screenEl.style.width = `${SCREEN_BASE_W}px`;
   screenEl.style.height = `${screenBaseH}px`;
-  screenEl.style.setProperty("--crt-clip", crtClipPath());
+  installScreenFx(screenEl, SCREEN_BASE_W, screenBaseH);
   screenEl.hidden = false;
   screenEl.addEventListener("click", onScreenClick);
 
@@ -968,6 +968,7 @@ export function disposeScene() {
     screenEl.style.visibility = "";
     screenTransform = "";
   }
+  disposeScreenFx();
   snapshot?.dispose();
   snapshot = null;
   stillHidden = false;

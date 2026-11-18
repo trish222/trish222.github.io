@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
 // The tube's rounded outline clips the live DOM and its hit-testing together (clicks land where they
-// appear), and the animated CRT and window rain freeze under prefers-reduced-motion.
+// appear; the tube glass around it takes none), and the animated CRT, the live screen's grain and
+// flicker, and the window rain freeze under prefers-reduced-motion.
 const url = process.argv[2] || 'http://127.0.0.1:4320/?diagnostics=1';
 const browser = await chromium.launch({ channel: 'chromium' });
 try {
@@ -17,7 +18,7 @@ try {
       const box = document.querySelector('#screen').getBoundingClientRect();
       const hit = (fx, fy) => document.elementFromPoint(box.left + box.width * fx, box.top + box.height * fy)?.closest('#screen') !== null;
       return {
-        clipped: getComputedStyle(document.querySelector('#screen')).clipPath.startsWith('polygon'),
+        clipped: getComputedStyle(document.querySelector('#screen-glass')).clipPath.startsWith('polygon'),
         corners: [[0.005, 0.005], [0.995, 0.005], [0.995, 0.995], [0.005, 0.995]].map(([x, y]) => hit(x, y)),
         edges: [[0.5, 0.01], [0.99, 0.5], [0.5, 0.99], [0.01, 0.5], [0.5, 0.5]].map(([x, y]) => hit(x, y)),
       };
@@ -38,7 +39,9 @@ try {
     await page.waitForTimeout(2500);
     const b = await shot();
     assert.equal(a.equals(b), expectFrozen, `${reducedMotion}: window and CRT ${expectFrozen ? 'hold still' : 'animate'}`);
+    const animations = await page.evaluate(() => ['::before', '::after'].map((p) => getComputedStyle(document.querySelector('#screen .crt-fx'), p).animationName));
+    assert.deepEqual(animations.map((n) => n === 'none'), [expectFrozen, expectFrozen], `${reducedMotion}: live-screen grain and flicker`);
     await context.close();
   }
-  console.log('PASS CRT outline clips clicks; reduced motion freezes rain and flicker');
+  console.log('PASS CRT outline clips clicks; reduced motion freezes rain, flicker and grain');
 } finally { await browser.close(); }

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { LOOK } from '../config/look.js';
+import { applyScreenFx } from '../overlay/crtFx.js';
 
 // Dev-only (`npm run dev`, ?debug): live sliders for src/config/look.js, matched
 // against the Cycles r14 renders. "Copy" puts the values on the clipboard to paste back.
@@ -22,6 +23,7 @@ const SLIDERS = [
   ['overviewZoom', 0.9, 1.3, 0.005],
   ['overviewHeight', -0.2, 0.3, 0.005],
   ['overviewPitch', -5, 15, 0.1],
+  ['parallaxStrength', 0, 1.5, 0.05],
   ['yawLimit', 0, 40, 0.5],
   ['pitchUpLimit', 0, 25, 0.5],
   ['pitchDownLimit', 0, 25, 0.5],
@@ -29,6 +31,12 @@ const SLIDERS = [
   ['crtGlow', 0, 0.6, 0.01],
   ['crtMask', 0, 0.5, 0.01],
   ['crtFlicker', 0, 0.06, 0.001],
+  ['crtTint', 0, 1, 0.01],
+  ['screenEdge', 0, 1, 0.01],
+  ['screenGlow', 0, 1, 0.01],
+  ['screenCA', 0, 4, 0.05],
+  ['screenGrain', 0, 0.4, 0.005],
+  ['screenGlare', 0, 1, 0.01],
   ['rainAmount', 0, 1.5, 0.01],
   ['rainSpeed', 0, 4, 0.05],
   ['rainRefraction', 0, 0.08, 0.001],
@@ -55,6 +63,7 @@ export function installLampTuning(context, stage) {
   let pose = CAMERA.map((k) => LOOK[k]).join();
   function apply() {
     stage.applyLook();
+    applyScreenFx();
     context.navigation.applyLimits();
     context.render();
     if (pose === CAMERA.map((k) => LOOK[k]).join()) return;

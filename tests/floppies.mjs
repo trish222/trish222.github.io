@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
-import { PROJECTS } from '../src/config/projects.js';
+import { FLOPPIES } from '../src/content/content.js';
 
-// Each floppy label shows its project's title (drawn at runtime from PROJECTS), and
+// Each floppy label shows its project's title (drawn at runtime from FLOPPIES), and
 // clicking a floppy flies into the screen and opens that project's window.
 const url = process.argv[2] || 'http://127.0.0.1:4320/?diagnostics=1';
 const browser = await chromium.launch({ channel: 'chromium' });
@@ -21,7 +21,7 @@ try {
       .filter((v, k) => k % 4 === 3 && v > 128).length);
     return { titles: text.userData.titles, ink };
   });
-  assert.deepEqual(labels.titles, PROJECTS.map(p => p.title), 'labels are drawn from PROJECTS in order');
+  assert.deepEqual(labels.titles, FLOPPIES.map(p => p.title), 'labels are drawn from FLOPPIES in order');
   labels.ink.forEach((n, i) => assert.ok(n > 500, `label cell ${i + 1} has ink: ${n} px`));
 
   // A point inside click_project_0i's projected box that the nearest-hit picker gives to that floppy.
@@ -45,7 +45,7 @@ try {
     return null;
   }, i);
 
-  for (const [i, { window: id, card }] of PROJECTS.entries()) {
+  for (const [i, { window: id, card }] of FLOPPIES.entries()) {
     const point = await floppyPoint(i);
     assert.ok(point, `click_project_0${i + 1} is pickable from the overview`);
     await page.mouse.click(point.x, point.y);

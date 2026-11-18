@@ -1,6 +1,5 @@
 import { desktopEvents } from './session.js';
 import { openWindow } from './windows.js';
-import { PROJECTS } from '../config/projects.js';
 
 // A floppy on the desk asks for its window through `desk:open` once the camera
 // lands on the screen; a request made while signed out waits for the sign-in.
@@ -17,10 +16,6 @@ function show({ window: id, card }) {
 
 export function initProjectLinks(signedIn) {
   pending = null;
-  for (const { title, card } of PROJECTS) {
-    const strong = card && document.querySelector(`[data-project="${card}"] strong`);
-    if (strong) strong.textContent = title;
-  }
   desktopEvents.on(document, 'desk:open', (e) => {
     if (signedIn()) show(e.detail);
     else pending = e.detail;
