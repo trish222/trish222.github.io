@@ -253,7 +253,6 @@ Saved in `art/scene.blend`; nothing exported to `public/`, nothing committed.
 - split src/desktop/desktop.js (455 lines; capped)
 - split src/desktop/windows.js (438 lines; capped)
 - split src/style.css (1628 lines; capped)
-- `public/textures/desk-wood-*` are orphaned since the procedural desk was deleted; remove them or reuse in P2/P4.
 - `src/style.css` comments reference `VOID` in `room.js` and `SCREEN_W/H` in `computer.js`; fix them when P1 touches those values.
 - Treehouse canopy is a round blob; flatten and tier it like `docs/refs/design/cherryblossom.png`. (Rebuilt tiered in B1 round 2; awaiting Trish's review.)
 - Plaster wall reads grey; warm it toward the palette. (Tinted deep warm brown in B1 round 2; awaiting review.)

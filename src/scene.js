@@ -816,11 +816,15 @@ export async function initScene(canvas) {
     };
     installExperienceDiagnostics(diagnostics);
     if (import.meta.env.DEV && new URLSearchParams(location.search).has('debug')) {
-      const { installLampTuning } = await import('./debug/lampTuning.js');
-      if (generation !== sceneGeneration) return false;
-      const disposeGeometry = disposeDiagnostics;
-      const disposeTuning = installLampTuning(diagnostics, stage);
-      disposeDiagnostics = () => { disposeTuning(); disposeGeometry?.(); };
+      try {
+        const { installLampTuning } = await import('./debug/lampTuning.js');
+        if (generation !== sceneGeneration) return false;
+        const disposeGeometry = disposeDiagnostics;
+        const disposeTuning = installLampTuning(diagnostics, stage);
+        disposeDiagnostics = () => { disposeTuning(); disposeGeometry?.(); };
+      } catch (error) {
+        console.error('Debug panel failed; continuing without it.', error);
+      }
     }
   }
 

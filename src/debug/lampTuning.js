@@ -47,6 +47,9 @@ export function installLampTuning(context, stage) {
   panel.style.cssText = 'position:fixed;top:8px;right:8px;z-index:9999;padding:8px;width:260px;'
     + 'font:11px/1.3 monospace;color:#eee;background:#000c;border-radius:4px';
   panel.addEventListener('pointerdown', (e) => e.stopPropagation());
+  const bar = document.createElement('div');
+  const list = document.createElement('div');
+  panel.append(bar, list);
 
   // Camera keys re-frame the home pose (and the orbit around it).
   let pose = CAMERA.map((k) => LOOK[k]).join();
