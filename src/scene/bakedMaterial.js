@@ -46,8 +46,13 @@ vec4 lmEnv(vec3 dir, float roughness) {
 }
 `;
 // Glass is mostly alpha, so strong reflections also raise its opacity or they'd vanish.
+// The screen glass instead blends premultiplied (createScene.js): only its tint covers the
+// picture, and reflections and glare add over it, so faint glints stay faint, not squared.
 const GLASS_ALPHA = /* glsl */`
-#ifdef LM_GLASS
+#if defined(LM_SCREEN_GLASS)
+  vec3 glassLight = totalSpecular + totalEmissiveRadiance;
+  outgoingLight = (outgoingLight - glassLight) * diffuseColor.a + glassLight;
+#elif defined(LM_GLASS)
   diffuseColor.a = mix(diffuseColor.a, 1.0, clamp(max(max(totalSpecular.r, totalSpecular.g), totalSpecular.b), 0.0, 1.0));
 #endif
 #include <opaque_fragment>`;
@@ -87,6 +92,7 @@ export function createBakedLighting({ lightmap_lampOn, lightmap_lampOff, lightma
     envMapOff: { value: null },
     shadeSaturation: { value: 1 },
     plasticSpec: { value: 1 },
+    glassSpec: { value: 1 },
   };
   // lightMap only switches on USE_LIGHTMAP and vLightMapUv; its channel picks the UV set.
   const channels = [0, 1].map((channel) => Object.assign(lightmap_lampOn.clone(), { channel }));
@@ -119,7 +125,7 @@ export function createBakedLighting({ lightmap_lampOn, lightmap_lampOff, lightma
     material.onBeforeCompile = (shader) => {
       Object.assign(shader.uniforms, uniforms);
       shader.fragmentShader = shader.fragmentShader
-        .replace('#include <lightmap_pars_fragment>', `#include <lightmap_pars_fragment>\nuniform float shadeSaturation, plasticSpec;\n${channel === undefined ? 'uniform float lampMix;' : DECODE}`)
+        .replace('#include <lightmap_pars_fragment>', `#include <lightmap_pars_fragment>\nuniform float shadeSaturation, plasticSpec, glassSpec;\n${channel === undefined ? 'uniform float lampMix;' : DECODE}`)
         .replace('#include <map_fragment>', SHADE_SATURATION)
         .replace('#include <envmap_physical_pars_fragment>', THREE.ShaderChunk.envmap_physical_pars_fragment
           .replace('#ifdef USE_ENVMAP', `#ifdef USE_ENVMAP\n#ifdef ENVMAP_TYPE_CUBE_UV\n${ENV_BLEND}\n#endif`)
@@ -127,7 +133,8 @@ export function createBakedLighting({ lightmap_lampOn, lightmap_lampOff, lightma
         .replace('#include <lights_fragment_maps>', THREE.ShaderChunk.lights_fragment_maps
           .replace(LIT_LIGHT, 'irradiance += lmLight() * PI;') + '\niblIrradiance = vec3(0.0);')
         .replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\nreflectedLight.directDiffuse = vec3(0.0);\n'
-          + '#ifdef LM_PLASTIC\nreflectedLight.directSpecular *= plasticSpec;\n#endif')
+          + '#ifdef LM_PLASTIC\nreflectedLight.directSpecular *= plasticSpec;\n#endif\n'
+          + '#ifdef LM_SCREEN_GLASS\nreflectedLight.directSpecular *= glassSpec;\n#endif')
         .replace('#include <opaque_fragment>', GLASS_ALPHA);
     };
     material.customProgramCacheKey = () => 'baked-lit';

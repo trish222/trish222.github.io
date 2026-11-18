@@ -6,11 +6,16 @@ import { createWindowView } from './windowView.js';
 import { createCrtMaterial } from './crtMaterial.js';
 import { createReflections } from './reflections.js';
 import { LOOK } from '../config/look.js';
+import { crtGlare } from '../config/crt.js';
 import { FLOPPIES } from '../content/content.js';
 
 const REQUIRED = ['screen_plane', 'screen_glass', 'window_view', 'lamp_bulb', 'baked_floppy_labels',
   'click_crt', 'click_lamp_chain', 'cam_overview', 'cam_screen', 'cam_mobile',
   ...FLOPPIES.map((_, i) => `click_project_0${i + 1}`)];
+
+// The glass's additive glare reads stronger than .crt-glare's screen blend at the same opacity;
+// this matches them at arrival (measured at the spot), so the hand-over keeps its brightness.
+const GLARE_MATCH = 0.45;
 
 // The DOM quad's corners are the plane's UV corners, TL TR BR BL; glTF UVs start top-left.
 function averageColor(canvas) {
@@ -52,10 +57,11 @@ export async function createRoomScene({ renderer, boxWidth, animated }) {
   const { scene, named, lightmaps, extras } = await loadScene(renderer);
   for (const name of REQUIRED) if (!named.has(name)) throw new Error(`scene.glb is missing "${name}"`);
   const lighting = createBakedLighting(lightmaps, extras);
-  // crt_glass exports opaque (BLEND, alpha 1); the glass is for reflections only, so the picture shows through.
   const glass = named.get('screen_glass').material;
-  glass.opacity = 0;
+  const glassTint = glass.opacity;
   const lit = [lighting.litMaterial(glass)];
+  glass.defines.LM_SCREEN_GLASS = '';
+  Object.assign(glass, { blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor });
   for (const [name, node] of named) {
     if (!name.startsWith('baked_') || !('lightmap_uv' in node.userData)) continue;
     node.traverse((o) => {
@@ -75,7 +81,10 @@ export async function createRoomScene({ renderer, boxWidth, animated }) {
 
   scene.updateMatrixWorld(true);
   const reflections = createReflections({ renderer, scene, bulb: named.get('lamp_bulb'), materials: lit, lighting });
-  const applyLook = () => { windowView.applyLook(); crt.applyLook(); reflections.applyLook(); };
+  const applyLook = () => {
+    windowView.applyLook(); crt.applyLook(); reflections.applyLook();
+    glass.emissiveIntensity = LOOK.screenGlare * GLARE_MATCH;
+  };
   const setTime = (t) => { crt.setTime(t); windowView.setTime(t); };
   const cams = { overview: pose(named.get('cam_overview')), screen: pose(named.get('cam_screen')),
     mobile: pose(named.get('cam_mobile')) };
@@ -85,6 +94,14 @@ export async function createRoomScene({ renderer, boxWidth, animated }) {
   const crt = createCrtMaterial(screenPlane.material.color.clone(), boxWidth * projectionSurface.height / projectionSurface.width);
   screenPlane.material.dispose();
   screenPlane.material = crt.material;
+  // screen_glass's UVs span the plane; glTF UVs start top-left, like the canvas.
+  glass.emissiveMap = Object.assign(new THREE.CanvasTexture(crtGlare(projectionSurface.width / projectionSurface.height)),
+    { colorSpace: THREE.SRGBColorSpace, flipY: false });
+  glass.emissive.setRGB(1, 1, 1);
+  glass.needsUpdate = true;
+  applyLook();
+  // The live DOM has no glass tint over it, so the tint fades out as the camera arrives.
+  const setZoom = (p) => { crt.setZoom(p); glass.opacity = glassTint * (1 - p); };
   const setStill = (canvas) => {
     crt.material.uniforms.map.value?.dispose();
     const map = new THREE.CanvasTexture(canvas);
@@ -96,13 +113,14 @@ export async function createRoomScene({ renderer, boxWidth, animated }) {
 
   const dispose = () => {
     crt.material.uniforms.map.value?.dispose();
+    glass.emissiveMap.dispose();
     reflections.dispose();
     lighting.dispose();
     named.get('baked_floppy_labels').material.userData.labelText.dispose();
     scene.traverse((o) => { o.geometry?.dispose(); o.material?.dispose(); });
   };
 
-  return { scene, screenPlane, proxies, cams, setStill, crt, setTime, dispose,
+  return { scene, screenPlane, proxies, cams, setStill, crt, setZoom, setTime, dispose,
     setLampMix: reflections.setLampMix, applyLook, lampMix: () => lighting.uniforms.lampMix.value,
     projectionSurface };
 }

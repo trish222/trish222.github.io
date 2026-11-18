@@ -396,7 +396,7 @@ function render() {
 
 function setFly(p) {
   fly.value = p;
-  stage.crt.setZoom(p);
+  stage.setZoom(p);
   applyFly(p, canvasEl.clientWidth, canvasEl.clientHeight);
   updateScreenOverlay();
 

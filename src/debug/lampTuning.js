@@ -47,6 +47,7 @@ const SLIDERS = [
   ['plasticTint', 0.5, 1.2, 0.01, 0], ['plasticTint', 0.5, 1.2, 0.01, 1], ['plasticTint', 0.5, 1.2, 0.01, 2],
   ['plasticEnvIntensity', 0, 2, 0.01],
   ['plasticSpec', 0, 2, 0.01],
+  ['glassSpec', 0, 1, 0.01],
 ];
 const CAMERA = ['overviewZoom', 'overviewHeight', 'overviewPitch'];
 // Frames the lamp like the r14 lamp panel (art/previews/b2-lamp-before-after.png).

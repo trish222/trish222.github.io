@@ -1,5 +1,5 @@
 import './crt.css';
-import { CRT, crtClipPath } from '../config/crt.js';
+import { CRT, crtClipPath, crtGlare } from '../config/crt.js';
 import { LOOK } from '../config/look.js';
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -93,6 +93,7 @@ export function installScreenFx(screen, width, height) {
   document.body.append(svg);
   screen.style.setProperty('--crt-clip', crtClipPath());
   screen.style.setProperty('--crt-soft', softEdge(width, height));
+  screen.style.setProperty('--crt-glare-map', `url(${crtGlare(width / height).toDataURL()})`);
   applyScreenFx();
 }
 

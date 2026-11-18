@@ -43,4 +43,5 @@ export const LOOK = {
   pitchDownLimit: 9,
   plasticEnvIntensity: 0.3,
   plasticSpec: 1.42,
+  glassSpec: 0.03,
 };

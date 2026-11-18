@@ -68,6 +68,7 @@ export function createReflections({ renderer, scene, bulb, materials, lighting }
       m.color.setRGB(...LOOK.plasticTint).multiplyScalar(LOOK.plasticBrightness);
     }
     lighting.uniforms.plasticSpec.value = LOOK.plasticSpec;
+    lighting.uniforms.glassSpec.value = LOOK.glassSpec;
     lighting.uniforms.shadeSaturation.value = LOOK.shadeSaturation;
     if (shade) {
       shade.color.setRGB(...LOOK.shadeColor);

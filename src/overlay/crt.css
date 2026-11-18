@@ -14,7 +14,8 @@
    .crt-lift     a screen-blended grey that raises the blacks (washed-out phosphor).
    .crt-fx       one multiply layer: warm phosphor tint, RGB mask, scanlines, vignette and edge
                  darkening, plus grain (::before) and flicker (::after).
-   .crt-glare    a faint reflection on the glass, over picture and tube alike.
+   .crt-glare    the convex glass's glare (crtGlare in src/config/crt.js, also on the WebGL glass),
+                 over picture and tube alike.
 
    Every strength is a custom property written by crtFx.js from LOOK (the ?debug sliders).
    ================================ */
@@ -129,9 +130,7 @@
 #screen .crt-glare {
   mix-blend-mode: screen;
   opacity: var(--crt-glare, 0);
-  background:
-    radial-gradient(ellipse 55% 38% at 27% 15%, rgb(255 255 255 / 0.5), transparent 70%),
-    linear-gradient(118deg, transparent 30%, rgb(255 255 255 / 0.16) 38%, transparent 50%);
+  background: var(--crt-glare-map) center / 100% 100%;
 }
 
 @media (prefers-reduced-motion: reduce) {

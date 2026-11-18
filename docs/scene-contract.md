@@ -5,7 +5,7 @@ The handoff between the Blender scene and the site code. If public/models/scene.
 | Object name in Blender | Type | Code uses it for |
 | --- | --- | --- |
 | screen_plane | Flat quad, UVs 0–1, sits just behind the glass | Projection corners, CRT shader, snapshot texture |
-| screen_glass | Curved mesh in front of screen_plane | Reflection and glare only, transparent |
+| screen_glass | Convex cap in front of screen_plane: rim 0.5 mm in front, centre sag `CRT.bulge` × half-height (7.2 mm); UV0 spans the plane 0–1 like screen_plane | Reflection and glare only, transparent (`crt_glass`, alpha 0.12) |
 | click_crt | Low-poly invisible proxy around the monitor | Raycast target to zoom in |
 | click_lamp_chain | Proxy around the pull chain | Lamp toggle |
 | click_project_01 … click_project_06 | Proxies on each floppy or CD | Open that project's window |

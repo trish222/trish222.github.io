@@ -13,6 +13,8 @@ CONSTANTS = {
     'lamp_trim_brass': {'Metallic': 0.78, 'Roughness': 0.37},
     'brass': {'Roughness': 0.28},
     'nameplate_brass': {'Roughness': 0.32},
+    # dust_glass (lived_in.py) at its clean-glass values; the node-driven version exported opaque white.
+    'crt_glass': {'Base Color': (0.02, 0.03, 0.03, 1), 'Roughness': 0.05, 'Alpha': 0.12},
 }
 FACTOR = 0.843  # DefaultMaterial roughness = G x 0.865 x noise remap (mean 0.975)
 EMIT_PX = 512
