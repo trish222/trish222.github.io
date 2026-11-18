@@ -33,6 +33,8 @@ const SLIDERS = [
   ['crtFlicker', 0, 0.06, 0.001],
   ['crtTint', 0, 1, 0.01],
   ['screenEdge', 0, 1, 0.01],
+  ['screenBrightness', 0.5, 2, 0.01],
+  ['screenLift', 0, 0.3, 0.005],
   ['screenGlow', 0, 1, 0.01],
   ['screenCA', 0, 4, 0.05],
   ['screenGrain', 0, 0.4, 0.005],
@@ -54,9 +56,14 @@ export function installLampTuning(context, stage) {
   const panel = Object.assign(document.createElement('form'), { id: 'look-panel' });
   panel.style.cssText = 'position:fixed;top:8px;right:8px;z-index:9999;padding:8px;width:260px;'
     + 'font:11px/1.3 monospace;color:#eee;background:#000c;border-radius:4px';
-  panel.addEventListener('pointerdown', (e) => e.stopPropagation());
+  // Keep the panel's gestures away from the scene's look-around and zoom handlers.
+  for (const type of ['wheel', 'pointerdown', 'pointermove', 'pointerup', 'touchstart', 'touchmove', 'touchend']) {
+    panel.addEventListener(type, (e) => e.stopPropagation(), { passive: true });
+  }
   const bar = document.createElement('div');
   const list = document.createElement('div');
+  list.id = 'look-list';
+  list.style.cssText = 'overflow-y:auto;max-height:calc(100vh - 70px);overscroll-behavior:contain;touch-action:pan-y';
   panel.append(bar, list);
 
   // Camera keys re-frame the home pose (and the orbit around it).

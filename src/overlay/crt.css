@@ -6,11 +6,12 @@
    .crt-tube     dark tube glass over the whole box, feathered into the bezel recess at the box
                  edge, so the rounded corners outside the picture read as glass, not as a cut-out.
    #screen-glass the live picture, clipped to the tube outline (--crt-clip, the shader's
-                 superellipse) and chromatic-aberrated toward the edges (--crt-ca-filter, an SVG
-                 filter built in crtFx.js). Hit-testing follows the clip; filters move pixels by
+                 superellipse) and chromatic-aberrated toward the edges (--crt-filter: an SVG
+                 filter built in crtFx.js, plus the brightness gain). Hit-testing follows the clip; filters move pixels by
                  at most --crt-ca px at the very edge, so clicks land where things appear.
    .crt-bloom    soft glow on bright UI: the picture behind it, thresholded and blurred, screened
                  back on top.
+   .crt-lift     a screen-blended grey that raises the blacks (washed-out phosphor).
    .crt-fx       one multiply layer: warm phosphor tint, RGB mask, scanlines, vignette and edge
                  darkening, plus grain (::before) and flicker (::after).
    .crt-glare    a faint reflection on the glass, over picture and tube alike.
@@ -39,7 +40,7 @@
   position: absolute;
   inset: 0;
   clip-path: var(--crt-clip, none);
-  filter: var(--crt-ca-filter, none);
+  filter: var(--crt-filter, none);
   mask: var(--crt-soft, none) 0 0 / 100% 100%;
 }
 
@@ -53,6 +54,15 @@
   -webkit-backdrop-filter: brightness(0.7) contrast(4) blur(5px);
   mix-blend-mode: screen;
   opacity: var(--crt-glow, 0);
+}
+
+#screen .crt-lift {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  clip-path: var(--crt-clip, none);
+  mix-blend-mode: screen;
+  background: rgb(var(--crt-lift, 0 0 0));
 }
 
 #screen .crt-fx {
@@ -149,7 +159,7 @@ body.glass-fullscreen #screen-glass {
   mask: none;
 }
 
-body.no-scene #screen :is(.crt-tube, .crt-bloom, .crt-fx, .crt-glare),
-body.glass-fullscreen #screen :is(.crt-tube, .crt-bloom, .crt-fx, .crt-glare) {
+body.no-scene #screen :is(.crt-tube, .crt-bloom, .crt-lift, .crt-fx, .crt-glare),
+body.glass-fullscreen #screen :is(.crt-tube, .crt-bloom, .crt-lift, .crt-fx, .crt-glare) {
   display: none;
 }

@@ -80,7 +80,8 @@ export function applyScreenFx() {
   set('--crt-glow', LOOK.screenGlow);
   set('--crt-grain', LOOK.screenGrain);
   set('--crt-glare', LOOK.screenGlare);
-  set('--crt-ca-filter', LOOK.screenCA > 0 ? 'url(#crt-ca)' : 'none');
+  set('--crt-filter', `${LOOK.screenCA > 0 ? 'url(#crt-ca) ' : ''}brightness(${LOOK.screenBrightness})`);
+  set('--crt-lift', Array(3).fill(Math.round(255 * LOOK.screenLift)).join(' '));
   const [r, b] = svg.querySelectorAll('feDisplacementMap');
   r.setAttribute('scale', 4 * LOOK.screenCA);
   b.setAttribute('scale', -4 * LOOK.screenCA);

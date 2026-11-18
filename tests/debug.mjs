@@ -16,6 +16,17 @@ try {
   await page.waitForSelector('#look-panel');
   assert.equal(await page.evaluate(() => document.body.classList.contains('no-scene')), false);
   assert.ok(await page.locator('#look-panel input[type=range]').count() > 0);
+  const scroll = await page.evaluate(async () => {
+    const list = document.getElementById('look-list');
+    const reached = [];
+    document.addEventListener('wheel', () => reached.push('wheel'));
+    list.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: 40 }));
+    const before = list.scrollTop;
+    list.scrollTop = 120;
+    return { scrollable: list.scrollHeight > list.clientHeight, moved: list.scrollTop > before, leaked: reached.length };
+  });
+  assert.ok(scroll.scrollable && scroll.moved, 'slider list scrolls');
+  assert.equal(scroll.leaked, 0, 'wheel inside the panel does not reach the scene');
   // drawImage on a WebGL canvas reads blank without preserveDrawingBuffer, so decode a screenshot.
   const shot = (await page.locator('#scene').screenshot()).toString('base64');
   const lit = await page.evaluate(async (b64) => {

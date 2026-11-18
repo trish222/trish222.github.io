@@ -9,7 +9,7 @@ void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(
 // with the same tint, mask, scanlines, vignette and edge darkening (src/overlay/crt.css).
 const fragmentShader = `uniform sampler2D map;
 uniform vec3 idle, tint;
-uniform float hasMap, zoom, time, flicker, barrel, glow, mask, lines, edge, scanDark, vignette, edgeShade, soft;
+uniform float bright, lift, hasMap, zoom, time, flicker, barrel, glow, mask, lines, edge, scanDark, vignette, edgeShade, soft;
 varying vec2 vUv;
 float fade(float cycles) { return 1.0 - smoothstep(0.3, 0.7, fwidth(cycles)); }
 float rim(float a) { return 1.0 - edgeShade * clamp((a - 0.88) / 0.12, 0.0, 1.0); }
@@ -21,6 +21,9 @@ void main() {
   float d = pow(inside, 1.0 / edge);
   vec3 col = hasMap > 0.5 ? texture2D(map, uv).rgb : idle;
   col += hasMap > 0.5 ? textureLod(map, uv, 4.0).rgb * glow * (1.0 - zoom) : vec3(0.0);
+  // Brightness is a gamma-space gain and the lift a screen blend, as in the DOM (.crt-lift in crt.css).
+  col *= bright;
+  col = pow(1.0 - (1.0 - pow(col, vec3(1.0 / 2.2))) * (1.0 - lift), vec3(2.2));
   float row = vUv.y * lines;
   col *= 1.0 - scanDark * (0.5 + 0.5 * sin(row * 6.2832)) * fade(row);
   float cols = vUv.x * lines * 1.3;
@@ -35,7 +38,7 @@ void main() {
 
 export function createCrtMaterial(idle, boxHeight) {
   const uniforms = {
-    map: { value: null }, idle: { value: idle }, hasMap: { value: 0 }, zoom: { value: 0 }, time: { value: 0 },
+    map: { value: null }, bright: { value: 1 }, lift: { value: 0 }, idle: { value: idle }, hasMap: { value: 0 }, zoom: { value: 0 }, time: { value: 0 },
     flicker: { value: 0 }, barrel: { value: 0 }, glow: { value: 0 }, mask: { value: 0 },
     tint: { value: new THREE.Color() }, edgeShade: { value: 0 },
     lines: { value: boxHeight / CRT.scanPx }, edge: { value: CRT.edge }, soft: { value: CRT.soft },
@@ -48,6 +51,8 @@ export function createCrtMaterial(idle, boxHeight) {
     uniforms.glow.value = LOOK.crtGlow;
     uniforms.mask.value = LOOK.crtMask;
     uniforms.edgeShade.value = LOOK.screenEdge;
+    uniforms.bright.value = LOOK.screenBrightness ** 2.2;
+    uniforms.lift.value = LOOK.screenLift;
     // CRT.tint is display (sRGB) white, like the DOM's; the shader multiplies before tone mapping.
     uniforms.tint.value.setRGB(...CRT.tint.map((c) => 1 + (c - 1) * LOOK.crtTint), THREE.SRGBColorSpace);
   };
