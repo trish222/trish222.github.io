@@ -1,13 +1,17 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
-// Needs the dev server (`npm run dev`): the panel is stripped from production builds.
+import { createServer } from 'vite';
+// The panel is dev-only (import.meta.env.DEV), so this starts its own Vite dev server.
+const server = await createServer({ server: { host: '127.0.0.1', port: 0 }, logLevel: 'error' });
+await server.listen();
+const base = server.resolvedUrls.local[0];
 const browser = await chromium.launch({ channel: 'chromium' });
 try {
   const page = await browser.newPage({ reducedMotion: 'reduce' });
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => m.type() === 'error' && !m.text().startsWith('Failed to load resource') && errors.push(m.text()));
-  await page.goto((process.argv[2] || 'http://127.0.0.1:4321/') + '?debug');
+  await page.goto(base + '?debug');
   await page.waitForFunction(() => window.__stillReady?.());
   await page.waitForSelector('#look-panel');
   assert.equal(await page.evaluate(() => document.body.classList.contains('no-scene')), false);
@@ -25,4 +29,5 @@ try {
   console.log('PASS ?debug scene renders with the look panel');
 } finally {
   await browser.close();
+  await server.close();
 }
