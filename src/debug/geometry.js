@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-export function installGeometryDiagnostics({ scene, camera, renderer, background, render }) {
+export function installGeometryDiagnostics({ scene, camera, renderer, render }) {
   window.__fit = (...names) => {
     const box = new THREE.Box3();
     for (const n of names.length ? names : ["screen_plane"]) {
@@ -45,11 +45,10 @@ export function installGeometryDiagnostics({ scene, camera, renderer, background
     gl.readPixels(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight, gl.RGBA, gl.UNSIGNED_BYTE, buf);
     return buf;
   };
-  window.__histogram = () => {
+  // Returns the normal frame and the white-redraw mask of the same view.
+  const frameAndMask = () => {
     render();
     const gl = renderer.getContext();
-    const w = gl.drawingBufferWidth;
-    const h = gl.drawingBufferHeight;
     const buf = read(gl);
     const swapped = [];
     scene.traverse((o) => {
@@ -62,6 +61,12 @@ export function installGeometryDiagnostics({ scene, camera, renderer, background
     const mask = read(gl);
     for (const [o, material, visible] of swapped) { o.material = material; o.visible = visible; }
     render();
+    return { gl, buf, mask };
+  };
+  window.__histogram = () => {
+    const { gl, buf, mask } = frameAndMask();
+    const w = gl.drawingBufferWidth;
+    const h = gl.drawingBufferHeight;
     const isVoid = (i) => mask[i] < 128;
     const lumas = [];
     for (let i = 0; i < buf.length; i += 4) {
@@ -87,32 +92,13 @@ export function installGeometryDiagnostics({ scene, camera, renderer, background
     };
   };
   window.__voidcheck = () => {
-    const hidden = [];
-    for (const child of scene.children) {
-      if (child.visible) {
-        hidden.push(child);
-        child.visible = false;
-      }
-    }
-    render();
-    const gl = renderer.getContext();
-    const px = new Uint8Array(4);
-    gl.readPixels(
-      Math.floor(gl.drawingBufferWidth / 2),
-      Math.floor(gl.drawingBufferHeight / 2),
-      1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px,
-    );
-    for (const child of hidden) child.visible = true;
-    render();
-    const got = [px[0], px[1], px[2]];
-    const bg = new THREE.Color(background);
-    const want = [bg.r, bg.g, bg.b].map((v) => Math.round(v * 255));
-    const hex = (a) => "#" + a.map((v) => v.toString(16).padStart(2, "0")).join("");
-    return {
-      got: hex(got),
-      want: hex(want),
-      err: Math.max(...got.map((v, i) => Math.abs(v - want[i]))),
-    };
+    const { gl, mask } = frameAndMask();
+    const w = gl.drawingBufferWidth;
+    const h = gl.drawingBufferHeight;
+    let voids = 0;
+    for (let i = 0; i < mask.length; i += 4) if (mask[i] < 128) voids++;
+    const centre = (Math.floor(h / 2) * w + Math.floor(w / 2)) * 4;
+    return { voidShare: Number((voids / (w * h)).toFixed(3)), centreIsVoid: mask[centre] < 128 };
   };
 return () => {
   delete window.__fit;

@@ -24,7 +24,7 @@ export const LOOK = {
   crtBarrel: 0.065,
   crtGlow: 0.25,
   crtMask: 0.11,
-  crtFlicker: 0.028,
+  crtFlicker: 0.005,
   crtTint: 0.71,
   screenEdge: 0.77,
   screenBrightness: 0.94,

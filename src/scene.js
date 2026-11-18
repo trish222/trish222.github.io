@@ -770,7 +770,7 @@ export async function initScene(canvas) {
       import('./debug/geometry.js'), import('./debug/experience.js'),
     ]);
     if (generation !== sceneGeneration) return false;
-    disposeDiagnostics = installGeometryDiagnostics({ scene, camera, renderer, background: BACKGROUND, render });
+    disposeDiagnostics = installGeometryDiagnostics({ scene, camera, renderer, render });
     const diagnostics = {
       get FACING() { return facingAngle; },
       get LAMP_FADE_S() { return LAMP_FADE_S; },
