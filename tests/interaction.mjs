@@ -25,6 +25,8 @@ const atOpeningPose = ({ overviewZoom: zoom, overviewHeight: height, overviewPit
 };
 // Parallax scales with the look-around yaw limit (tuned against the original 7 degrees) and LOOK.parallaxStrength.
 const widen = LOOK.yawLimit / 7 * LOOK.parallaxStrength;
+// The absolute movement thresholds below were tuned at yawLimit 20, parallaxStrength 0.5.
+const tuned = widen / (20 / 7 * 0.5);
 const url = process.argv[2] || 'http://127.0.0.1:4320/?diagnostics=1';
 const browser = await chromium.launch({ channel: 'chromium' });
 try {
@@ -152,14 +154,14 @@ try {
     await page.waitForTimeout(180);
     const response = await page.evaluate(() => window.__parallaxSample);
     if (!touch && reducedMotion !== 'reduce') {
-      assert.ok(response.x < -.018 && response.y < -.011, 'parallax responds visibly within 180ms');
+      assert.ok(response.x < -.018 * tuned && response.y < -.011 * tuned, 'parallax responds visibly within 180ms');
     }
     await page.waitForTimeout(500);
     const parallax = await page.evaluate(() => window.__parallaxSample);
     if (touch || reducedMotion === 'reduce') {
       assert.ok(parallax.max < .000001, 'touch and reduced motion disable passive camera movement');
     } else {
-      assert.ok(parallax.x < -.029 && parallax.y < -.018, 'upper-right pointer produces stronger inverted movement on both axes');
+      assert.ok(parallax.x < -.029 * tuned && parallax.y < -.018 * tuned, 'upper-right pointer produces stronger inverted movement on both axes');
       assert.ok(parallax.max <= .04501 * widen, 'diagonal movement stays inside the radial cap');
       await page.mouse.move(width - 1, 1);
       await page.waitForTimeout(650);
@@ -172,7 +174,7 @@ try {
       await page.evaluate(() => { window.__parallaxSample.max = 0; });
       await page.waitForTimeout(100);
       const reversed = await page.evaluate(() => window.__parallaxSample);
-      assert.ok(reversed.x > .029 && reversed.y > .018, 'lower-left pointer produces stronger rightward and upward movement');
+      assert.ok(reversed.x > .029 * tuned && reversed.y > .018 * tuned, 'lower-left pointer produces stronger rightward and upward movement');
     }
     const neutral = await page.evaluate(() => window.__camera.position.toArray());
     assert.ok(neutral.every((v, i) => Math.abs(v - home[i]) < .0001), 'parallax never alters the permanent camera pose');

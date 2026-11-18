@@ -36,23 +36,37 @@ export function installGeometryDiagnostics({ scene, camera, renderer, background
       luma: Math.round(0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]),
     };
   };
+  // Void is any pixel no geometry covers. It renders as exact black, which crushed shadows reach too, so
+  // colour cannot tell them apart: redraw every mesh flat white and call whatever stays black void.
+  // (The material is swapped per mesh because the render pass resets scene.overrideMaterial.)
+  const coverage = new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false, side: THREE.DoubleSide });
+  const read = (gl) => {
+    const buf = new Uint8Array(gl.drawingBufferWidth * gl.drawingBufferHeight * 4);
+    gl.readPixels(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+    return buf;
+  };
   window.__histogram = () => {
     render();
     const gl = renderer.getContext();
     const w = gl.drawingBufferWidth;
     const h = gl.drawingBufferHeight;
-    const buf = new Uint8Array(w * h * 4);
-    gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-    const voidRgb = new THREE.Color(background);
-    const vr = Math.round(voidRgb.r * 255);
-    const vg = Math.round(voidRgb.g * 255);
-    const vb = Math.round(voidRgb.b * 255);
+    const buf = read(gl);
+    const swapped = [];
+    scene.traverse((o) => {
+      if (!o.isMesh || !o.visible) return;
+      swapped.push([o, o.material, o.visible]);
+      if (o.name.startsWith('click_')) o.visible = false;
+      else o.material = coverage;
+    });
+    render();
+    const mask = read(gl);
+    for (const [o, material, visible] of swapped) { o.material = material; o.visible = visible; }
+    render();
+    const isVoid = (i) => mask[i] < 128;
     const lumas = [];
     for (let i = 0; i < buf.length; i += 4) {
-      const r = buf[i], g = buf[i + 1], b = buf[i + 2];
-      /* Within a level or two of the backdrop, on every channel. */
-      if (Math.abs(r - vr) <= 2 && Math.abs(g - vg) <= 2 && Math.abs(b - vb) <= 2) continue;
-      lumas.push(0.2126 * r + 0.7152 * g + 0.0722 * b);
+      if (isVoid(i)) continue;
+      lumas.push(0.2126 * buf[i] + 0.7152 * buf[i + 1] + 0.0722 * buf[i + 2]);
     }
     lumas.sort((a, b) => a - b);
     const n = lumas.length;
