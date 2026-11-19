@@ -47,6 +47,8 @@ export const LOOK = {
   pitchDownLimit: 9,
   plasticEnvIntensity: 0.3,
   plasticSpec: 1.42,
+  standLift: [0.42, 0.25, 0.14], // the monitor's stand, in the chin's shadow (bakedMaterial.js)
+  standSpec: 0.5,
   glassSpec: 0.03,
   screenEnv: 1,
   screenRim: 2.5,

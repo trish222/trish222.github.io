@@ -80,6 +80,10 @@ const SCREEN_TINT = new THREE.Color(0.25, 0.85, 0.85);
 // emission is about 4x the picture's own linear value.
 const DESKTOP = new THREE.Color(0, 0.216, 0.216);
 const EMISSION = 4.25;
+// Below the monitor's bottom plate, baked_crt_monitor is its stand (art/scripts/mvstand.py). Deep in the chin's shadow its
+// baked light is low and the lamp's specular greys it, so its shadows lift toward a warm floor and its specular
+// scales down (LOOK.standLift/standSpec); lit parts (the foot's top) stay as baked.
+const STAND_TOP = 0.935;
 
 export function createBakedLighting({ lightmap_lampOn, lightmap_lampOff, lightmap_screen }, extras) {
   if (!(extras.lightmap_range > 0 && extras.lightmap_screen_range > 0)) {
@@ -97,6 +101,8 @@ export function createBakedLighting({ lightmap_lampOn, lightmap_lampOff, lightma
     envMapOff: { value: null },
     shadeSaturation: { value: 1 },
     plasticSpec: { value: 1 },
+    standLift: { value: new THREE.Color(0, 0, 0) },
+    standSpec: { value: 1 },
     glassSpec: { value: 1 },
     screenRim: { value: 0 },
     screenSheen: { value: 0 },
@@ -129,10 +135,14 @@ export function createBakedLighting({ lightmap_lampOn, lightmap_lampOff, lightma
     if (material.transparent) material.defines = { LM_GLASS: '' };
     if (material.name === 'lamp_shade') material.defines = { LM_SHADE: '' };
     if (PLASTIC.has(material.name)) material.defines = { LM_PLASTIC: '' };
+    if (material.name === 'Material.018') material.defines.LM_STAND = '';
     material.onBeforeCompile = (shader) => {
       Object.assign(shader.uniforms, uniforms);
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', '#include <common>\nvarying float vWorldY;')
+        .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWorldY = (modelMatrix * vec4(transformed, 1.0)).y;');
       shader.fragmentShader = shader.fragmentShader
-        .replace('#include <lightmap_pars_fragment>', `#include <lightmap_pars_fragment>\nuniform float shadeSaturation, plasticSpec, glassSpec, screenRim, screenSheen;\n${channel === undefined ? 'uniform float lampMix;' : DECODE}`)
+        .replace('#include <lightmap_pars_fragment>', `#include <lightmap_pars_fragment>\nuniform float shadeSaturation, plasticSpec, glassSpec, screenRim, screenSheen, standSpec;\nuniform vec3 standLift;\nvarying float vWorldY;\n${channel === undefined ? 'uniform float lampMix;' : DECODE}`)
         .replace('#include <map_fragment>', SHADE_SATURATION)
         .replace('#include <envmap_physical_pars_fragment>', THREE.ShaderChunk.envmap_physical_pars_fragment
           .replace('#ifdef USE_ENVMAP', `#ifdef USE_ENVMAP\n#ifdef ENVMAP_TYPE_CUBE_UV\n${ENV_BLEND}\n#endif`)
@@ -141,6 +151,7 @@ export function createBakedLighting({ lightmap_lampOn, lightmap_lampOff, lightma
           .replace(LIT_LIGHT, 'irradiance += lmLight() * PI;') + '\niblIrradiance = vec3(0.0);')
         .replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\nreflectedLight.directDiffuse = vec3(0.0);\n'
           + '#ifdef LM_PLASTIC\nreflectedLight.directSpecular *= plasticSpec;\n#endif\n'
+          + `#ifdef LM_STAND\nif (vWorldY < ${STAND_TOP.toFixed(3)}) {\n  vec3 lift = material.diffuseColor * standLift;\n  reflectedLight.indirectDiffuse += lift * lift / (reflectedLight.indirectDiffuse + lift + 1e-4);\n  reflectedLight.directSpecular *= standSpec;\n}\n#endif\n`
           + '#ifdef LM_SCREEN_GLASS\nreflectedLight.directSpecular *= glassSpec;\n#endif')
         .replace('#include <opaque_fragment>', GLASS_ALPHA);
     };

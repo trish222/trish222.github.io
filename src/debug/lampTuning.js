@@ -47,6 +47,7 @@ const SLIDERS = [
   ...['keyboardTint', 'keycapTint'].flatMap((k) => [0, 1, 2].map((i) => [k, 0.5, 3, 0.01, i])),
   ['plasticEnvIntensity', 0, 2, 0.01],
   ['plasticSpec', 0, 2, 0.01],
+  ['standLift', 0, 2, 0.01, 0], ['standLift', 0, 2, 0.01, 1], ['standLift', 0, 2, 0.01, 2], ['standSpec', 0, 2, 0.01],
   ['glassSpec', 0, 1, 0.01],
   ['screenEnv', 0, 8, 0.05],
   ['screenRim', 0, 6, 0.05],

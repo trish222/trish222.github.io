@@ -71,6 +71,8 @@ export function createReflections({ renderer, scene, bulb, materials, lighting }
       m.color.setRGB(...LOOK[TINT[m.name]]).multiplyScalar(LOOK.plasticBrightness);
     }
     lighting.uniforms.plasticSpec.value = LOOK.plasticSpec;
+    lighting.uniforms.standLift.value.setRGB(...LOOK.standLift);
+    lighting.uniforms.standSpec.value = LOOK.standSpec;
     lighting.uniforms.glassSpec.value = LOOK.glassSpec;
     lighting.uniforms.screenRim.value = LOOK.screenRim;
     lighting.uniforms.screenSheen.value = LOOK.screenSheen;
