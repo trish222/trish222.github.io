@@ -144,7 +144,6 @@ export function createNavigation({ homeTarget, isAtDesk, reducedMotion, hasFrame
     controls.enablePan = false;
 
     controls.enableZoom = false;
-    controls.rotateSpeed = ORBIT_SPEED;
 
     controls.enableDamping = !reducedMotion();
     controls.dampingFactor = ORBIT_DAMPING;
@@ -156,6 +155,9 @@ export function createNavigation({ homeTarget, isAtDesk, reducedMotion, hasFrame
     applyOrbitLimits();
 
     controls.addEventListener("start", () => {
+      // OrbitControls measures drags against the canvas height; on a portrait phone that made a full-width
+      // swipe turn less than the look-around range, so drag speed follows the narrower side instead.
+      controls.rotateSpeed = ORBIT_SPEED * Math.max(1, canvasEl.clientHeight / canvasEl.clientWidth);
       resetParallax();
       orbitDragging = true;
       const returning = !!orbitTween;
