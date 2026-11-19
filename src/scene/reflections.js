@@ -3,7 +3,7 @@ import { RectAreaLightUniformsLib } from 'three/examples/jsm/lights/RectAreaLigh
 import { LOOK } from '../config/look.js';
 import { PLASTIC } from './bakedMaterial.js';
 
-const TINT = { 'Material.018': 'monitorTint', 'Material.017': 'caseTint' }; // monitor, computer case
+const TINT = { 'Material.018': 'monitorTint', 'Material.017': 'caseTint', 'Material.021': 'keyboardTint', 'Material.022': 'keycapTint' };
 
 const CUBE_SIZE = 128;
 // The room is open behind the camera; reflections see this dim warm fill there, not black.
@@ -67,8 +67,8 @@ export function createReflections({ renderer, scene, bulb, materials, lighting }
     for (const m of materials) m.envMapIntensity = m.transparent ? LOOK.glassEnvIntensity : LOOK.envIntensity;
     for (const m of plastics) {
       m.envMapIntensity = LOOK.plasticEnvIntensity;
-      // The monitor's albedo is already cream; caseTint matches the case to it, plasticTint neutralises the yellower keyboard.
-      m.color.setRGB(...(LOOK[TINT[m.name]] ?? LOOK.plasticTint)).multiplyScalar(LOOK.plasticBrightness);
+      // Each plastic's albedo differs (the keyboard's is yellower); its tint matches it to the monitor's cream.
+      m.color.setRGB(...LOOK[TINT[m.name]]).multiplyScalar(LOOK.plasticBrightness);
     }
     lighting.uniforms.plasticSpec.value = LOOK.plasticSpec;
     lighting.uniforms.glassSpec.value = LOOK.glassSpec;

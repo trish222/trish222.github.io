@@ -20,9 +20,11 @@ export const LOOK = {
   overviewHeight: 0.02,
   overviewPitch: -2.5,
   plasticBrightness: 1.03,
-  plasticTint: [0.61, 0.69, 0.95],
+  // Matched to the monitor's cream as seen from the overview, lamp on (their albedos are darker and yellower, and they sit lower in the lamp's light)
   monitorTint: [0.78, 0.67, 0.56],
-  caseTint: [1.19, 1.18, 1.26], // case albedo × this = monitor albedo × monitorTint
+  caseTint: [2.33, 2.05, 1.8],
+  keyboardTint: [1.7, 1.62, 2.68], // keyboard and mouse
+  keycapTint: [1.93, 1.8, 2.36],
   crtBarrel: 0.065,
   crtGlow: 0.25,
   crtMask: 0.11,

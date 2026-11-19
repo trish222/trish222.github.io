@@ -7,7 +7,7 @@ export const CRT = {
   scanDark: 0.14,
   vignette: 0.38,
   tint: [1, 0.93, 0.84], // warm phosphor white, scaled in by LOOK.crtTint
-  bulge: 0.225,    // screen_glass's centre sag over the half-height (25 mm dome)
+  bulge: 0.164,    // screen_glass's centre sag over the half-height (18.3 mm dome from its tucked rim)
 };
 
 // The glare on the convex glass, grey on black, `width` px wide at the box's aspect. screen_glass

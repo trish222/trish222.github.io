@@ -12,8 +12,10 @@ SOURCE = os.path.join(os.path.dirname(os.path.dirname(ART)), 'sources', 'masterv
 PLACE = Matrix.Translation((-0.0100000008, 0.0206276178, 1.1112426508)) @ Matrix.Scale(1.0041841277, 4)
 MON = 'baked_crt_monitor'
 CX, CZ = -0.01, 1.1257       # centre of the download's screen opening
-GLASS_EDGE = -0.168          # the download's own glass rim, mean depth
-SINK, DOME = 0.020, 0.025    # glass rim moved back by SINK; dome height, centre over rim (apex just behind the bezel face)
+# The glass tucks under the bezel's own lip (which ends at y about -0.168): its rim RIM_BACK behind that edge and TUCK
+# outside it, so the screen's edges curve back into the bezel; its centre bulges forward to APEX, 1.5 mm proud of the
+# top band of the bezel face (y -0.1751), the face's closest part: an 18.3 mm dome.
+RIM_BACK, TUCK, APEX = 0.008, 0.006, -0.1766
 Y_END = 0.11                                       # stepped rear: back face (natural scale)
 # Larger screen: the opening grows DROP down and WIDEN out on each side (6% of its height, aspect kept). Its bevel
 # and corners move rigidly, so they keep the download's shape; only the flat chin and side bands give way.
@@ -186,7 +188,8 @@ def widen_opening(bm):
 def material_own():
     """The MasterView's own material (cream, wear, roughness, normal map) on the logo-free texture,
     plus the detail tints (ink, note, pen, LED) with no extra ageing or grime."""
-    if 'mv_plastic_own' in bpy.data.materials: return bpy.data.materials['mv_plastic_own']
+    for name in ('mv_plastic_own', 'Material.018'):  # renamed after the first build
+        if name in bpy.data.materials: return bpy.data.materials[name]
     m = plastic().copy(); m.name = 'mv_plastic_own'
     bsdf = next(x for x in m.node_tree.nodes if x.type == 'BSDF_PRINCIPLED')
     bsdf.inputs['Base Color'].links[0].from_node.image = bpy.data.images['mv_base_clean']
@@ -200,7 +203,7 @@ def material_own():
 
 def clean_logo():
     """mv_base_clean: the base colour with the 'MasterView' print painted out from its own plastic."""
-    if 'mv_base_clean' in bpy.data.images: return
+    if 'mv_base_clean' in bpy.data.images or 'mv_base_even' in bpy.data.images: return  # even_plastic is built from it
     exec(open(ART + 'mvtex.py').read(), globals())
     bsdf = next(x for x in plastic().node_tree.nodes if x.type == 'BSDF_PRINCIPLED')
     src = bsdf.inputs['Base Color'].links[0].from_node.image; A, Wd, Hd = tex_array(src.name)
@@ -358,82 +361,41 @@ def opening(bm):
         loop.append(step)
 
 
-def across(v):
-    """The wall edge from the ring in front to opening vertex v (the one running most nearly straight back)."""
-    return max((v.co - e.other_vert(v).co for e in v.link_edges if not e.is_boundary), key=lambda d: d.normalized().y)
+def opening_outline(loop, out=0.0):
+    """The opening's outline (`loop`: its (x, z) points), resampled every 2 mm, pushed `out` outward along its normals."""
+    pts = np.array(loop + loop[:1])
+    s = np.r_[0, np.cumsum(np.linalg.norm(np.diff(pts, axis=0), axis=1))]; t = np.arange(0, s[-1], 0.002)
+    p = np.c_[np.interp(t, s, pts[:, 0]), np.interp(t, s, pts[:, 1])]
+    d = np.roll(p, -1, 0) - np.roll(p, 1, 0); n = np.c_[d[:, 1], -d[:, 0]] / np.linalg.norm(d, axis=1)[:, None]
+    n *= np.sign(np.sum(n * (p - p.mean(0)), axis=1))[:, None]  # outward
+    return p + out * n
 
 
-def wall_dirs(loop):
-    """Per opening vertex, the wall's own direction back, without its slide along the opening (the edge
-    "across" may be a triangle's diagonal): what remains is the wall's real inward slope."""
-    out = []
-    for i, v in enumerate(loop):
-        t = (loop[(i + 1) % len(loop)].co - loop[i - 1].co).normalized(); d = across(v)
-        d = (d - t * d.dot(t)).normalized(); out.append(d if d.y > 0.5 else Vector((0, 1, 0)))
-    return out
+def mask_ring(mon, loop, y):
+    """The tube's black border, as on a real CRT: a dark (detail_ink) ring just behind the picture, from 1 mm inside
+    its edge to past the glass's tucked rim, so the glass under the lip shows black, not the hollow shell."""
+    a, b = opening_outline(loop, -0.001), opening_outline(loop, TUCK + 0.002)
+    bm = bmesh.new(); ink = bm.faces.layers.float.new('detail_ink')
+    va, vb = [bm.verts.new((x, y, z)) for x, z in a], [bm.verts.new((x, y, z)) for x, z in b]
+    for i in range(len(va)):
+        j = (i + 1) % len(va); bm.faces.new((va[i], va[j], vb[j], vb[i]))[ink] = 1.0
+    bm.normal_update()
+    if sum(f.normal.y for f in bm.faces) > 0: bmesh.ops.reverse_faces(bm, faces=list(bm.faces))
+    join_uv(mon, bm, bpy.data.meshes.new('mv_mask'), (-0.112, 1.262))
 
 
-def plastic_patch(x0=0.06, z0=1.249, period=0.024):
-    """(s, t) in metres -> UVs of a clean piece of the bezel's top band at the texture's own density,
-    mirrored every `period` along s, so a long strip of new wall wears the same plastic without seams."""
-    maps = {}
-    for name in ('UVMap', 'UVMap.001'):
-        u0 = Vector(uv_at(x0, z0, name)[0]); h = 0.002
-        ds, dt = (Vector(uv_at(x0 + h, z0, name)[0]) - u0) / h, (Vector(uv_at(x0, z0 + h, name)[0]) - u0) / h
-        maps[name] = (u0, ds, dt)
-    tri = lambda s: period - abs(s % (2 * period) - period)
-    return lambda name, s, t: maps[name][0] + maps[name][1] * tri(s) + maps[name][2] * t
-
-
-def deepen(bm, loop, y_end, patch):
-    """Carry the opening's own inner wall straight on back to y_end, at its own slope, with the bezel's plastic
-    (`patch`) and the wall's own smooth normals, so the edge reads as the original one, only deeper.
-    Returns the new faces and, per vertex on them, the (wall face, opening vertex) whose corner normal it shares."""
-    uvs = [bm.loops.layers.uv[n] for n in ('UVMap', 'UVMap.001')]
-    n = len(loop); cols, src, d_all, faces = [], {}, [], []
-    d_all = wall_dirs(loop)
-    seg = np.mean([across(v).length for v in loop])
-    K = max(1, round((y_end - np.mean([v.co.y for v in loop])) / seg))
-    arc = np.r_[0, np.cumsum([(loop[i].co - loop[i - 1].co).length for i in range(1, n)])]
-    st = {}
-    for v, d, s_ in zip(loop, d_all, arc):
-        t = (y_end - v.co.y) / d.y
-        cols.append([v] + [bm.verts.new(v.co + d * t * k / K) for k in range(1, K + 1)])
-        for k, c in enumerate(cols[-1]): st[c] = (s_, t * k / K)
-    for i in range(n):
-        j = (i + 1) % n; a, b = loop[i], loop[j]
-        w = next(f for f in bm.edges.get((a, b)).link_faces)
-        la = next(l for l in w.loops if l.vert is a); lb = next(l for l in w.loops if l.vert is b)
-        flip = la.link_loop_next is lb  # wind each new face against the wall face's edge, so it faces the same way
-        for k in range(K):
-            corners = ((i, la, k), (j, lb, k), (j, lb, k + 1), (i, la, k + 1))
-            if flip: corners = corners[::-1]
-            f = bm.faces.new([cols[c][r] for c, _, r in corners]); f.smooth = True; faces.append(f)
-            for l in f.loops:
-                s_, t = st[l.vert]
-                if j == 0 and l.vert in cols[0]: s_ = arc[-1] + (loop[0].co - loop[-1].co).length  # closing edge
-                for u, name in zip(uvs, ('UVMap', 'UVMap.001')): l[u].uv = patch(name, s_, t)
-            for c in (cols[i][k], cols[j][k], cols[j][k + 1], cols[i][k + 1]):
-                src[c] = (w, a if c in cols[i] else b)
-    return faces, src, K
-
-
-def outline_at(loop, y):
-    """The deepened wall's outline at depth y, resampled every 2 mm, as (x, z)."""
-    pts = []
-    for v, d in zip(loop, wall_dirs(loop)):
-        p = v.co + d * (y - v.co.y) / d.y; pts.append((p.x, p.z))
-    pts = np.array(pts + pts[:1]); seg = np.linalg.norm(np.diff(pts, axis=0), axis=1); s = np.r_[0, np.cumsum(seg)]
-    t = np.arange(0, s[-1], 0.002)
-    return np.c_[np.interp(t, s, pts[:, 0]), np.interp(t, s, pts[:, 1])]
+def box_of(rim):
+    xs, zs = rim[:, 0], rim[:, 1]
+    return (xs.min() + xs.max()) / 2, (zs.min() + zs.max()) / 2, (xs.max() - xs.min()) / 2, (zs.max() - zs.min()) / 2
 
 
 def dome(name, rim, box, y_of, rings=24):
-    """Domed cap over the outline `rim`: concentric copies of it to the centre; UV 0-1 over `box`."""
+    """Domed cap over the outline `rim` (centred on `box`): concentric copies of it to the centre, y from y_of(x, z);
+    UV 0-1 over `box`."""
     cx, cz, hx, hz = box
     me = bpy.data.objects[name].data; b = bmesh.new(); uv = b.loops.layers.uv.new('UVMap')
     def vert(x, z):
-        u, v = (x - cx) / hx, (z - cz) / hz; return b.verts.new((x, y_of(u, v), z))
+        return b.verts.new((x, y_of(x, z), z))
     rs = [[vert(cx + (x - cx) * s, cz + (z - cz) * s) for x, z in rim] for s in np.linspace(1, 0, rings + 1)[:-1]]
     c = vert(cx, cz); n = len(rim)
     for r0, r1 in zip(rs, rs[1:] + [None]):
@@ -492,44 +454,34 @@ def build(rear):
     exec(open(ART + 'mvtex.py').read(), globals())
     globals()['SH'] = mon
     uv0 = uv_at(-0.01, 1.262)[0]
-    y_rim = GLASS_EDGE + SINK
     bm = bmesh.new(); bm.from_mesh(mon.data)
     for name in ('detail_ink', 'led', 'note', 'pen'): bm.faces.layers.float.new(name)
     widen_opening(bm)
     btn = {}; exec(open(ART + 'mvbuttons.py').read(), btn); btn['add'](bm, wx, wz)
     dropped = step_rear(bm) if rear == 'step' else 0
     st = {}; exec(open(ART + 'mvstand.py').read(), st); st['replace'](bm, comps, patch_uv, uv0)
-    loop = opening(bm)
-    rim = outline_at(loop, y_rim)
-    faces, src, K = deepen(bm, loop, y_rim + 0.002, plastic_patch())  # the wall runs on 2 mm past the glass rim
-    bm.faces.index_update(); bm.verts.index_update()
-    pairs = {c.index: (w.index, a.index) for c, (w, a) in src.items()}
-    new_faces = [f.index for f in faces]
+    edge = opening(bm); loop = [(v.co.x, v.co.z) for v in edge]
+    y_rim = max(v.co.y for v in edge) + RIM_BACK
+    rim, glass_rim = opening_outline(loop), opening_outline(loop, TUCK)
     bm.to_mesh(mon.data); bm.free(); mon.data.update()
-    me = mon.data; cn = [c.vector.copy() for c in me.corner_normals]
-    wall_n = {}
-    for vi, (fi, ai) in pairs.items():  # the wall's own smooth normal at the opening vertex the column grows from
-        p = me.polygons[fi]; li = next(l for l in p.loop_indices if me.loops[l].vertex_index == ai); wall_n[vi] = cn[li]
-    for fi in new_faces:
-        for li in me.polygons[fi].loop_indices: cn[li] = wall_n[me.loops[li].vertex_index]
-    me.normals_split_custom_set([tuple(c) for c in cn])
     if rear == 'step': join(mon, rear_box(uv0), 'mv_rear')
-    xs, zs = rim[:, 0], rim[:, 1]
-    box = ((xs.min() + xs.max()) / 2, (zs.min() + zs.max()) / 2, (xs.max() - xs.min()) / 2, (zs.max() - zs.min()) / 2)
+    box, gbox = box_of(rim), box_of(glass_rim)
     details(mon, box[1] - box[3])
     bm = bmesh.new(); bm.from_mesh(mon.data)  # the font leaves zero-area triangles in the badge
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.calc_area() < 1e-9], context='FACES_ONLY')
     bm.to_mesh(mon.data); bm.free()
+    mask_ring(mon, loop, y_rim + 0.0008)
     atlas_strokes(mon)
-    inset = np.array(box[:2]) + (rim - box[:2]) * (1 - 0.0003 / np.linalg.norm(rim - box[:2], axis=1))[:, None]  # clear of the wall
-    bump = lambda u, v: DOME * (1 - u * u) * (1 - v * v)
-    dome('screen_glass', inset, box, lambda u, v: y_rim - 0.0005 - bump(u, v))
+    sag = y_rim - APEX
+    dome('screen_glass', glass_rim, box,
+         lambda x, z: y_rim - sag * (1 - ((x - gbox[0]) / gbox[2]) ** 2) * (1 - ((z - gbox[1]) / gbox[3]) ** 2))
     rect('screen_plane', box, y_rim); rect('crt_glow', box, y_rim + 0.003)
     cam = bpy.data.objects['cam_screen']; cam.location = (box[0], y_rim - 0.42 * box[2] / 0.144, box[1])
     M = Matrix.Translation((0, 0, 0.0006))  # lifts everything so the base clears the case top (z 0.87597)
     for n in (MON, 'screen_glass', 'screen_plane', 'crt_glow'): bpy.data.objects[n].data.transform(M)
     cam.location = M @ cam.location
     mon.data.update()
-    print(f'built rear {rear}: faces {len(mon.data.polygons)}, rear pieces dropped {dropped}, old buttons dropped {buttons}, wall steps {K}, '
-          f'screen {2000 * box[2]:.1f} x {2000 * box[3]:.1f} mm, rim y {y_rim:.4f}, apex y {y_rim - DOME:.4f}, '
-          f'CRT.edge fit {edge_fit(rim, box)}, bulge {DOME / box[3]:.3f}, cam {tuple(round(c, 4) for c in cam.location)}')
+    print(f'built rear {rear}: faces {len(mon.data.polygons)}, rear pieces dropped {dropped}, old buttons dropped {buttons}, '
+          f'screen {2000 * box[2]:.1f} x {2000 * box[3]:.1f} mm, opening edge y {y_rim - RIM_BACK:.4f}, rim y {y_rim:.4f}, '
+          f'apex y {APEX:.4f}, sag {1000 * sag:.1f} mm, CRT.edge fit {edge_fit(rim, box)}, bulge {sag / box[3]:.3f}, '
+          f'cam {tuple(round(c, 4) for c in cam.location)}')

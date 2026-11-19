@@ -44,7 +44,7 @@ const SLIDERS = [
   ['rainRefraction', 0, 0.08, 0.001],
   ['rainStreaks', 0, 2, 0.01],
   ['plasticBrightness', 0.5, 1.2, 0.01],
-  ['plasticTint', 0.5, 1.2, 0.01, 0], ['plasticTint', 0.5, 1.2, 0.01, 1], ['plasticTint', 0.5, 1.2, 0.01, 2],
+  ...['keyboardTint', 'keycapTint'].flatMap((k) => [0, 1, 2].map((i) => [k, 0.5, 3, 0.01, i])),
   ['plasticEnvIntensity', 0, 2, 0.01],
   ['plasticSpec', 0, 2, 0.01],
   ['glassSpec', 0, 1, 0.01],
@@ -52,7 +52,7 @@ const SLIDERS = [
   ['screenRim', 0, 6, 0.05],
   ['screenSheen', 0, 1, 0.01],
   ['monitorTint', 0.5, 1.2, 0.01, 0], ['monitorTint', 0.5, 1.2, 0.01, 1], ['monitorTint', 0.5, 1.2, 0.01, 2],
-  ['caseTint', 0.5, 1.5, 0.01, 0], ['caseTint', 0.5, 1.5, 0.01, 1], ['caseTint', 0.5, 1.5, 0.01, 2],
+  ['caseTint', 0.5, 3, 0.01, 0], ['caseTint', 0.5, 3, 0.01, 1], ['caseTint', 0.5, 3, 0.01, 2],
 ];
 const CAMERA = ['overviewZoom', 'overviewHeight', 'overviewPitch'];
 // Frames the lamp like the r14 lamp panel (art/previews/b2-lamp-before-after.png).
