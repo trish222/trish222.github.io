@@ -14,7 +14,7 @@ def check(edge):
             if o.type == 'MESH' and o.name not in skip and not o.name.startswith('click_') and not o.hide_render and (k := tm.overlap(T(o)))}
     ink = np.array([a.value for a in me.attributes['detail_ink'].data])
     cross = {}
-    for n in ('screen_glass', 'screen_curve'):
+    for n in ('screen_glass',):
         ids = {b for a, b in T(bpy.data.objects[n]).overlap(tm)}; cross[n] = (len(ids), sum(1 for i in ids if ink[i] < 0.5))
     bm = bmesh.new(); bm.from_mesh(me)
     note, pen = bm.faces.layers.float['note'], bm.faces.layers.float['pen']

@@ -10,7 +10,7 @@ import bmesh
 import numpy as np
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
-from mathutils.geometry import barycentric_transform, delaunay_2d_cdt
+from mathutils.geometry import barycentric_transform, delaunay_2d_cdt, intersect_point_line
 
 # Where the download has them (x, z on its chin), the radius built, the LED glow, and what paint_out lifts:
 # an ellipse (rx, rz) around the painted button and its AO, keeping the icon within `keep`.
@@ -54,8 +54,12 @@ def cut_chin(bm, at, holes):
     circles = [ring(cx, cz, R) for cx, cz, R in holes]
     assert all(at(x, z)[1] in region for c in circles for x, z in c), 'a hole reaches past the flat chin'
     lo, hi = np.array([(v.co.x, v.co.z) for v in verts]).min(0), np.array([(v.co.x, v.co.z) for v in verts]).max(0)
+    rim = [(e.verts[0].co.xz, e.verts[1].co.xz) for f in faces for e in f.edges if sum(g.index in region for g in e.link_faces) == 1]
+    # a grid point on (or within float noise of) the region's edge splits it on one side only: a T-junction the site shows as a crack
+    off_rim = lambda p: all((intersect_point_line(p, a, b)[0] - p).length > GRID / 2 or not 0 <= intersect_point_line(p, a, b)[1] <= 1
+                            for a, b in rim)
     clear = lambda x, z: (at(x, z)[1] in region and all(math.hypot(x - cx, z - cz) > R + GRID / 2 for cx, cz, R in holes)
-                          and all(math.hypot(x - v.co.x, z - v.co.z) > GRID / 2 for v in verts))
+                          and all(math.hypot(x - v.co.x, z - v.co.z) > GRID / 2 for v in verts) and off_rim(Vector((x, z))))
     grid = [(x, z) for x in np.arange(lo[0], hi[0], GRID) for z in np.arange(lo[1], hi[1], GRID) if clear(x, z)]
     pts = [(v.co.x, v.co.z) for v in verts] + [p for c in circles for p in c] + grid
     index = {v: i for i, v in enumerate(verts)}

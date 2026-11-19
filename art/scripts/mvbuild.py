@@ -13,7 +13,7 @@ PLACE = Matrix.Translation((-0.0100000008, 0.0206276178, 1.1112426508)) @ Matrix
 MON = 'baked_crt_monitor'
 CX, CZ = -0.01, 1.1257       # centre of the download's screen opening
 GLASS_EDGE = -0.168          # the download's own glass rim, mean depth
-SINK, DOME = 0.015, 0.019    # glass rim moved back by SINK; dome height, centre over rim (apex just behind the bezel face)
+SINK, DOME = 0.020, 0.025    # glass rim moved back by SINK; dome height, centre over rim (apex just behind the bezel face)
 Y_END = 0.11                                       # stepped rear: back face (natural scale)
 # Larger screen: the opening grows DROP down and WIDEN out on each side (6% of its height, aspect kept). Its bevel
 # and corners move rigidly, so they keep the download's shape; only the flat chin and side bands give way.
@@ -78,11 +78,11 @@ def outline(hx, hz, r, step=0.005):
 
 
 
-def patch_uv(bm, uv0, half=0.004):
+def patch_uv(bm, uv0, half=0.004, faces=None):
     """New faces read a plain patch of the MasterView texture; box-projected so no face has zero UV area."""
     for name in ('UVMap', 'UVMap.001'):
         lay = bm.loops.layers.uv.get(name) or bm.loops.layers.uv.new(name)
-        for f in bm.faces:
+        for f in faces or bm.faces:
             ax = max(range(3), key=lambda i: abs(f.normal[i])); a, b = [(1, 2), (0, 2), (0, 1)][ax]
             for l in f.loops:
                 p = l.vert.co
@@ -486,7 +486,6 @@ def build(rear):
     clean_logo()
     even_plastic()
     glass_look()
-    bpy.data.objects['old_crt_monitor'].hide_render = True
     buttons = drop_old_buttons()
     mon = fresh(MON, 'mv_src_shell')
     mon.data.materials.clear(); mon.data.materials.append(material_own()); plastic_maps(material_own())
@@ -499,6 +498,7 @@ def build(rear):
     widen_opening(bm)
     btn = {}; exec(open(ART + 'mvbuttons.py').read(), btn); btn['add'](bm, wx, wz)
     dropped = step_rear(bm) if rear == 'step' else 0
+    st = {}; exec(open(ART + 'mvstand.py').read(), st); st['replace'](bm, comps, patch_uv, uv0)
     loop = opening(bm)
     rim = outline_at(loop, y_rim)
     faces, src, K = deepen(bm, loop, y_rim + 0.002, plastic_patch())  # the wall runs on 2 mm past the glass rim
@@ -524,11 +524,10 @@ def build(rear):
     inset = np.array(box[:2]) + (rim - box[:2]) * (1 - 0.0003 / np.linalg.norm(rim - box[:2], axis=1))[:, None]  # clear of the wall
     bump = lambda u, v: DOME * (1 - u * u) * (1 - v * v)
     dome('screen_glass', inset, box, lambda u, v: y_rim - 0.0005 - bump(u, v))
-    dome('screen_curve', inset, box, lambda u, v: y_rim - 0.9 * bump(u, v))
     rect('screen_plane', box, y_rim); rect('crt_glow', box, y_rim + 0.003)
     cam = bpy.data.objects['cam_screen']; cam.location = (box[0], y_rim - 0.42 * box[2] / 0.144, box[1])
     M = Matrix.Translation((0, 0, 0.0006))  # lifts everything so the base clears the case top (z 0.87597)
-    for n in (MON, 'screen_glass', 'screen_curve', 'screen_plane', 'crt_glow'): bpy.data.objects[n].data.transform(M)
+    for n in (MON, 'screen_glass', 'screen_plane', 'crt_glow'): bpy.data.objects[n].data.transform(M)
     cam.location = M @ cam.location
     mon.data.update()
     print(f'built rear {rear}: faces {len(mon.data.polygons)}, rear pieces dropped {dropped}, old buttons dropped {buttons}, wall steps {K}, '

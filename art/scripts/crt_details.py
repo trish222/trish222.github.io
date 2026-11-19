@@ -15,7 +15,7 @@ MONITOR = 'baked_crt_monitor'
 CABLES = 'baked_crt_cables'  # holds the case's front LEDs and power button
 PLASTICS = ['Material.017', 'Material.018', 'Material.021', 'Material.022', 'mouse_beige']
 INK = (0.10, 0.09, 0.075, 1)
-LED_GREEN = (0.12, 1.0, 0.3, 1)
+LED_GREEN = (0.012, 0.80, 0.045, 1)  # saturated: brighter or whiter reads as pale mint after tone mapping
 NOTE_PAPER = (0.74, 0.65, 0.22, 1)  # aged, slightly faded tan-yellow sticky note (lived_in.py)
 PEN = (0.18, 0.18, 0.19, 1)  # soft medium-grey graphite, L* ~50 (half again lighter than the first 0.075)
 CHIN_Z = 0.981
@@ -48,7 +48,7 @@ def build_piece(kind):
     else:
         curve = bpy.data.curves.new('tmp_badge', 'FONT')
         curve.body = 'TRISH'
-        curve.font = bpy.data.fonts['Cinzel Regular']
+        curve.font = bpy.data.fonts.get('Cinzel Regular') or bpy.data.fonts.load('//fonts/Cinzel-Regular.ttf')
         curve.size = 0.0100
         curve.space_character = 1.25
         curve.extrude = 0.0004
@@ -202,7 +202,7 @@ def detail_group():
     led = attr('led')
     col = mix(col, LED_GREEN, led)
     ln.new(col, go.inputs['Color'])
-    ln.new(math('MULTIPLY', led, 1.8), go.inputs['Emission Strength'])
+    ln.new(math('MULTIPLY', led, 1.0), go.inputs['Emission Strength'])
 
     # Fine plastic grain, sub-millimetre.
     grain = n.new('ShaderNodeTexNoise')
