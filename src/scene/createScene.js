@@ -61,6 +61,7 @@ export async function createRoomScene({ renderer, boxWidth, animated }) {
   const glassTint = glass.opacity;
   const lit = [lighting.litMaterial(glass)];
   glass.defines.LM_SCREEN_GLASS = '';
+  glass.roughness = 0.35; // blurs the 128 px room capture, so the dome's reflection of the desk reads as no shape
   Object.assign(glass, { blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor });
   for (const [name, node] of named) {
     if (!name.startsWith('baked_') || !('lightmap_uv' in node.userData)) continue;
@@ -83,6 +84,7 @@ export async function createRoomScene({ renderer, boxWidth, animated }) {
   const reflections = createReflections({ renderer, scene, bulb: named.get('lamp_bulb'), materials: lit, lighting });
   const applyLook = () => {
     windowView.applyLook(); crt.applyLook(); reflections.applyLook();
+    glass.envMapIntensity = LOOK.screenEnv;
     glass.emissiveIntensity = LOOK.screenGlare * GLARE_MATCH;
   };
   const setTime = (t) => { crt.setTime(t); windowView.setTime(t); };

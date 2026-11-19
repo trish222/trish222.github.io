@@ -46,6 +46,7 @@ GROUPS = {
            'baked_window_glass'],
 }
 WEIGHTS = {name: w for w, names in GROUPS.items() for name in names}
+NOTE_WEIGHT = 3  # at 1x the 6 cm note had ~4 texels across, all under strokes, so unink had no paper to refill from
 LIGHTMAP_SPP, PREVIEW_SPP = 256, 32
 JOINS = {  # bake rule 1: same-material props become one object (mobile draw-call budget)
     'baked_pencilcup': ['baked_pencil', 'baked_pen'],
@@ -105,6 +106,8 @@ def set_state(snap, lights, emitters, screen_white, world):
 
 
 def texel_weight(o, f):
+    if o.name == 'baked_crt_monitor' and (o.data.attributes['note'].data[f.index].value or o.data.attributes['pen'].data[f.index].value):
+        return NOTE_WEIGHT * WEIGHTS[o.name]
     if o.name == 'baked_desk':  # the desk top is hero, its sides and legs less so
         return 1.0 if (o.matrix_world.to_3x3() @ f.normal).normalized().z > 0.7 else 0.5
     return WEIGHTS[o.name]
@@ -263,6 +266,7 @@ def unink(rgb, note):
     hole = np.pad(hole, 1)
     hole = np.logical_or.reduce([hole[1 + dy:size + 1 + dy, 1 + dx:size + 1 + dx]
                                  for dy in (-1, 0, 1) for dx in (-1, 0, 1)]) & inside
+    assert (inside & ~hole).any(), 'unink: the strokes cover every paper texel; raise NOTE_WEIGHT'
     out = rgb.copy()
     out[hole] = rgb[inside & ~hole].mean(0)
     for _ in range(400):  # Jacobi: each hole texel becomes the mean of its paper neighbours

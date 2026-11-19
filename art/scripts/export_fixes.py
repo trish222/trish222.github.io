@@ -14,7 +14,7 @@ CONSTANTS = {
     'brass': {'Roughness': 0.28},
     'nameplate_brass': {'Roughness': 0.32},
     # dust_glass (lived_in.py) at its clean-glass values; the node-driven version exported opaque white.
-    'crt_glass': {'Base Color': (0.02, 0.03, 0.03, 1), 'Roughness': 0.05, 'Alpha': 0.12},
+    'crt_glass': {'Base Color': (0.13, 0.16, 0.145, 1), 'Roughness': 0.05, 'Alpha': 0.22, 'Coat Weight': 0.0},  # grey-green tube glass
 }
 FACTOR = 0.843  # DefaultMaterial roughness = G x 0.865 x noise remap (mean 0.975)
 EMIT_PX = 512

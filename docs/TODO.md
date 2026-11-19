@@ -257,6 +257,13 @@ Saved in `art/scene.blend`; nothing exported to `public/`, nothing committed.
   - Done (3) screen dust: `crt_glass` roughness, alpha and base colour now follow wipe-streak noise plus sparse dust specks. `screen_glass` geometry, `screen_plane`, `crt_glow` and `cam_screen` untouched. The effect is very subtle at overview.
   - P2 bake: `note`, `pen` and `stain` need albedo baking like the other procedural tints. `crt_details.py` now holds `NOTE_PAPER` and `PEN`.
 
+## MasterView progress (2026-11-18; paused before the real bake)
+
+- Approved: B-stepped MasterView ("CRT Computer Monitor" by fizyman, CC BY 4.0, credited in `art/credits.md`): original edge, 15 mm sink, 19 mm dome, TRISH badge, green LED, "finish website" note at the old note's on-screen size. Site: `CRT.edge` 48, `CRT.bulge` 0.181, `monitorTint`, and screen-glass `screenEnv` / `screenRim` / `screenSheen` (?debug sliders). Round-6 preview sheet: `.review-artifacts/crt-replace/masterview-round6-site-sheet.png`.
+- The model lives only in `art/_wip_masterview.blend` (gitignored); `art/scene.blend` still has the old monitor. Rebuild with `art/scripts/mvbuild.py` (`build('step')`, then `mvcheck.check(48)`); source in `art/sources/masterview/`.
+- Next: the real partial bake. Pack only the new monitor around the locked islands of every other object (stop if it can't reach today's density), bake monitor + case, composite into the existing lightmaps, re-bake the monitor's albedo/detail maps, then re-check the bezel grime at full resolution.
+- Known: preview bakes need `art/_preview_scene.blend` prepared with `old_crt_monitor` removed and `mv_plastic_own` renamed to `Material.018`; the real bake must do the same in `scene.blend`.
+
 ## Backlog
 
 - split src/scene.js (1008 lines; capped in `scripts/check-size.mjs`)

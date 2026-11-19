@@ -65,10 +65,13 @@ export function createReflections({ renderer, scene, bulb, materials, lighting }
     for (const m of materials) m.envMapIntensity = m.transparent ? LOOK.glassEnvIntensity : LOOK.envIntensity;
     for (const m of plastics) {
       m.envMapIntensity = LOOK.plasticEnvIntensity;
-      m.color.setRGB(...LOOK.plasticTint).multiplyScalar(LOOK.plasticBrightness);
+      // The monitor's albedo is already cream; plasticTint neutralises the yellower case and keyboard.
+      m.color.setRGB(...(m.name === 'Material.018' ? LOOK.monitorTint : LOOK.plasticTint)).multiplyScalar(LOOK.plasticBrightness);
     }
     lighting.uniforms.plasticSpec.value = LOOK.plasticSpec;
     lighting.uniforms.glassSpec.value = LOOK.glassSpec;
+    lighting.uniforms.screenRim.value = LOOK.screenRim;
+    lighting.uniforms.screenSheen.value = LOOK.screenSheen;
     lighting.uniforms.shadeSaturation.value = LOOK.shadeSaturation;
     if (shade) {
       shade.color.setRGB(...LOOK.shadeColor);

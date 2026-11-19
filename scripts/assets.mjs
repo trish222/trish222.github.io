@@ -7,7 +7,7 @@ import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 
 // art/ export -> public/models. Mobile gets 1024 px textures, desktop 2048.
-// `npm run assets -- art/export/scene-raw-preview.glb` packs a bake.py --preview run.
+// `npm run assets -- art/export/scene-raw-preview.glb [outdir]` packs a bake.py --preview run.
 const INPUT = process.argv[2] ?? 'art/export/scene-raw.glb';
 const BAKES = INPUT.endsWith('-preview.glb') ? 'art/bakes/preview' : 'art/bakes';
 const LIGHTMAPS = ['lightmap_lampOn', 'lightmap_lampOff', 'lightmap_screen'];
@@ -15,6 +15,7 @@ const LIGHTMAPS = ['lightmap_lampOn', 'lightmap_lampOff', 'lightmap_screen'];
 // UASTC with RDO, at these sizes on mobile to stay in its download budget.
 const DETAIL = { albedo_lamp: 512, DefaultMaterial_metallicRoughness: 256, emit_window_view: 512 };
 const VARIANTS = [['scene.glb', 2048], ['scene-mobile.glb', 1024]];
+const OUT = process.argv[3] ?? 'public/models';
 
 if (!existsSync(INPUT)) {
   console.error(`Missing ${INPUT}. Run the Blender bake (art/scripts/bake.py) first.`);
@@ -86,5 +87,5 @@ for (const [name, size] of VARIANTS) {
   for (const map of ['lightmap_lampOn', 'lightmap_screen']) gt('uastc', b, b, '--pattern', map);
   // etc1s skips textures that are already KTX2.
   gt('etc1s', b, c);
-  gt('meshopt', c, path.join('public/models', name));
+  gt('meshopt', c, path.join(OUT, name));
 }

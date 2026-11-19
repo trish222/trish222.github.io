@@ -50,7 +50,12 @@ vec4 lmEnv(vec3 dir, float roughness) {
 // picture, and reflections and glare add over it, so faint glints stay faint, not squared.
 const GLASS_ALPHA = /* glsl */`
 #if defined(LM_SCREEN_GLASS)
-  vec3 glassLight = totalSpecular + totalEmissiveRadiance;
+  // The dome reads as a gradient: coverage and reflections rise toward the grazing edges, plus a
+  // broad warm sheen from up-left. Both scale with opacity, so they fade out with the tint at arrival.
+  float rim = screenRim * pow(1.0 - saturate(dot(normal, geometryViewDir)), 2.0);
+  float sheen = screenSheen * smoothstep(0.8, 0.0, length((vEmissiveMapUv - vec2(0.3, 0.28)) * vec2(1.0, 1.3)));
+  vec3 glassLight = totalSpecular * (1.0 + rim) + totalEmissiveRadiance + opacity * sheen * vec3(1.0, 0.93, 0.84);
+  diffuseColor.a = min(diffuseColor.a * (1.0 + rim), 1.0);
   outgoingLight = (outgoingLight - glassLight) * diffuseColor.a + glassLight;
 #elif defined(LM_GLASS)
   diffuseColor.a = mix(diffuseColor.a, 1.0, clamp(max(max(totalSpecular.r, totalSpecular.g), totalSpecular.b), 0.0, 1.0));
@@ -93,6 +98,8 @@ export function createBakedLighting({ lightmap_lampOn, lightmap_lampOff, lightma
     shadeSaturation: { value: 1 },
     plasticSpec: { value: 1 },
     glassSpec: { value: 1 },
+    screenRim: { value: 0 },
+    screenSheen: { value: 0 },
   };
   // lightMap only switches on USE_LIGHTMAP and vLightMapUv; its channel picks the UV set.
   const channels = [0, 1].map((channel) => Object.assign(lightmap_lampOn.clone(), { channel }));
@@ -125,7 +132,7 @@ export function createBakedLighting({ lightmap_lampOn, lightmap_lampOff, lightma
     material.onBeforeCompile = (shader) => {
       Object.assign(shader.uniforms, uniforms);
       shader.fragmentShader = shader.fragmentShader
-        .replace('#include <lightmap_pars_fragment>', `#include <lightmap_pars_fragment>\nuniform float shadeSaturation, plasticSpec, glassSpec;\n${channel === undefined ? 'uniform float lampMix;' : DECODE}`)
+        .replace('#include <lightmap_pars_fragment>', `#include <lightmap_pars_fragment>\nuniform float shadeSaturation, plasticSpec, glassSpec, screenRim, screenSheen;\n${channel === undefined ? 'uniform float lampMix;' : DECODE}`)
         .replace('#include <map_fragment>', SHADE_SATURATION)
         .replace('#include <envmap_physical_pars_fragment>', THREE.ShaderChunk.envmap_physical_pars_fragment
           .replace('#ifdef USE_ENVMAP', `#ifdef USE_ENVMAP\n#ifdef ENVMAP_TYPE_CUBE_UV\n${ENV_BLEND}\n#endif`)

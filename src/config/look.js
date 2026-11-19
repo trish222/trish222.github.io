@@ -21,6 +21,7 @@ export const LOOK = {
   overviewPitch: -2.5,
   plasticBrightness: 1.03,
   plasticTint: [0.61, 0.69, 0.95],
+  monitorTint: [0.78, 0.67, 0.56],
   crtBarrel: 0.065,
   crtGlow: 0.25,
   crtMask: 0.11,
@@ -44,4 +45,7 @@ export const LOOK = {
   plasticEnvIntensity: 0.3,
   plasticSpec: 1.42,
   glassSpec: 0.03,
+  screenEnv: 1,
+  screenRim: 2.5,
+  screenSheen: 0.35,
 };

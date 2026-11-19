@@ -1,13 +1,13 @@
 // The tube's shape and raster, shared by the shader (src/scene/crtMaterial.js) and the live DOM
 // (src/style.css, `--crt-clip`), so the hand-over at arrival has nothing to give away.
 export const CRT = {
-  edge: 16,        // superellipse exponent of the rounded picture outline
+  edge: 48,        // superellipse exponent of the rounded picture outline
   soft: 0.025,     // the picture fades into the tube glass over this much of the half-width
   scanPx: 3,       // scanline pitch in the desktop box's own pixels
   scanDark: 0.14,
   vignette: 0.38,
   tint: [1, 0.93, 0.84], // warm phosphor white, scaled in by LOOK.crtTint
-  bulge: 0.065,    // screen_glass's centre sag over the half-height (LOOK.crtBarrel when it was shaped)
+  bulge: 0.181,    // screen_glass's centre sag over the half-height (19 mm dome)
 };
 
 // The glare on the convex glass, grey on black, `width` px wide at the box's aspect. screen_glass

@@ -41,4 +41,6 @@ art/export/
 art/bakes/preview/
 art/bakes/*.exr
 *.blend1
+# Scratch and work-in-progress scenes (preview bakes, unapproved models); art/scene.blend is the source of truth.
+art/_*.blend
 __pycache__/

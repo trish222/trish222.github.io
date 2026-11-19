@@ -7,6 +7,7 @@ Every third-party asset in `art/scene.blend` and `public/models/scene*.glb`. CC 
 | Asset | Used as | Author | Source |
 | --- | --- | --- | --- |
 | old computer | CRT monitor, case, keyboard, keycaps, mouse, cables (`baked_crt_*`) | ivsn | https://sketchfab.com/models/8183647717084f008969c22b7fcd1b8a |
+| CRT Computer Monitor | Replacement CRT monitor (source in `art/sources/masterview/`; not shipped yet) | fizyman | https://sketchfab.com/3d-models/crt-computer-monitor-f2ff0013f86e4cd0a2aee183a23bdfee |
 | Desk lamp | Banker's lamp (`baked_lamp`) | 7ASSAN | https://sketchfab.com/models/b9458e04d30e4b6284d46d35880a9b95 |
 | Verbatim Floppy Disk 3.5" | Project floppies (`baked_floppies`) | Timescade | https://sketchfab.com/models/f055312452cb4b5f87898a9beb312cbe |
 | Ice Coffee | Iced coffee (`baked_icedcoffee_drink`, `baked_icedcoffee_glass`) | ponchoguy | https://sketchfab.com/models/fd2e9142168d4f31ba99bf4d9b1165b4 |
