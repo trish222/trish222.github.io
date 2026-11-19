@@ -201,6 +201,52 @@ def clean_logo():
     print('logo region px', (x0, y0, x1, y1), 'painted', int(mask.sum()))
 
 
+def box(a, r):
+    """Mean over a (2r+1)^2 window, edges clamped."""
+    for ax in (0, 1):
+        c = np.cumsum(np.pad(a, [(r + 1, r) if i == ax else (0, 0) for i in range(a.ndim)], mode='edge'), axis=ax)
+        n = c.shape[ax]
+        a = (np.take(c, range(2 * r + 1, n), axis=ax) - np.take(c, range(n - 2 * r - 1), axis=ax)) / (2 * r + 1)
+    return a.astype(np.float32)
+
+
+GRIME_KEEP = 0.25  # share of the download's grey dirt left in; the rest lifts to the clean plastic around it
+AO_WEIGHT = 0.8    # the download's own AO (buttons, seams): the site's lightmap is far too coarse to hold it
+
+
+def even_plastic():
+    """mv_base_even: mv_base_clean with its dirt patches lifted (painted vents, print and LED dot spared)
+    and the download's AO multiplied in."""
+    if 'mv_base_even' in bpy.data.images: return
+    exec(open(ART + 'mvtex.py').read(), globals())
+    A, Wd, Hd = tex_array('mv_base_clean'); L = A[..., :3] @ np.array([0.2126, 0.7152, 0.0722], np.float32)
+    clean = (L > box(L, 24) - 0.02).astype(np.float32)
+    ref = box(L * clean, 64) / np.maximum(box(clean, 64), 1e-3)  # clean plastic level, about 3 cm around
+    dirt = np.clip(ref - L, 0, None) * np.clip((L - 0.3) / 0.2, 0, 1)
+    ao = tex_array('monitor_plastic_metallicRoughness.png')[0][..., 0]
+    k = (L + (1 - GRIME_KEEP) * dirt) / np.maximum(L, 1e-4) * (1 - AO_WEIGHT * (1 - ao)) ** (1 / 2.2)  # AO is linear
+    A[..., :3] = np.clip(A[..., :3] * k[..., None], 0, 1)
+    im = bpy.data.images.new('mv_base_even', Wd, Hd); im.pixels.foreach_set(A.ravel()); im.pack()
+
+
+def plastic_maps(m):
+    """Base colour from mv_base_even. The download's metal (about 0) and AO channels read its own UVs,
+    which the bake replaces, so they would ship scrambled: metal goes to 0, AO is in mv_base_even."""
+    nt = m.node_tree; b = next(x for x in nt.nodes if x.type == 'BSDF_PRINCIPLED')
+    next(x for x in nt.nodes if x.type == 'TEX_IMAGE' and x.image.name.startswith('mv_base_')).image = bpy.data.images['mv_base_even']
+    for s in [b.inputs['Metallic']] + [x.inputs['Occlusion'] for x in nt.nodes if x.type == 'GROUP' and 'Occlusion' in x.inputs]:
+        for l in list(s.links): nt.links.remove(l)
+    b.inputs['Metallic'].default_value = 0.0
+
+
+def drop_old_buttons():
+    """The old monitor's six front buttons are part of baked_crt_cables; under the new bezel they hang in its shadow."""
+    me = bpy.data.objects['baked_crt_cables'].data; bm = bmesh.new(); bm.from_mesh(me)
+    dead = [f for c, lo, hi in comps(bm) if len(c) == 30 and hi[2] < 0.935 and hi[1] < -0.14 for f in c]
+    bmesh.ops.delete(bm, geom=dead, context='FACES'); bm.to_mesh(me); bm.free()
+    return len(dead) // 30
+
+
 def details(mon, z_bottom):
     """TRISH badge where the logo was, green LED on the MasterView's own LED dot, and the note."""
     ns = {}
@@ -408,10 +454,12 @@ def glass_look():
 def build(rear):
     load_source()
     clean_logo()
+    even_plastic()
     glass_look()
     bpy.data.objects['old_crt_monitor'].hide_render = True
+    buttons = drop_old_buttons()
     mon = fresh(MON, 'mv_src_shell')
-    mon.data.materials.clear(); mon.data.materials.append(material_own())
+    mon.data.materials.clear(); mon.data.materials.append(material_own()); plastic_maps(material_own())
     exec(open(ART + 'mvtex.py').read(), globals())
     globals()['SH'] = mon
     uv0 = uv_at(-0.01, 1.262)[0]
@@ -451,6 +499,6 @@ def build(rear):
     for n in (MON, 'screen_glass', 'screen_curve', 'screen_plane', 'crt_glow'): bpy.data.objects[n].data.transform(M)
     cam.location = M @ cam.location
     mon.data.update()
-    print(f'built rear {rear}: faces {len(mon.data.polygons)}, rear pieces dropped {dropped}, wall steps {K}, '
+    print(f'built rear {rear}: faces {len(mon.data.polygons)}, rear pieces dropped {dropped}, old buttons dropped {buttons}, wall steps {K}, '
           f'screen {2000 * box[2]:.1f} x {2000 * box[3]:.1f} mm, rim y {y_rim:.4f}, apex y {y_rim - DOME:.4f}, '
           f'CRT.edge fit {edge_fit(rim, box)}, bulge {DOME / box[3]:.3f}, cam {tuple(round(c, 4) for c in cam.location)}')

@@ -20,6 +20,7 @@ import bake_common as bc
 import bake_only
 import bake_window
 import export_fixes
+import lightmap_lock
 
 CONTRACT = ['screen_plane', 'screen_glass', 'click_crt', 'click_lamp_chain',
             *[f'click_project_0{i}' for i in range(1, 7)], 'click_nameplate', 'click_treehouse',
@@ -191,14 +192,18 @@ def note_uvs(mon):
     return paper, ink
 
 
-def build_uvs(objs, size, margin_px):
-    """Packs UVMap_Light; returns its key (uv_key) as packed, before the real strokes return,
-    and the note's UVs for unink()."""
+def build_uvs(objs, size, margin_px, relight):
+    """Packs UVMap_Light (around the saved atlas when relighting); returns its key (uv_key) as packed,
+    before the real strokes return, and the note's UVs for unink()."""
     mug = bpy.data.objects['baked_mug']
     mug_seams(mug)
     mon = bpy.data.objects['baked_crt_monitor']
     real = atlas_strokes_in(mon)
-    bc.smart_uv(objs, 'UVMap_Light', margin_px / size, texel_weight, seamed=[mug])
+    if relight:
+        lightmap_lock.pack(objs, size, margin_px, texel_weight)
+    else:
+        bc.smart_uv(objs, 'UVMap_Light', margin_px / size, texel_weight, seamed=[mug])
+    lightmap_lock.save(objs)
     pen_on_note(mon)
     key = uv_key(objs)
     paper, ink = note_uvs(mon)
@@ -334,7 +339,7 @@ def run(opts):
     # baked, so it may fill at most half the gap: a 16 px margin smeared neighbouring
     # islands across the CRT parts' slivers (chrome-like streaks on keys and drive bays).
     screen_size, gap = (512, 1) if opts.preview else (1024, 2)  # 2 px at 512 shrinks every island to nothing
-    key, note = build_uvs(objs, size, gap)
+    key, note = build_uvs(objs, size, gap, opts.relight)
 
     bc.begin('lightmaps', 4)
     window = bake_window.bake(opts)
@@ -347,7 +352,8 @@ def run(opts):
     key_path = os.path.join(opts.out, 'lightmap_uv.sha1')
     if not os.path.exists(key_path) or open(key_path).read() != key:
         print('UVMap_Light changed since the last lightmap bake: re-baking all lightmaps')
-        opts.force_maps |= {'lightmap_lampOn', 'lightmap_lampOff', 'lightmap_screen'}
+        opts.force_maps |= {n + ('_relit' if opts.relight else '')
+                            for n in ('lightmap_lampOn', 'lightmap_lampOff', 'lightmap_screen')}
     states = [
         ('lightmap_lampOn', size, AMBIENT_LIGHTS + LAMP_LIGHTS, AMBIENT_EMIT + LAMP_EMIT, False, world),
         ('lightmap_lampOff', size, AMBIENT_LIGHTS, AMBIENT_EMIT, False, world),
@@ -355,10 +361,12 @@ def run(opts):
     ]
     baked = []
     tricks = [bake_only.glass_shadow(), bake_only.pen_shadowless()]
+    targets = [bpy.data.objects[n] for n in opts.relight]
     for name, px, lights, emitters, white, w in states:
         set_state(snap, lights, emitters, white, w)
-        baked.append(bc.bake(opts, name, objs, px, 'DIFFUSE', spp, 'UVMap_Light', 'Linear Rec.709',
-                             hdr=True, margin=gap * px // size // 2, pass_filter={'DIRECT', 'INDIRECT'}))
+        img = bc.bake(opts, name + '_relit' if targets else name, targets or objs, px, 'DIFFUSE', spp, 'UVMap_Light',
+                      'Linear Rec.709', hdr=True, margin=gap * px // size // 2, pass_filter={'DIRECT', 'INDIRECT'})
+        baked.append(lightmap_lock.composite(opts, name, img, targets, objs) if targets else img)  # over the saved full bake
     for t in tricks:
         t.restore()
     with open(key_path, 'w') as f:

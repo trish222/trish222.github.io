@@ -7,6 +7,7 @@ import os
 
 import bpy
 
+import bake_albedo
 import bake_common as bc
 
 # (unit, objects, normal/roughness px, emissive px or 0 for no LEDs)
@@ -60,7 +61,7 @@ def run(opts):
     bc.begin('details', sum(2 + bool(e) for *_, e in UNITS))
     for unit, obj_names, px, emit_px in UNITS:
         objs = [bpy.data.objects[n] for n in obj_names]
-        uv = objs[0].data.uv_layers[0].name
+        uv = 'UVMap_bake' if 'UVMap_bake' in objs[0].data.uv_layers else objs[0].data.uv_layers[0].name
         size = opts.px(px)
         normal = bc.bake(opts, f'normal_{unit}', objs, size, 'NORMAL', opts.spp(SPP), uv, 'Non-Color')
         rough = bc.bake(opts, f'rough_{unit}', objs, size, 'ROUGHNESS', opts.spp(SPP), uv, 'Non-Color')
@@ -77,3 +78,4 @@ def run(opts):
                 p.material_index = 0
             while len(o.data.materials) > 1:
                 o.data.materials.pop(index=1)
+    bake_albedo.adopt_uv0(bake_albedo.ADOPT)

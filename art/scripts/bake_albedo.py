@@ -43,6 +43,9 @@ UNITS = [
 ]
 SPP = 64  # AO grime in plastic_detail needs samples to converge
 DETAIL_WEIGHT = 8  # texel density of zero-UV details (note writing, badge, LED) vs the body
+# Objects with a fresh UV0, adopted by bake_details once it has baked them: until then their image
+# textures (the MasterView's normal map) still read the old UV0.
+ADOPT = []
 
 
 def upstream_image(sock, seen=None):
@@ -163,7 +166,7 @@ def run(opts):
             nt.links.new(prev, out.inputs['Surface'])
             nt.nodes.remove(em)
         if fresh:
-            adopt_uv0(objs)
+            ADOPT.extend(objs)
         use_image(mats, img)
         for o in objs:  # baked into the image now; the exporter would still ship them
             for attr in list(o.data.color_attributes):

@@ -22,6 +22,7 @@ export const LOOK = {
   plasticBrightness: 1.03,
   plasticTint: [0.61, 0.69, 0.95],
   monitorTint: [0.78, 0.67, 0.56],
+  caseTint: [1.19, 1.18, 1.26], // case albedo × this = monitor albedo × monitorTint
   crtBarrel: 0.065,
   crtGlow: 0.25,
   crtMask: 0.11,
