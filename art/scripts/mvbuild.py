@@ -15,6 +15,11 @@ CX, CZ = -0.01, 1.1257       # centre of the download's screen opening
 GLASS_EDGE = -0.168          # the download's own glass rim, mean depth
 SINK, DOME = 0.015, 0.019    # glass rim moved back by SINK; dome height, centre over rim (apex just behind the bezel face)
 Y_END = 0.11                                       # stepped rear: back face (natural scale)
+# Larger screen: the opening grows DROP down and WIDEN out on each side (6% of its height, aspect kept). Its bevel
+# and corners move rigidly, so they keep the download's shape; only the flat chin and side bands give way.
+DROP, WIDEN = 0.0126, 0.00835
+Z_BANDS = (0.952, 0.984, 1.04, 1.20)  # flat chin from, bevel from, corners up to, sides stretch up to
+U_BANDS = (0.10, 0.162, 0.178)        # |x - CX|: top/bottom edges stretch out to, bevel out to, flat side band out to
 
 
 def link(o):
@@ -162,6 +167,22 @@ def step_rear(bm):
 
 
 
+def wz(z):
+    a, b, c, d = Z_BANDS
+    return float(np.interp(z, Z_BANDS, (a, b - DROP, c - DROP, d))) if a < z < d else z
+
+
+def wx(x):
+    c, b, e = U_BANDS; u = abs(x - CX)
+    return CX + math.copysign(float(np.interp(u, (0, c, b, e), (0, c + WIDEN, b + WIDEN, e))), x - CX) if u < e else x
+
+
+def widen_opening(bm):
+    """The front shell (not the bottom plate) through wx, wz."""
+    for v in bm.verts:
+        if v.co.y < -0.125 and v.co.z > 0.94: v.co.x, v.co.z = wx(v.co.x), wz(v.co.z)
+
+
 def material_own():
     """The MasterView's own material (cream, wear, roughness, normal map) on the logo-free texture,
     plus the detail tints (ink, note, pen, LED) with no extra ageing or grime."""
@@ -210,13 +231,14 @@ def box(a, r):
     return a.astype(np.float32)
 
 
+EVEN = {'monitor_plastic_normal.png': 'mv_normal_even', 'monitor_plastic_metallicRoughness.png': 'mv_rough_even'}  # buttons lifted out
 GRIME_KEEP = 0.25  # share of the download's grey dirt left in; the rest lifts to the clean plastic around it
 AO_WEIGHT = 0.8    # the download's own AO (buttons, seams): the site's lightmap is far too coarse to hold it
 
 
 def even_plastic():
-    """mv_base_even: mv_base_clean with its dirt patches lifted (painted vents, print and LED dot spared)
-    and the download's AO multiplied in."""
+    """mv_base_even: mv_base_clean with its dirt patches lifted (painted vents and print spared), the download's AO
+    multiplied in, and the painted buttons lifted out."""
     if 'mv_base_even' in bpy.data.images: return
     exec(open(ART + 'mvtex.py').read(), globals())
     A, Wd, Hd = tex_array('mv_base_clean'); L = A[..., :3] @ np.array([0.2126, 0.7152, 0.0722], np.float32)
@@ -226,14 +248,23 @@ def even_plastic():
     ao = tex_array('monitor_plastic_metallicRoughness.png')[0][..., 0]
     k = (L + (1 - GRIME_KEEP) * dirt) / np.maximum(L, 1e-4) * (1 - AO_WEIGHT * (1 - ao)) ** (1 / 2.2)  # AO is linear
     A[..., :3] = np.clip(A[..., :3] * k[..., None], 0, 1)
-    im = bpy.data.images.new('mv_base_even', Wd, Hd); im.pixels.foreach_set(A.ravel()); im.pack()
+    maps = {'mv_base_even': A, **{EVEN[n]: tex_array(n)[0] for n in EVEN}}
+    globals()['SH'] = shell = bpy.data.objects.new('tmp_src', bpy.data.meshes['mv_src_shell']); link(shell)
+    bpy.context.view_layer.update()
+    btn = {}; exec(open(ART + 'mvbuttons.py').read(), btn); btn['paint_out'](list(maps.values()), uv_at)  # mvbuttons.py models them
+    bpy.data.objects.remove(shell)
+    for name, a in maps.items():
+        im = bpy.data.images.new(name, Wd, Hd); im.pixels.foreach_set(a.ravel()); im.pack()
+        if name != 'mv_base_even': im.colorspace_settings.name = 'Non-Color'
 
 
 def plastic_maps(m):
-    """Base colour from mv_base_even. The download's metal (about 0) and AO channels read its own UVs,
+    """Base colour, normal and roughness from the mv_*_even maps. The download's metal (about 0) and AO channels read its own UVs,
     which the bake replaces, so they would ship scrambled: metal goes to 0, AO is in mv_base_even."""
     nt = m.node_tree; b = next(x for x in nt.nodes if x.type == 'BSDF_PRINCIPLED')
     next(x for x in nt.nodes if x.type == 'TEX_IMAGE' and x.image.name.startswith('mv_base_')).image = bpy.data.images['mv_base_even']
+    for x in nt.nodes:
+        if x.type == 'TEX_IMAGE' and x.image.name in EVEN: x.image = bpy.data.images[EVEN[x.image.name]]
     for s in [b.inputs['Metallic']] + [x.inputs['Occlusion'] for x in nt.nodes if x.type == 'GROUP' and 'Occlusion' in x.inputs]:
         for l in list(s.links): nt.links.remove(l)
     b.inputs['Metallic'].default_value = 0.0
@@ -248,7 +279,7 @@ def drop_old_buttons():
 
 
 def details(mon, z_bottom):
-    """TRISH badge where the logo was, green LED on the MasterView's own LED dot, and the note."""
+    """TRISH badge where the logo was, and the note."""
     ns = {}
     exec(open(ART + 'crt_details.py').read().split("\nmon = bpy.data")[0].split("\nif 'detail_ink'")[0], ns)
     def place(kind, x, z, proud, ink_v, led_v, size=1.0):
@@ -258,8 +289,7 @@ def details(mon, z_bottom):
             v.co = Vector((wx, ns['surface_y'](mon, wx, wz) - proud + v.co.y, wz))
         return piece, ink_v, led_v
     # where the print was (x -0.111, z 1.2405-1.250), grey like it, at its letter height (~9 mm)
-    parts = [place('badge', -0.111, 1.2453, 0.00035, 0.85, 0.0, 1.6),
-             place('led', 0.0155, 0.966, 0.0007, 0.0, 1.6)]
+    parts = [place('badge', wx(-0.111), 1.2453, 0.00035, 0.85, 0.0, 1.6)]
     me = bpy.data.meshes.new('mv_details'); bm = bmesh.new()
     ink = bm.faces.layers.float.new('detail_ink'); led = bm.faces.layers.float.new('led')
     for piece, ink_v, led_v in parts:
@@ -270,7 +300,7 @@ def details(mon, z_bottom):
     li = {}
     src = open(ART + 'lived_in.py').read().split('\nadd_note()\nadd_ring()')[0]
     exec(src, li)
-    li['NOTE_TL'], li['NOTE_ANGLE'] = (0.1035, z_bottom - 0.016), math.radians(4)
+    li['NOTE_TL'], li['NOTE_ANGLE'] = (0.1035, z_bottom - 0.006), math.radians(4)  # the shorter chin: overhangs its edge a little
     li['NOTE_W'], li['NOTE_H'] = 0.0608, 0.060  # seen from cam_overview as large as the old monitor's note, which wrapped its edge
     li['NOTE_C'] = (li['NOTE_TL'][0] + li['NOTE_W'] / 2 * math.cos(li['NOTE_ANGLE']) + li['NOTE_H'] / 2 * math.sin(li['NOTE_ANGLE']),
                     li['NOTE_TL'][1] + li['NOTE_W'] / 2 * math.sin(li['NOTE_ANGLE']) - li['NOTE_H'] / 2 * math.cos(li['NOTE_ANGLE']))
@@ -316,7 +346,7 @@ def join(mon, bm, name, normals=None):
 
 def opening(bm):
     """The download's screen opening: its boundary loop, in order."""
-    inner = lambda v: abs(v.co.x - CX) < 0.145 and abs(v.co.z - CZ) < 0.112 and v.co.y < -0.16
+    inner = lambda v: abs(v.co.x - CX) < 0.145 + WIDEN and abs(v.co.z - CZ) < 0.112 + DROP and v.co.y < -0.16
     edges = [e for e in bm.edges if e.is_boundary and all(inner(v) for v in e.verts)]
     nxt = {}
     for e in edges:
@@ -466,6 +496,8 @@ def build(rear):
     y_rim = GLASS_EDGE + SINK
     bm = bmesh.new(); bm.from_mesh(mon.data)
     for name in ('detail_ink', 'led', 'note', 'pen'): bm.faces.layers.float.new(name)
+    widen_opening(bm)
+    btn = {}; exec(open(ART + 'mvbuttons.py').read(), btn); btn['add'](bm, wx, wz)
     dropped = step_rear(bm) if rear == 'step' else 0
     loop = opening(bm)
     rim = outline_at(loop, y_rim)
