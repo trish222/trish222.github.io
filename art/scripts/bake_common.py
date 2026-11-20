@@ -16,8 +16,9 @@ LOG = []  # (step, map, kind, size, spp, seconds or None when reused)
 
 
 class Opts:
-    def __init__(self, preview, force, force_map, relight=()):
+    def __init__(self, preview, force, force_map, relight=(), lightmap_spp=None):
         self.preview, self.force, self.force_maps, self.relight = preview, force, set(force_map), list(relight)
+        self.lightmap_spp = lightmap_spp
         self.out = os.path.join(ROOT, 'bakes', 'preview') if preview else os.path.join(ROOT, 'bakes')
         os.makedirs(self.out, exist_ok=True)
 

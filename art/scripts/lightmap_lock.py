@@ -129,11 +129,12 @@ def islands(o):
     return [(np.unique(t), np.array(t)) for t in groups.values()]
 
 
-def pack(objs, size, gap, weight, relight, seamed=()):
-    """Objects whose loops match the saved atlas get its UVs back; the rest, and the relit ones (so a texel weight
-    change takes), are unwrapped and packed around them. Raises if they can't fit."""
+def pack(objs, size, gap, weight, seamed=()):
+    """Objects whose loops match the saved atlas get its UVs back, relit ones included (re-unwrapping the case and
+    keyboard gave them dark texel patches); the rest are unwrapped and packed around them. To change an unchanged
+    mesh's texel weight, drop it from the atlas first. Raises if they can't fit."""
     saved = np.load(ATLAS)
-    fresh = [o for o in objs if o.name in relight or o.name not in saved or saved[o.name].size != 2 * len(o.data.loops)]
+    fresh = [o for o in objs if o.name not in saved or saved[o.name].size != 2 * len(o.data.loops)]
     locked = [o for o in objs if o not in fresh]
     for o in objs:
         uvl = o.data.uv_layers

@@ -203,7 +203,7 @@ def build_uvs(objs, size, margin_px, relight):
     mon = bpy.data.objects['baked_crt_monitor']
     real = atlas_strokes_in(mon)
     if relight:
-        lightmap_lock.pack(objs, size, margin_px, texel_weight, relight, seamed=[mug])
+        lightmap_lock.pack(objs, size, margin_px, texel_weight, seamed=[mug])
     else:
         bc.smart_uv(objs, 'UVMap_Light', margin_px / size, texel_weight, seamed=[mug])
     lightmap_lock.save(objs)
@@ -337,6 +337,7 @@ def run(opts):
     join_props()
     objs = [bpy.data.objects[n] for n in WEIGHTS if n in bpy.data.objects]
     size, spp = (512, PREVIEW_SPP) if opts.preview else (2048, LIGHTMAP_SPP)
+    spp = opts.lightmap_spp or spp
     # ~27k islands (each LEGO brick face is one), so the packing gap must stay tiny.
     # Blender applies the bake margin per object, over texels other objects already
     # baked, so it may fill at most half the gap: a 16 px margin smeared neighbouring
