@@ -10,11 +10,11 @@ export const CONTENT = {
 
   // `id` names the floppy's card; descriptions are placeholders until P8's content audit.
   projects: [
-    { id: 'moneyflow', title: 'MONEYFLOW', icon: '💻', tags: ['React', 'Node.js', 'PostgreSQL'],
+    { id: 'moneyflow', title: 'MONEYFLOW', name: 'MoneyFlow', icon: '💻', tags: ['React', 'Node.js', 'PostgreSQL'],
       description: 'A web app built with React and Node.js. Replace this with your real project description.' },
-    { id: 'cook', title: 'COOK', icon: '🌐', tags: ['Python', 'Flask'],
+    { id: 'cook', title: 'COOK', name: 'Cook', icon: '🌐', tags: ['Python', 'Flask'],
       description: 'Another cool project. Replace this with your real project description.' },
-    { id: 'microlearning', title: 'MICROLEARNING', icon: '📱', tags: ['TypeScript', 'Vue'],
+    { id: 'microlearning', title: 'MICROLEARNING', name: 'Microlearning', icon: '📱', tags: ['TypeScript', 'Vue'],
       description: 'Mobile-friendly application. Replace this with your real project description.' },
   ],
 
@@ -71,11 +71,45 @@ export const CONTENT = {
   },
 };
 
+// The Credits window. tests/credits.mjs checks `assets` and `fonts` against art/credits.md.
+export const CREDITS = {
+  inspiredBy: [
+    { text: 'seanaiux.com/computer', href: 'https://seanaiux.com/computer' },
+    { text: 'felixrieseberg.com', href: 'https://felixrieseberg.com' },
+  ],
+  assets: [
+    { title: 'old computer', author: 'ivsn', license: 'CC BY 4.0', href: 'https://sketchfab.com/models/8183647717084f008969c22b7fcd1b8a' },
+    { title: 'CRT Computer Monitor', author: 'fizyman', license: 'CC BY 4.0', href: 'https://sketchfab.com/3d-models/crt-computer-monitor-f2ff0013f86e4cd0a2aee183a23bdfee' },
+    { title: 'Desk lamp', author: '7ASSAN', license: 'CC BY 4.0', href: 'https://sketchfab.com/models/b9458e04d30e4b6284d46d35880a9b95' },
+    { title: 'Verbatim Floppy Disk 3.5"', author: 'Timescade', license: 'CC BY 4.0', href: 'https://sketchfab.com/models/f055312452cb4b5f87898a9beb312cbe' },
+    { title: 'Ice Coffee', author: 'ponchoguy', license: 'CC BY 4.0', href: 'https://sketchfab.com/models/fd2e9142168d4f31ba99bf4d9b1165b4' },
+    { title: 'Coffee Mug (School Project)', author: 'FrenchBaguette', license: 'CC BY 4.0', href: 'https://sketchfab.com/models/5f5ccee1514c440887c072fae8e0d699' },
+  ],
+  fonts: [
+    { title: 'Atkinson Hyperlegible', author: 'Braille Institute', license: 'SIL OFL 1.1', href: 'https://brailleinstitute.org/freefont' },
+    { title: 'Departure Mono', author: 'Helena Zhang', license: 'SIL OFL 1.1', href: 'https://departuremono.com' },
+    { title: 'Playfair Display', author: 'Claus Eggers Sørensen', license: 'SIL OFL 1.1', href: 'https://fonts.google.com/specimen/Playfair+Display' },
+    { title: 'Cinzel', author: 'Natanael Gama', license: 'SIL OFL 1.1', href: 'https://fonts.google.com/specimen/Cinzel' },
+  ],
+  builtWith: 'Built with Three.js and Blender.',
+};
+
 // The floppies on the desk: entry i is click_project_0{i+1} and label cell i. `window` is a
 // screen window id (projects, about, resume, contact); `card` selects a project in it.
 export const FLOPPIES = [
-  ...CONTENT.projects.map(({ id, title }) => ({ title, window: 'projects', card: id })),
-  { title: 'RESUME', window: 'resume' },
-  { title: 'ABOUT', window: 'about' },
-  { title: 'CONTACT', window: 'contact' },
+  ...CONTENT.projects.map(({ id, title, name }) => ({ title, label: name, window: 'projects', card: id })),
+  { title: 'RESUME', label: 'Resume', window: 'resume' },
+  { title: 'ABOUT', label: 'About', window: 'about' },
+  { title: 'CONTACT', label: 'Contact', window: 'contact' },
 ];
+
+// Every word the room itself says (labels, hints, buttons, the intro), in one place to edit.
+export const UI = {
+  introCta: 'click me',
+  hint: 'drag to look around · click things on the desk',
+  back: 'back to desk',
+  menu: 'menu',
+  credits: 'credits',
+  objects: { crt: 'use computer', lamp: 'lamp', nameplate: 'about me', treehouse: 'cherry blossom treehouse' },
+  menuItems: [['about', 'About'], ['projects', 'Projects'], ['resume', 'Resume'], ['contact', 'Contact'], ['credits', 'Credits']],
+};

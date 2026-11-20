@@ -3,10 +3,11 @@ import * as THREE from 'three';
 // One gesture stream and one nearest-hit picker for every 3D action.
 export function createInteraction({ canvas, camera, proxies, parallax,
   canOrbit, isDragging, canLeaveScreen, overScreen, beginParallax, endParallax,
-  setHover, onLamp, onEnter, onProject, onExit }) {
+  onHoverTarget, onLamp, onEnter, onProject, onNameplate, onExit }) {
   const CLICK_SLOP = 5;
   const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
   let press = { id: -1, x: 0, y: 0, target: null };
+  let armed = null; // touch: the first tap on an object shows its label, the second presses it
   let onCanvasDown, onCanvasUp, onCanvasCancel, onPointerMove, onPointerLeave;
   const pickNdc = new THREE.Vector2();
   const pickRay = new THREE.Raycaster();
@@ -21,13 +22,26 @@ export function createInteraction({ canvas, camera, proxies, parallax,
     pickRay.setFromCamera(pickNdc, camera);
     if (shifted) endParallax();
 
-    const hits = pickRay.intersectObjects([proxies.lampChain, proxies.crt, ...proxies.projects], false);
+    const { lampChain, crt, nameplate, treehouse, projects } = proxies;
+    const hits = pickRay.intersectObjects([lampChain, crt, nameplate, treehouse, ...projects], false);
     if (!hits.length) return null;
-    const project = proxies.projects.indexOf(hits[0].object);
+    const hit = hits[0].object;
+    const project = projects.indexOf(hit);
     if (project >= 0) return `project:${project}`;
-    return hits[0].object === proxies.lampChain ? "lamp" : "machine";
+    return { [lampChain.id]: "lamp", [nameplate.id]: "nameplate", [treehouse.id]: "treehouse" }[hit.id] ?? "machine";
   }
 
+
+  // Touch has no hover, so a first tap on an object only shows its label.
+  function firstTap(e, target) {
+    if (!e.pointerType || e.pointerType === "mouse" || target === armed) {
+      armed = null;
+      return false;
+    }
+    armed = target;
+    onHoverTarget(target);
+    return true;
+  }
 
   function initCanvasPress() {
     onCanvasDown = (e) => {
@@ -68,11 +82,12 @@ export function createInteraction({ canvas, camera, proxies, parallax,
         if (canLeaveScreen()) onExit();
         return;
       }
-      if (!target || moved > CLICK_SLOP || !canOrbit()) return;
-
+      if (moved > CLICK_SLOP || !canOrbit()) return;
+      if (firstTap(e, target) || !target) return;
       if (target === "lamp") onLamp();
+      else if (target === "nameplate") onNameplate();
       else if (target.startsWith("project:")) onProject(Number(target.slice(8)));
-      else onEnter();
+      else if (target === "machine") onEnter();
     };
     onCanvasCancel = () => {
       press.id = -1;
@@ -94,29 +109,26 @@ export function createInteraction({ canvas, camera, proxies, parallax,
         );
       }
 
+      if (e.pointerType !== 'mouse') return;
       if (!canOrbit()) {
-        setHover(0);
+        onHoverTarget(null);
         return;
       }
       // A drag already owns the gesture; raycasting every coalesced move
       // cannot change its action and competes with drawing the next frame.
       if (isDragging()) {
-        setHover(0);
+        onHoverTarget(null);
         canvas.style.cursor = "grabbing";
         return;
       }
-      if (e.target?.closest?.(".window, #taskbar, #start-menu")) {
-        setHover(0);
+      if (e.target?.closest?.(".window, #taskbar, #start-menu, .ux")) {
+        onHoverTarget(null);
         return;
       }
       const target = pickTarget(e);
-
-      setHover(target === "machine" ? 1 : 0);
-      canvas.style.cursor = isDragging()
-        ? "grabbing"
-        : target
-          ? "pointer"
-          : "grab";
+      onHoverTarget(target);
+      // The treehouse is labelled but does nothing when pressed, so it gets no pointer.
+      canvas.style.cursor = target && target !== "treehouse" ? "pointer" : "grab";
     };
     window.addEventListener("pointermove", onPointerMove, { passive: true });
     onPointerLeave = () => parallax.pointer.set(0, 0);
@@ -129,7 +141,8 @@ export function createInteraction({ canvas, camera, proxies, parallax,
   initCanvasPress();
   return {
     pick: pickTarget,
-    cancel() { press.id = -1; },
+    firstTap,
+    cancel() { press.id = -1; armed = null; },
     get finePointer() { return finePointer.matches; },
     dispose() {
       if (press.id !== -1 && canvas.hasPointerCapture?.(press.id)) canvas.releasePointerCapture(press.id);

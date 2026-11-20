@@ -1,6 +1,7 @@
 import { desktopEvents } from './session.js';
 import * as roomScene from '../scene.js';
 import { initProjectLinks, openPendingProject } from './projects.js';
+import { initRoomUi } from '../ui/roomUi.js';
 import { renderWindowContent } from './windowContent.js';
 import { WINDOWS, resetWindows, openWindow, closeWindow, blurWindows, updateTaskbar, fitAllWindows, initDragging, initWindowControls } from './windows.js';
 
@@ -341,13 +342,16 @@ function initLoginScreen() {
        Ask for a fresh one now so it lands in idle time during the beat
        below rather than on the first frame of the phone's move. */
     sceneApi?.refreshLoginStill();
-    /* The scene owns the reduced-motion decision for the move it may
-       be about to make — it has the still and the render loop — and
-       calls back either way. */
-    const go = () => (sceneApi ? sceneApi.diveToDesktop(signIn) : signIn());
-    if (prefersReducedMotion()) go();
-    else desktopEvents.timeout(go, SIGN_IN_MS);
+    if (prefersReducedMotion()) enterDesktop();
+    else desktopEvents.timeout(enterDesktop, SIGN_IN_MS);
   });
+}
+
+/* The scene owns the reduced-motion decision for the move it may be about
+   to make (it has the still and the render loop) and calls back either way. */
+function enterDesktop() {
+  if (sceneApi) sceneApi.diveToDesktop(signIn);
+  else signIn();
 }
 
 /* No WebGL: there is no monitor to click, so the login is shown flat
@@ -356,6 +360,7 @@ function initLoginScreen() {
    (the rest is CSS — see "NO WEBGL" in style.css). */
 function initWithoutScene() {
   document.body.classList.add('no-scene');
+  document.getElementById('boot')?.remove();
   const screen = document.getElementById('screen');
   if (screen) screen.hidden = false;
   document.getElementById('login-user')?.focus({ preventScroll: true });
@@ -365,25 +370,17 @@ function initWithoutScene() {
    move. */
 function initScreenControls(scene) {
   sceneApi = scene;
-  const bar = document.getElementById('screen-back-bar');
-  if (bar) bar.hidden = false;
+  document.getElementById('screen-back-bar').hidden = false;
+  initRoomUi(scene, desktopEvents);
 
   const back = () => scene.flyFromScreen();
   desktopEvents.on(document.getElementById('screen-back'), 'click', back);
   desktopEvents.on(document.querySelector('[data-login-cancel]'), 'click', back);
   desktopEvents.on(document.querySelector('.login-dialog .title-bar-controls button'), 'click', back);
 
-  /* Escape leaves the monitor — the keyboard's version of clicking the
-     room around it, and the same move either way, signed in or not.
-     The session is not what it unwinds: the desktop stays signed in
-     with its windows where they were, and pressing the monitor again
-     comes back to it. Ending a session is Start > Log Off, which is a
-     thing you mean rather than a thing you escape.
-
-     What has the first claim on the key is anything already open *on*
-     the desktop: a menu closes before the page it is over goes
-     anywhere. That is `dismissChrome`, and it reports whether it took
-     the press. */
+  /* Escape leaves the monitor, signed in or not; the session stays
+     (Start > Log Off ends it). Anything open on the desktop has the
+     first claim on the key: `dismissChrome` reports whether it took it. */
   desktopEvents.on(document, 'keydown', e => {
     if (e.key !== 'Escape') return;
     if (dismissChrome()) return;
@@ -408,7 +405,7 @@ export function initDesktop() {
   initPointerKind();
   initDesktopIcons();
   initRecycleBin();
-  initProjectLinks(signedIn);
+  initProjectLinks(signedIn, enterDesktop);
 
   /* A window positioned for a desktop viewport is off-stage once the
      viewport is a phone's — and crossing the PHONE breakpoint in either

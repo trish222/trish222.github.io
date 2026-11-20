@@ -6,10 +6,10 @@ import path from 'node:path';
 // in docs/TODO.md. Do not add entries: split the file instead.
 const LIMIT = 250;
 const CAPS = {
-  'src/desktop/desktop.js': 455,
+  'src/desktop/desktop.js': 452,
   'src/desktop/windows.js': 438,
-  'src/scene.js': 1008,
-  'src/style.css': 1628,
+  'src/scene.js': 1002,
+  'src/style.css': 1453,
 };
 
 async function files(directory) {

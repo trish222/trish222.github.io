@@ -1,4 +1,4 @@
-import { CONTENT } from '../content/content.js';
+import { CONTENT, CREDITS } from '../content/content.js';
 
 // The Win98 theme's window bodies, filled from src/content/content.js. The chrome (title bars,
 // menus, status bars) stays in index.html; only what is said about Trish comes from content.
@@ -13,6 +13,7 @@ const about = ({ owner, about: lines }) => `<div class="about-content">
   </div>
   <div class="divider-raised"></div>
   ${list(lines, (line, i) => `<p${i ? ' style="margin-top:6px;"' : ''}>${esc(line)}</p>`)}
+  <p class="about-credits"><button type="button" class="link-button" data-open-window="credits">Credits</button></p>
 </div>`;
 
 const projects = ({ projects: items }) => `<div class="file-explorer">${list(items, (p) => `
@@ -41,6 +42,15 @@ const entry = (e) => `<div class="resume-entry">
   ${e.bullets ? `<ul>${list(e.bullets, (b) => `<li>${esc(b)}</li>`)}</ul>` : ''}
 </div>`;
 
+const credit = (c) => `<li>${link({ text: c.title, href: c.href })} by ${esc(c.author)} <span class="credit-license">(${esc(c.license)})</span></li>`;
+
+const credits = () => `<div class="credits-content">
+  <p>Inspired by ${CREDITS.inspiredBy.map(link).join(' and ')} (not affiliated).</p>
+  <h2>3D models</h2><ul>${list(CREDITS.assets, credit)}</ul>
+  <h2>Fonts</h2><ul>${list(CREDITS.fonts, credit)}</ul>
+  <p class="credits-built">${esc(CREDITS.builtWith)}</p>
+</div>`;
+
 const resume = ({ owner, resume: r }) => `<article class="resume">
   <header class="resume-head">
     <h1>${esc(owner.name)}</h1>
@@ -56,7 +66,7 @@ const resume = ({ owner, resume: r }) => `<article class="resume">
 
 export function renderWindowContent() {
   const content = CONTENT;
-  for (const [id, render] of Object.entries({ about, projects, contact, resume })) {
+  for (const [id, render] of Object.entries({ about, projects, contact, resume, credits })) {
     const body = document.querySelector(`#window-${id} .window-body`);
     if (body) body.innerHTML = render(content);
   }

@@ -12,6 +12,9 @@ try {
       await page.waitForFunction(()=>performance.getEntriesByName('room:interactive').length);
       assert.equal(await page.locator('#scene-poster').count(),0);
       assert.equal(await page.evaluate(()=>document.body.classList.contains('no-scene')),false);
+      await page.waitForFunction(()=>document.body.classList.contains('intro-ready'));
+      await page.keyboard.press('Enter');
+      await page.waitForFunction(()=>document.body.classList.contains('orbit-live'));
       await page.locator('#lamp-toggle').focus();
       await page.keyboard.press('Space');
       assert.equal(await page.locator('#lamp-toggle').getAttribute('aria-pressed'),'false');
@@ -23,7 +26,7 @@ try {
       await page.keyboard.press('Escape');
       await page.waitForFunction(()=>document.body.classList.contains('orbit-live'));
       assert.deepEqual(errors,[]);
-      console.log('PASS',width,reducedMotion,'first frame, lamp, monitor flight, Escape');
+      console.log('PASS',width,reducedMotion,'first frame, intro, lamp, monitor flight, Escape');
       await page.close();
     }
   }

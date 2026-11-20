@@ -13,6 +13,8 @@ import * as THREE from "three";
 import { gsap } from "gsap/gsap-core";
 import { tonemapForward, TONE_MAPPINGS } from "./tonemap.js";
 import { FLOPPIES } from "./content/content.js";
+import { createDeskObjects } from "./ui/deskObjects.js";
+import { createIntro } from "./scene/intro.js";
 
 let interaction = null;
 
@@ -36,17 +38,11 @@ function distFor(frustum) {
 
 const MOBILE_BP = 760;
 
-     // the front of the keyboard's contact shadow
-
-// Shift toward the window and slightly toward the lamp, leaving a gap
-// in front of its base and keeping the whole wedge on the desktop.
-
 const LAMP_START_ON = true;
 
 const LAMP_FADE_S = 0.3; // P4 done-when: the crossfade lands in under 400 ms
 
 const BACKGROUND = "#1c1a2a";
-
 
 const HOVER_RATE = 7; // hover easing, per second
 
@@ -82,9 +78,6 @@ const FADE_EASE = "power1.inOut";
 
 const FADE_SCALE = 0.015;
 
- // of the legacy path: camera is head-on by here
- // ...and the push-in has already started
-
 // THE SECOND MOVE — the bezel framing in to a full viewport
 
 const DIVE_S = 0.9; // seconds; the flight's 1.6s would drag over a dolly this short
@@ -109,11 +102,10 @@ let stage = null;
 
 let lampLevel = LAMP_START_ON ? 1 : 0;
 let lampBtn = null;
-let onLampBtn = null;
-
+let deskObjects = null;
+let intro = null;
 
 let hover = { target: 0, value: 0 };
-
 
 // World units at the viewport edges, with a radial cap for diagonals.
 // Smoothness is a time constant in seconds: smaller values respond faster.
@@ -136,10 +128,6 @@ let onResize = null;
 let onScreenInput = null;
 
 let sceneFade = -1;
-
- // the walk home, while one is running
-
- // the camera moved and the overlay has not caught up
 
 let flyFrom = FLY_FROM;
 
@@ -188,13 +176,18 @@ function setLampOn(on, jump = !animation?.running) {
   return lampState.on;
 }
 
-function initLampButton() {
+function initDeskObjects() {
+  deskObjects = createDeskObjects({ proxies: stage.proxies, camera, canvas: canvasEl, actions: {
+    machine: enterScreen, lamp: () => setLampOn(!lampState.on), nameplate: () => openWindow("about"),
+    ...Object.fromEntries(FLOPPIES.map((_, i) => [`project:${i}`, () => openProject(i)])),
+  } });
   lampBtn = document.getElementById("lamp-toggle");
-  if (!lampBtn) return;
-  lampBtn.hidden = false;
-  lampBtn.setAttribute("aria-pressed", String(lampState.on));
-  onLampBtn = () => setLampOn(!lampState.on);
-  lampBtn.addEventListener("click", onLampBtn);
+  lampBtn?.setAttribute("aria-pressed", String(lampState.on));
+}
+
+function onHoverTarget(target) {
+  hover.target = target === "machine" ? 1 : 0;
+  deskObjects?.show(target);
 }
 
 function applyVoidColor() {
@@ -262,6 +255,12 @@ function canLeaveScreen() {
 let pendingProject = null;
 function openProject(i) {
   pendingProject = FLOPPIES[i];
+  enterScreen();
+}
+
+// The corner menu, the nameplate and the credits link: zoom in and open a desktop window.
+export function openWindow(id) {
+  pendingProject = { window: id };
   enterScreen();
 }
 
@@ -389,6 +388,7 @@ function render() {
   parallaxPresented = shifted;
   try {
     renderer.render(scene, camera);
+    deskObjects?.place();
   } finally {
     if (shifted) endParallax();
   }
@@ -432,7 +432,7 @@ function arrive() {
   document.body.classList.add("screen-focused");
 
   applyFade(1);
-  hover.target = 0;
+  onHoverTarget(null);
 
   updateScreenOverlay();
   if (pendingProject) document.dispatchEvent(new CustomEvent("desk:open", { detail: pendingProject }));
@@ -514,7 +514,7 @@ function buildFlyTimeline() {
 }
 
 function jumpFly(to) {
-  flyTl?.pause();
+  flyTl?.pause().progress(to, true); // so a later reverse() starts from here
   flyState.p = to;
   flyState.fade = to;
   setFly(to);
@@ -681,6 +681,7 @@ export function flyFromScreen() {
     buildFlyPath(canvasEl.clientWidth, canvasEl.clientHeight);
   }
   document.body.classList.remove("screen-focused");
+  intro?.end();
   if (prefersReducedMotion()) return jumpFly(0);
   document.body.classList.add("screen-zooming");
   fly.dir = -1;
@@ -691,7 +692,7 @@ function onScreenClick(e) {
 
   if (fly.value > 0) return;
   e.preventDefault();
-  flyToScreen();
+  if (!interaction?.firstTap(e, "machine")) flyToScreen();
 }
 
 function initScreenOverlay() {
@@ -744,7 +745,9 @@ export async function initScene(canvas) {
   renderer.setSize(w, h, false);
 
   performance.mark('room:renderer-ready');
-  const loaded = await createRoomScene({ renderer, boxWidth: SCREEN_BASE_W, animated: !prefersReducedMotion() });
+  intro = createIntro({ reducedMotion: prefersReducedMotion });
+  const loaded = await createRoomScene({ renderer, boxWidth: SCREEN_BASE_W, animated: !prefersReducedMotion(),
+    onProgress: (e) => intro?.onProgress(e) });
   if (generation !== sceneGeneration) { loaded.dispose(); return false; }
   stage = loaded;
   scene = stage.scene;
@@ -868,10 +871,15 @@ export async function initScene(canvas) {
   interaction = createInteraction({ canvas, camera, proxies: stage.proxies, parallax,
     canOrbit: () => navigation.allowed(), isDragging: () => navigation.dragging,
     canLeaveScreen, overScreen, beginParallax, endParallax,
-    setHover: value => { hover.target = value; }, onLamp: () => setLampOn(!lampState.on),
+    onHoverTarget, onLamp: () => setLampOn(!lampState.on), onNameplate: () => openWindow("about"),
     onEnter: enterScreen, onProject: openProject, onExit: flyFromScreen });
 
-  initLampButton();
+  initDeskObjects();
+  // Review URLs (?diagnostics) start at the desk unless they ask for the intro.
+  const query = new URLSearchParams(location.search);
+  const wait = !query.has('diagnostics') || query.has('intro');
+  if (wait) jumpFly(1);
+  intro.start({ wait, flyOut: flyFromScreen });
   performance.mark('room:interactive');
   if (prefersReducedMotion()) return true;
 
@@ -939,15 +947,11 @@ export function disposeScene() {
   flyStart = null;
   flyFrom = FLY_FROM;
   fovOverride = null;
-  if (lampBtn && onLampBtn) lampBtn.removeEventListener("click", onLampBtn);
-  if (lampBtn) {
-    lampBtn.hidden = true;
-    lampBtn.setAttribute("aria-pressed", String(LAMP_START_ON));
-  }
-  lampBtn = onLampBtn = null;
+  deskObjects?.dispose();
+  intro?.dispose();
+  deskObjects = lampBtn = intro = null;
   lampState.reset();
   lampLevel = LAMP_START_ON ? 1 : 0;
-  document.getElementById("orbit-hint")?.setAttribute("hidden", "");
   perf?.dispose();
   perf = null;
   stage?.dispose();

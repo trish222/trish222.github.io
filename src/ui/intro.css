@@ -1,0 +1,72 @@
+/* Boot screen: an old PC's POST over the whole page while the scene downloads. */
+#boot {
+  position: fixed;
+  inset: 0;
+  z-index: 6000;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 22px;
+  padding: 0 max(24px, 12vw);
+  background: radial-gradient(ellipse at center, #10140f 0%, #050605 75%);
+  color: #b7f0b0;
+  font: 15px/1.6 'Departure Mono', ui-monospace, monospace;
+  text-shadow: 0 0 6px rgb(140 255 140 / 0.45);
+  transition: opacity 0.45s ease, visibility 0.45s;
+}
+#boot.gone { opacity: 0; visibility: hidden; }
+.boot-text p { margin: 0; opacity: 0; animation: boot-line 0.01s forwards; }
+.boot-text p:nth-child(2) { animation-delay: 0.25s; }
+.boot-text p:nth-child(3) { animation-delay: 0.5s; }
+.boot-text p:nth-child(4) { animation-delay: 0.75s; }
+@keyframes boot-line { to { opacity: 1; } }
+.boot-dots::after { content: ''; animation: boot-dots 1.2s steps(4) infinite; }
+@keyframes boot-dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+.boot-bar {
+  width: min(420px, 100%);
+  height: 14px;
+  padding: 2px;
+  border: 1px solid rgb(183 240 176 / 0.6);
+}
+.boot-bar span {
+  display: block;
+  height: 100%;
+  width: calc(var(--p, 0) * 100%);
+  background: repeating-linear-gradient(90deg, #b7f0b0 0 10px, transparent 10px 13px);
+  transition: width 0.25s linear;
+}
+.boot-bar.indeterminate span { width: 30%; animation: boot-sweep 1.4s ease-in-out infinite alternate; }
+@keyframes boot-sweep { to { transform: translateX(233%); } }
+#boot.done .boot-bar span { animation: none; transform: none; width: 100%; }
+
+/* "click me" on the tube while the intro waits; the login sits under it. */
+#intro-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: none;
+  place-items: center;
+  background: radial-gradient(ellipse at center, #0f1a17 0%, #060a09 80%);
+}
+body.intro #intro-screen { display: grid; }
+#intro-cta {
+  padding: 14px 34px;
+  border: 2px solid rgb(183 240 176 / 0.7);
+  background: none;
+  color: #c9f7c3;
+  font: 44px/1 'Departure Mono', ui-monospace, monospace;
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 10px rgb(140 255 140 / 0.6);
+  cursor: pointer;
+  opacity: 0;
+}
+body.intro-ready #intro-cta { opacity: 1; animation: cta-blink 1.1s steps(2) infinite; }
+#intro-cta:hover, #intro-cta:focus-visible { background: rgb(183 240 176 / 0.12); outline: 3px solid var(--ux-accent); outline-offset: 6px; }
+@keyframes cta-blink { 50% { border-color: transparent; } }
+body.intro #screen-back-bar, body.intro #corner { visibility: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  #boot, .boot-bar span { transition: none; }
+  .boot-text p { animation: none; opacity: 1; }
+  .boot-dots::after, .boot-bar.indeterminate span, body.intro-ready #intro-cta { animation: none; }
+}

@@ -26,6 +26,18 @@
 </head>
 <body>
 
+  <!-- THE BOOT SCREEN: over everything while scene.glb downloads; its bar
+       is the real download (src/scene/intro.js). Removed without WebGL. -->
+  <div id="boot" class="ux">
+    <div class="boot-text">
+      <p>TRISH BIOS v4.51 &nbsp;Copyright 1995</p>
+      <p>Memory test: 65536K OK</p>
+      <p>Detecting desk lamp ... found</p>
+      <p>Loading scene<span class="boot-dots"></span></p>
+    </div>
+    <div class="boot-bar" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span></span></div>
+  </div>
+
   <!-- Ambient 3D backdrop; falls back to the flat teal desktop without WebGL -->
   <canvas id="scene"></canvas>
 
@@ -49,6 +61,8 @@
     <!-- Tube glass, picture, raster, glare: see src/overlay/crt.css. -->
     <div class="crt-tube" aria-hidden="true"></div>
     <div id="screen-glass">
+    <!-- The intro's "click me" (UI.introCta), over the login until it is pressed. -->
+    <div id="intro-screen" class="ux"><button id="intro-cta" type="button"></button></div>
     <div id="screen-page" class="ui98">
       <div class="login-dialog win98" role="dialog" aria-labelledby="login-title">
         <div class="title-bar">
@@ -198,6 +212,23 @@
           <div class="window-statusbar"><span>resume.txt</span></div>
         </div>
 
+        <!-- ===== CREDITS WINDOW ===== -->
+        <div class="window hidden" id="window-credits" style="top:60px; left:240px; width:460px;">
+          <div class="window-titlebar" data-drag="window-credits">
+            <span class="window-title"><img src="/icons/document.png" width="16" height="16" alt="">Credits</span>
+            <div class="window-controls">
+              <button class="win-btn minimize-btn" type="button" data-target="credits" aria-label="Minimize">_</button>
+              <button class="win-btn maximize-btn" type="button" data-target="credits" aria-label="Maximize">□</button>
+              <button class="win-btn close-btn" type="button" data-target="credits" aria-label="Close">✕</button>
+            </div>
+          </div>
+          <div class="window-menubar">
+            <span>File</span><span>Edit</span><span>View</span><span>Help</span>
+          </div>
+          <div class="window-body"><!-- src/content/content.js, via src/desktop/windowContent.js --></div>
+          <div class="window-statusbar"><span>Thank you!</span></div>
+        </div>
+
         <!-- ===== RECYCLE BIN WINDOW =====
 
              A detail view, the way the real one opened: Name / Original
@@ -297,61 +328,34 @@
     <div class="crt-glare" aria-hidden="true"></div>
   </div><!-- /#screen -->
 
-  <!-- DRAG TO LOOK AROUND
+  <!-- THE ROOM'S OWN CHROME (src/ui/roomUi.js fills the words from UI in
+       src/content/content.js and unhides it once the scene is live, so
+       none of it appears without WebGL). The hint shows on a first visit
+       and goes on the first interaction; it describes a pointer gesture,
+       so it is aria-hidden. -->
+  <p id="orbit-hint" class="ux" aria-hidden="true"></p>
+  <header id="corner" class="ux" hidden>
+    <p id="corner-name"></p>
+    <nav id="corner-menu" aria-label="Site">
+      <button id="menu-button" class="ux-pill" type="button" aria-expanded="false" aria-controls="menu-list"></button>
+      <ul id="menu-list" hidden></ul>
+    </nav>
+  </header>
+  <button id="credits-link" class="ux" type="button" hidden></button>
 
-       The establishing shot's camera is on a short leash the visitor
-       can swing (OrbitControls — see "LOOKING AROUND" in scene.js), and
-       a drag is not a thing a page usually invites, so it has to say
-       so. Unhidden by scene.js once the controls are actually live, so
-       it never appears without WebGL, and faded out for good the first
-       time anyone takes it up.
+  <!-- THE DESK, FOR EVERYONE WHO IS NOT HOLDING A POINTER
 
-       aria-hidden because it describes a pointer gesture with no
-       keyboard or assistive equivalent: the camera move is decoration
-       either way, and the thing it decorates — the monitor, and the
-       login behind it — is reached by pressing it. -->
-  <p id="orbit-hint" aria-hidden="true" hidden>
-    <span class="orbit-hint-arrows">&#8596;</span> Drag to look around
-  </p>
+       One button per pressable object on the desk (the lamp keeps its
+       `aria-pressed`), filled by src/ui/deskObjects.js once the scene
+       is live, so without WebGL the group stays empty. A focused button
+       shows itself as the object's label, at the object. -->
+  <div id="desk-objects" class="ux" role="group" aria-label="Things on the desk"></div>
 
-  <!-- THE DESK LAMP, FOR EVERYONE WHO IS NOT HOLDING A POINTER
-
-       The lamp on the desk is toggled by pressing it in the 3D scene,
-       which is a raycast against a canvas and so has no keyboard or
-       assistive equivalent at all. This is that equivalent: the same
-       switch, through the same `setLampOn` in scene.js, so the two can
-       never disagree. `aria-pressed` is the state and scene.js writes
-       it on every toggle, whichever route took it.
-
-       Visually hidden rather than merely off-screen — a `display:none`
-       control is not in the accessibility tree at all, and a `left:
-       -9999px` one drags the viewport sideways when it takes focus.
-
-       Outside the glass on purpose: everything in #screen is inert
-       until the camera has arrived and the desktop's own chrome until
-       the sign-in, so a control in there would be unreachable for
-       exactly the stretch in which the lamp is the only thing on the
-       page to press.
-
-       `hidden` until scene.js unhides it, like the drag hint: without
-       WebGL there is no lamp, so there must be no switch for one. -->
-  <button id="lamp-toggle" class="visually-hidden" type="button"
-          aria-pressed="true" hidden>Desk lamp</button>
-
-  <!-- THE WAY BACK TO THE ROOM
-
-       On screen the whole time the camera is at the monitor, signed in
-       or not. A pointer has two other ways out — a click anywhere on
-       the room around the screen, and Escape — and neither is
-       reachable without one, which is what this is for. It sits
-       outside #screen deliberately: a control for leaving the glass
-       cannot be *on* the glass, where a press would land in the
-       desktop instead.
-
-       `hidden` until scene.js unhides it: without WebGL there is no
-       room to go back to. -->
-  <div id="screen-back-bar" class="ui98" hidden>
-    <button id="screen-back" type="button">&larr; Back to the room</button>
+  <!-- THE WAY BACK TO THE DESK: on screen the whole time the camera is at
+       the monitor (clicking the room around it and Escape also leave).
+       Outside #screen, so a press never lands in the desktop. -->
+  <div id="screen-back-bar" class="ux" hidden>
+    <button id="screen-back" class="ux-pill" type="button"></button>
   </div>
 
 </body>

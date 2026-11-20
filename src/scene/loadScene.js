@@ -21,11 +21,11 @@ async function loadLightmaps(parser, ktx2) {
   return Object.fromEntries(entries);
 }
 
-export async function loadScene(renderer, url = `${base}models/scene.glb`) {
+export async function loadScene(renderer, onProgress, url = `${base}models/scene.glb`) {
   const ktx2 = new KTX2Loader().setTranscoderPath(`${base}basis/`).detectSupport(renderer);
   const loader = new GLTFLoader().setKTX2Loader(ktx2).setMeshoptDecoder(MeshoptDecoder);
   try {
-    const { scene, parser } = await loader.loadAsync(url);
+    const { scene, parser } = await loader.loadAsync(url, onProgress);
     const lightmaps = await loadLightmaps(parser, ktx2);
     const named = new Map();
     scene.traverse((o) => { if (o.name) named.set(o.name, o); });

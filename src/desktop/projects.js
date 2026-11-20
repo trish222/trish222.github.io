@@ -1,8 +1,8 @@
 import { desktopEvents } from './session.js';
 import { openWindow } from './windows.js';
 
-// A floppy on the desk asks for its window through `desk:open` once the camera
-// lands on the screen; a request made while signed out waits for the sign-in.
+// A floppy, the nameplate or the corner menu asks for a window through `desk:open` once the
+// camera lands on the screen; signed out, it signs in first and opens the window after.
 let pending = null;
 
 function show({ window: id, card }) {
@@ -14,11 +14,16 @@ function show({ window: id, card }) {
   el?.scrollIntoView({ block: 'nearest' });
 }
 
-export function initProjectLinks(signedIn) {
+export function initProjectLinks(signedIn, signIn) {
   pending = null;
   desktopEvents.on(document, 'desk:open', (e) => {
-    if (signedIn()) show(e.detail);
-    else pending = e.detail;
+    if (signedIn()) return show(e.detail);
+    pending = e.detail;
+    signIn();
+  });
+  desktopEvents.on(document, 'click', (e) => {
+    const id = e.target.closest?.('[data-open-window]')?.dataset.openWindow;
+    if (id) openWindow(id);
   });
 }
 

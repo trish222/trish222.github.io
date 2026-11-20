@@ -192,6 +192,25 @@ Generated in P0 from [visual-plan.md](visual-plan.md). Work the first unchecked 
 - [ ] Add OG/Twitter meta with a screenshot. Done when: the meta validates.
 - [ ] Run every check, then open a PR from `theme/crt-baked` to `main` with a summary and before/after screenshots (only when Trish asks). Done when: all acceptance criteria in visual-plan are ticked and the Pages deploy succeeds.
 
+## UX layer
+
+Feel: seanaiux.com/computer and felixrieseberg.com. Wording lives in `UI` in `src/content/content.js`. Everything keyboard-reachable with visible focus.
+
+- [x] U3 Look around: keep the mouse parallax and the drag/swipe leash at the tuned limits (yaw ±20°, pitch +10/−9), easing back on release; touch drag replaces parallax. Done when: `tests/lookaround.mjs` drags and swipes past the limits and sees the clamp and the return.
+  - Note: no runtime change (drag/swipe leash and eased return already existed; limits kept at Trish's tuned 20/10/9). `tests/lookaround.mjs` now drags (mouse) and swipes (CDP touch) past each limit, checks the clamp and the return home.
+- [x] U1 Hover labels: a pill label near each `click_*` proxy in friendly wording ("use computer", "lamp", "MoneyFlow", "about me"), a pointer cursor and a subtle highlight; on touch the first tap labels, the second activates; a focusable button per object shows the same pill. Nameplate opens About. Done when: `tests/hoverLabels.mjs` passes.
+  - Note: new `src/ui/deskObjects.js` (pill `#hover-label`, `.desk-glow` bloom, one button per object in `#desk-objects`, replacing `#lamp-toggle`'s markup but keeping its id). `interaction.js` picks the nameplate and treehouse too; `firstTap` arms touch (also on the screen overlay). Nameplate opens About. Known: the treehouse is label-only (no action, so no pointer cursor); cam_mobile frames only the CRT, so phones label just "use computer".
+- [x] U2 Navigation help: a subtle one-line hint on first visit that fades after the first interaction, and a clear "back to desk" button while zoomed in; no hint bar, no key buttons. Done when: the hint shows once per browser and the back button returns to the desk.
+  - Note: hint and back-button text from `UI`; styles moved from `style.css` to `src/ui/ux.css`; first visit is a `localStorage` flag (`src/ui/visit.js`). Known: the hint is deliberately faint over the dark desk front.
+- [x] U4 Corner menu: name top-left, a top-right menu (About, Projects, Resume, Contact, Credits) that zooms into the screen, signs in if needed and opens the window. Done when: each entry opens its window from the overview.
+  - Note: `src/ui/roomUi.js`, scene export `openWindow(id)` (dispatches `desk:open` directly when already at the screen); `desk:open` now signs in through the same path as the login form (`enterDesktop` in desktop.js). Escape closes the menu first. `tests/cornerMenu.mjs`.
+- [x] U7 Credits: a Credits window (content in `content.js`) with the inspiration sites, every CC BY asset and font from `art/credits.md`, and "built with Three.js and Blender"; opened from the menu, About and a small desk-view "credits" link. Done when: `tests/credits.mjs` checks it against `art/credits.md`.
+  - Note: `CREDITS` in content.js, `#window-credits`, About's Credits button, `#credits-link`. `art/credits.md` updated (MasterView shipped, site fonts added). `tests/credits.mjs` (node only).
+- [x] U5 Intro: start at `cam_screen` behind a CRT boot screen whose bar follows the real download, then "click me" on the screen flies out to `cam_overview` (a cut under reduced motion). Repeat visits fly out on their own; after loading, a click, Enter, Space or Esc skips the boot. No-WebGL fallback unchanged. Done when: `tests/intro.mjs` passes.
+  - Note: `#boot` in index.html, `src/scene/intro.js`, `src/ui/intro.css`; `loadScene` takes `onProgress`. `jumpFly` now parks the GSAP timeline at its endpoint so a later reverse flies. `?diagnostics` skips the intro unless `&intro=1`, so the older suites still start at the desk.
+- [x] U6 Zoom hand-over: the shader picture matches the live DOM at the hand-over. Done when: `tests/crt.mjs` compares the screen's average colour just before and after arrival within 3/255.
+  - Note: `crtMaterial.js` blends from the tuned desk look to the DOM's own steps in exact sRGB as `zoom` → 1 (AgX out, bloom backdrop, sRGB multiply raster, the DOM's stripe mask, grain/flicker veil). Gap was ~40 levels (e.g. 87/140/136 vs 56/97/93); now ≤ 1.8 per channel, login and desktop, 1440×900 and 1024×768. Overview unchanged (mask and scanlines fade out there, the blend starts at zoom 0.5).
+
 ## Step 6 progress (scene finish, preview rendered 2026-11-13; awaiting Trish's review)
 
 Saved in `art/scene.blend`; nothing exported to `public/`, nothing committed.
@@ -270,6 +289,9 @@ Saved in `art/scene.blend`; nothing exported to `public/`, nothing committed.
 
 ## Backlog
 
+- `tests/lifecycle.mjs` (not in `npm test`, dev server on 4321) loads `/` and so now waits at the intro; add `?diagnostics` or press through "click me" if it is revived.
+- A first `npm test` run on 2026-11-19 hung in `tests/lookaround.mjs` while a stale copy of it was still running; it passed alone (40 s) and in a clean full run. Same family as the alignment.mjs hang above.
+
 - split src/scene.js (1008 lines; capped in `scripts/check-size.mjs`)
 - split src/desktop/desktop.js (455 lines; capped)
 - split src/desktop/windows.js (438 lines; capped)
@@ -305,6 +327,5 @@ Saved in `art/scene.blend`; nothing exported to `public/`, nothing committed.
 - Lit CRT plastics plus the curtain blur cost ~3 ms/frame at 1440×900 DPR 2 on the M1. Profile on a mid-range phone in P7; if needed, drop the area light and the second env sample for plastics on mobile.
 - The lamp's spec `RectAreaLight` shows as a bright soft rectangle in `window_glass` when looking up at the window (seen in a close-up, not at the overview).
 - Alternative screen OS theme (e.g. classic Mac OS or a green-phosphor terminal) per "Screen OS themes" in `docs/scene-contract.md`: own login/desktop markup, CSS and window renderer reading `CONTENT`; no change to content or the 3D scene.
-- The CRT shader's picture is brighter and more saturated than the live DOM just before the hand-over (visible in `.review-artifacts/p5/zoom-sequence.png` frames 3 → 4, pre-existing); match the snapshot's tone mapping to the DOM.
 - Live-screen effects cost (SVG displacement filter, `backdrop-filter` bloom, animated grain) is unmeasured on Safari and mid-range hardware; profile in P7 and drop `screenCA`/`screenGlow` to 0 there if needed.
 - "True bulge" option for the zoomed-in screen (proposal, not built): show the shader-rendered snapshot with barrel while idle and swap to the flat live DOM on pointer/keyboard input.

@@ -1,13 +1,13 @@
 # Asset credits
 
-Every third-party asset in `art/scene.blend` and `public/models/scene*.glb`. CC BY assets must also appear in the site's Credits window (TODO P8).
+Every third-party asset in `art/scene.blend`, `public/models/scene*.glb` and `public/fonts/`. The CC BY and OFL rows also appear in the site's Credits window (`CREDITS` in `src/content/content.js`); `tests/credits.mjs` checks they match.
 
 ## CC BY 4.0 (attribution required)
 
 | Asset | Used as | Author | Source |
 | --- | --- | --- | --- |
-| old computer | CRT monitor, case, keyboard, keycaps, mouse, cables (`baked_crt_*`) | ivsn | https://sketchfab.com/models/8183647717084f008969c22b7fcd1b8a |
-| CRT Computer Monitor | Replacement CRT monitor (source in `art/sources/masterview/`; not shipped yet) | fizyman | https://sketchfab.com/3d-models/crt-computer-monitor-f2ff0013f86e4cd0a2aee183a23bdfee |
+| old computer | Case, keyboard, keycaps, mouse, cables (`baked_crt_*`) | ivsn | https://sketchfab.com/models/8183647717084f008969c22b7fcd1b8a |
+| CRT Computer Monitor | CRT monitor (`baked_crt_monitor`; source in `art/sources/masterview/`) | fizyman | https://sketchfab.com/3d-models/crt-computer-monitor-f2ff0013f86e4cd0a2aee183a23bdfee |
 | Desk lamp | Banker's lamp (`baked_lamp`) | 7ASSAN | https://sketchfab.com/models/b9458e04d30e4b6284d46d35880a9b95 |
 | Verbatim Floppy Disk 3.5" | Project floppies (`baked_floppies`) | Timescade | https://sketchfab.com/models/f055312452cb4b5f87898a9beb312cbe |
 | Ice Coffee | Iced coffee (`baked_icedcoffee_drink`, `baked_icedcoffee_glass`) | ponchoguy | https://sketchfab.com/models/fd2e9142168d4f31ba99bf4d9b1165b4 |
@@ -31,8 +31,10 @@ Modifications: decimated, rescaled, re-oriented, materials simplified (normal an
 
 | Asset | Used as | Author | Source |
 | --- | --- | --- | --- |
-| Departure Mono | Floppy label text (`art/textures/floppy_labels.png`, via `art/scripts/floppy_labels.py`) | Helena Zhang | https://departuremono.com |
-| Cinzel | Nameplate engraving (`art/fonts/`, OFL alongside) | Natanael Gama | https://fonts.google.com |
+| Departure Mono | Floppy label text (`art/textures/floppy_labels.png`, via `art/scripts/floppy_labels.py`) and the resume (`public/fonts/`) | Helena Zhang | https://departuremono.com |
+| Cinzel | Nameplate engraving (`art/fonts/`, OFL alongside) | Natanael Gama | https://fonts.google.com/specimen/Cinzel |
+| Atkinson Hyperlegible | Body copy in windows (`public/fonts/`) | Braille Institute | https://brailleinstitute.org/freefont |
+| Playfair Display | Display face (`public/fonts/`) | Claus Eggers Sørensen | https://fonts.google.com/specimen/Playfair+Display |
 
 ## Made in Blender Python (no third-party license)
 

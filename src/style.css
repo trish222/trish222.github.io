@@ -1318,67 +1318,6 @@ body.orbit-live #screen {
   pointer-events: none;
 }
 
-/* The hint. Unhidden by scene.js once the controls are live, so it
-   never shows up without WebGL; faded for good by `orbit-used` the
-   first time anyone drags. It comes in late on purpose — the
-   establishing shot should land before anything is asked of it. */
-#orbit-hint {
-  position: fixed;
-  left: 50%;
-  bottom: 22px;
-  transform: translateX(-50%);
-  z-index: 2500;
-  margin: 0;
-  padding: 5px 12px 6px;
-  font-family: var(--font);
-  font-size: var(--font-size);
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-  color: var(--darker);
-  /* Reads as a label lying on the floor rather than a toast over it:
-     the floor grey it sits on, with the raised 1px edge every other
-     control here has. */
-  background: color-mix(in srgb, var(--scene-void) 86%, transparent);
-  box-shadow:
-    inset -1px -1px var(--dark),
-    inset 1px 1px var(--white);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.6s ease;
-}
-
-body.orbit-live #orbit-hint {
-  opacity: 0.85;
-  transition-delay: 1.6s;
-}
-
-/* After `body.orbit-live` so it wins at equal specificity: once it has
-   been used, it goes and does not come back. */
-body.orbit-used #orbit-hint {
-  opacity: 0;
-  transition-delay: 0s;
-}
-
-.orbit-hint-arrows {
-  display: inline-block;
-  margin-right: 2px;
-  font-size: 1.15em;
-  vertical-align: -1px;
-  animation: orbit-nudge 2.6s ease-in-out infinite;
-}
-
-@keyframes orbit-nudge {
-  0%, 60%, 100% { transform: translateX(0); }
-  70% { transform: translateX(-2px); }
-  85% { transform: translateX(2px); }
-}
-
-/* The nudge is the only moving part of the hint, and a hint is not
-   worth any motion a visitor has asked not to see. */
-@media (prefers-reduced-motion: reduce) {
-  .orbit-hint-arrows { animation: none; }
-}
-
 /* THE VISUALLY HIDDEN CONTROL
 
    For the desk lamp's keyboard and screen-reader switch (see
@@ -1493,40 +1432,6 @@ body.screen-active {
   margin: 10px 0 0;
   min-height: 1.4em;
   color: #0a0a0a;
-}
-
-/* ================================
-   BACK OUT OF THE SCREEN
-   ================================ */
-#screen-back-bar {
-  position: fixed;
-  top: 16px;
-  left: 16px;
-  z-index: 4000;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-}
-
-body.screen-focused #screen-back-bar {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* Not on the phone's full-page desktop. There is no room around the
-   glass to go back to from in there — `canLeaveScreen` refuses while
-   the second move is at its end, because the flight's endpoint is not
-   where the camera is — and a button that does nothing is worse than
-   no button. Start > Log Off is the way out of that state, and it
-   reverses the dolly to the bezel framing, where this comes back and
-   the room is a press away. */
-body.glass-fullscreen #screen-back-bar {
-  opacity: 0;
-  pointer-events: none;
-}
-
-#screen-back-bar button {
-  cursor: pointer;
 }
 
 /* The resize grip shares the monitor's transformed desktop coordinates. */

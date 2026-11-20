@@ -6,6 +6,7 @@ export const WINDOWS = {
   about:    { title: 'About Me',    icon: 'about-me' },
   resume:   { title: 'Resume',      icon: 'resume' },
   contact:  { title: 'Contact',     icon: 'contact' },
+  credits:  { title: 'Credits',     icon: 'document' },
   recycle:  { title: 'Recycle Bin', icon: 'recycle-bin' },
 };
 

@@ -191,7 +191,6 @@ export function createNavigation({ homeTarget, isAtDesk, reducedMotion, hasFrame
       }
     });
 
-    document.getElementById("orbit-hint")?.removeAttribute("hidden");
     setOrbitEnabled(true);
   }
 

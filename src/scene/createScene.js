@@ -10,7 +10,7 @@ import { crtGlare } from '../config/crt.js';
 import { FLOPPIES } from '../content/content.js';
 
 const REQUIRED = ['screen_plane', 'screen_glass', 'window_view', 'lamp_bulb', 'baked_floppy_labels',
-  'click_crt', 'click_lamp_chain', 'cam_overview', 'cam_screen', 'cam_mobile',
+  'click_crt', 'click_lamp_chain', 'click_nameplate', 'click_treehouse', 'cam_overview', 'cam_screen', 'cam_mobile',
   ...FLOPPIES.map((_, i) => `click_project_0${i + 1}`)];
 
 // The glass's additive glare reads stronger than .crt-glare's screen blend at the same opacity;
@@ -53,8 +53,8 @@ function pose(node) {
   return { position, forward, fov: node.isCamera ? node.fov : null };
 }
 
-export async function createRoomScene({ renderer, boxWidth, animated }) {
-  const { scene, named, lightmaps, extras } = await loadScene(renderer);
+export async function createRoomScene({ renderer, boxWidth, animated, onProgress }) {
+  const { scene, named, lightmaps, extras } = await loadScene(renderer, onProgress);
   for (const name of REQUIRED) if (!named.has(name)) throw new Error(`scene.glb is missing "${name}"`);
   const lighting = createBakedLighting(lightmaps, extras);
   const glass = named.get('screen_glass').material;
@@ -77,8 +77,9 @@ export async function createRoomScene({ renderer, boxWidth, animated }) {
 
   const screenPlane = named.get('screen_plane');
   const projects = FLOPPIES.map((_, i) => named.get(`click_project_0${i + 1}`));
-  const proxies = { crt: named.get('click_crt'), lampChain: named.get('click_lamp_chain'), projects };
-  for (const proxy of [proxies.crt, proxies.lampChain, ...projects]) proxy.material.visible = false;
+  const proxies = { crt: named.get('click_crt'), lampChain: named.get('click_lamp_chain'), projects,
+    nameplate: named.get('click_nameplate'), treehouse: named.get('click_treehouse') };
+  for (const proxy of [proxies.crt, proxies.lampChain, proxies.nameplate, proxies.treehouse, ...projects]) proxy.material.visible = false;
 
   scene.updateMatrixWorld(true);
   const reflections = createReflections({ renderer, scene, bulb: named.get('lamp_bulb'), materials: lit, lighting });

@@ -1,4 +1,6 @@
 import './style.css';
+import './ui/ux.css';
+import './ui/intro.css';
 import { initDesktop, disposeDesktop } from './desktop/desktop.js';
 
 document.addEventListener('DOMContentLoaded', initDesktop, { once: true });
