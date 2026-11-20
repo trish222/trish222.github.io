@@ -2,12 +2,13 @@ import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 import { FLOPPIES, UI } from '../src/content/content.js';
 
-// Hovering a click_* proxy shows its friendly pill label with a pointer cursor and the glow; on touch
+// Hovering a click_* proxy shows its friendly pill label with a pointer cursor and the glow (for the computer,
+// only its screen glows; the nameplate is inert: nothing labels or presses it); on touch
 // the first tap only labels and the second presses; the keyboard reaches every object through a
 // focusable button that shows the same label with a visible focus ring.
 const url = process.argv[2] || 'http://127.0.0.1:4320/?diagnostics=1';
 const OBJECTS = [['click_crt', 'machine', UI.objects.crt], ['click_lamp_chain', 'lamp', UI.objects.lamp],
-  ['click_nameplate', 'nameplate', UI.objects.nameplate], ['click_treehouse', 'treehouse', UI.objects.treehouse],
+  ['click_treehouse', 'treehouse', UI.objects.treehouse],
   ...FLOPPIES.map((f, i) => [`click_project_0${i + 1}`, `project:${i}`, f.label])];
 
 // A viewport point inside the proxy's projected box that the nearest-hit picker gives to it.
@@ -35,7 +36,8 @@ const pointFor = (page, [name, target]) => page.evaluate(([name, target]) => {
 const labelState = (page) => page.evaluate(() => {
   const el = document.getElementById('hover-label');
   return { text: el.textContent, shown: getComputedStyle(el).opacity === '1', cursor: document.querySelector('#scene').style.cursor,
-    glow: getComputedStyle(document.querySelector('.desk-glow')).opacity === '1', top: el.getBoundingClientRect().bottom };
+    glow: getComputedStyle(document.querySelector('.desk-glow')).display !== 'none' && getComputedStyle(document.querySelector('.desk-glow')).opacity === '1',
+    screen: window.__scene.getObjectByName('screen_plane').material.uniforms.hover.value, top: el.getBoundingClientRect().bottom };
 });
 
 const browser = await chromium.launch({ channel: 'chromium' });
@@ -49,13 +51,23 @@ try {
     await page.mouse.move(point.x, point.y);
     await page.waitForFunction((text) => document.getElementById('hover-label').textContent === text, object[2]);
     const state = await labelState(page);
-    assert.ok(state.shown && state.glow, `${object[0]}: label and glow show`);
+    const machine = object[1] === 'machine';
+    assert.ok(state.shown, `${object[0]}: label shows`);
+    assert.equal(state.glow, !machine, `${object[0]}: box glow ${machine ? 'hidden' : 'shows'}`);
+    assert.equal(state.screen, machine ? 1 : 0, `${object[0]}: screen glow`);
     assert.ok(state.top <= point.y + 1, `${object[0]}: the label sits above the pointer's object`);
     assert.equal(state.cursor, object[1] === 'treehouse' ? 'grab' : 'pointer', `${object[0]}: cursor`);
     assert.doesNotMatch(state.text, /\[|\(.\)|^\w\s*[:·-]/, `${object[0]}: no shortcut letters in "${state.text}"`);
   }
   await page.mouse.move(5, 450);
   await page.waitForFunction(() => !document.body.classList.contains('desk-hover'));
+  const plate = await pointFor(page, ['click_nameplate', null]);
+  assert.ok(plate, 'the nameplate is on screen');
+  await page.mouse.move(plate.x, plate.y);
+  await page.mouse.click(plate.x, plate.y);
+  await page.waitForTimeout(300);
+  assert.deepEqual(await page.evaluate(() => [document.body.classList.contains('desk-hover'), document.querySelector('#scene').style.cursor,
+    document.body.classList.contains('screen-active') || window.__lamp().mix !== 1]), [false, 'grab', false], 'the nameplate is inert');
 
   // Keyboard: every pressable object has a button that shows its label and a visible focus ring.
   const labels = [];

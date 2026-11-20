@@ -82,7 +82,8 @@ const DESKTOP = new THREE.Color(0, 0.216, 0.216);
 const EMISSION = 4.25;
 // Below the monitor's bottom plate, baked_crt_monitor is its stand (art/scripts/mvstand.py). Deep in the chin's shadow its
 // baked light is low and the lamp's specular greys it, so its shadows lift toward a warm floor and its specular
-// scales down (LOOK.standLift/standSpec); lit parts (the foot's top) stay as baked.
+// scales down (LOOK.standLift/standSpec); lit parts (the foot's top) stay as baked. The floor is lamp light, so it
+// fades with the lamp: a fixed floor outshone the dim lamp-off bake as a flat peach shape.
 const STAND_TOP = 0.935;
 
 export function createBakedLighting({ lightmap_lampOn, lightmap_lampOff, lightmap_screen }, extras) {
@@ -151,7 +152,7 @@ export function createBakedLighting({ lightmap_lampOn, lightmap_lampOff, lightma
           .replace(LIT_LIGHT, 'irradiance += lmLight() * PI;') + '\niblIrradiance = vec3(0.0);')
         .replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\nreflectedLight.directDiffuse = vec3(0.0);\n'
           + '#ifdef LM_PLASTIC\nreflectedLight.directSpecular *= plasticSpec;\n#endif\n'
-          + `#ifdef LM_STAND\nif (vWorldY < ${STAND_TOP.toFixed(3)}) {\n  vec3 lift = material.diffuseColor * standLift;\n  reflectedLight.indirectDiffuse += lift * lift / (reflectedLight.indirectDiffuse + lift + 1e-4);\n  reflectedLight.directSpecular *= standSpec;\n}\n#endif\n`
+          + `#ifdef LM_STAND\nif (vWorldY < ${STAND_TOP.toFixed(3)}) {\n  vec3 lift = material.diffuseColor * standLift * lampMix;\n  reflectedLight.indirectDiffuse += lift * lift / (reflectedLight.indirectDiffuse + lift + 1e-4);\n  reflectedLight.directSpecular *= standSpec;\n}\n#endif\n`
           + '#ifdef LM_SCREEN_GLASS\nreflectedLight.directSpecular *= glassSpec;\n#endif')
         .replace('#include <opaque_fragment>', GLASS_ALPHA);
     };

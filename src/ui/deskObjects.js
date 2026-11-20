@@ -8,7 +8,6 @@ export function createDeskObjects({ proxies, camera, canvas, actions }) {
   const objects = [
     ['machine', UI.objects.crt, proxies.crt],
     ['lamp', UI.objects.lamp, proxies.lampChain],
-    ['nameplate', UI.objects.nameplate, proxies.nameplate],
     ...FLOPPIES.map((f, i) => [`project:${i}`, f.label, proxies.projects[i]]),
     ['treehouse', UI.objects.treehouse, proxies.treehouse],
   ].map(([id, label, proxy]) => ({ id, label, box: new THREE.Box3().setFromObject(proxy) }));
@@ -62,6 +61,7 @@ export function createDeskObjects({ proxies, camera, canvas, actions }) {
     if (id === current) return;
     current = id;
     if (id) label.textContent = byId.get(id).label;
+    glow.hidden = id === 'machine'; // the CRT's own picture glows instead (crtMaterial.js)
     place();
   }
 

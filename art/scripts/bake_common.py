@@ -202,14 +202,16 @@ def smart_uv(objs, layer, margin, weight=None, seamed=()):
     bpy.ops.mesh.select_all(action='SELECT')
     bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=margin, scale_to_bounds=False)
     bpy.ops.object.mode_set(mode='OBJECT')
-    density = uv_per_area([o for o in objs if o not in seamed], layer) if seamed else 0
+    plain = [o for o in objs if o not in seamed]
     for o in seamed:
         select([o])
         bpy.ops.object.mode_set(mode='EDIT')
         bpy.ops.mesh.select_all(action='SELECT')
         bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0)
         bpy.ops.object.mode_set(mode='OBJECT')
-        k = math.sqrt(density / uv_per_area([o], layer))
+        if not plain:  # nothing to match; the caller rescales (lightmap_lock.pack)
+            continue
+        k = math.sqrt(uv_per_area(plain, layer) / uv_per_area([o], layer))
         for d in o.data.uv_layers[layer].data:
             d.uv *= k
     select(objs)

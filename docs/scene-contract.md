@@ -9,7 +9,7 @@ The handoff between the Blender scene and the site code. If public/models/scene.
 | click_crt | Low-poly invisible proxy around the monitor | Raycast target to zoom in |
 | click_lamp_chain | Proxy around the pull chain | Lamp toggle |
 | click_project_01 … click_project_06 | Proxies on each floppy or CD | Open that project's window |
-| click_nameplate, click_treehouse | Proxies | Easter eggs or About window |
+| click_nameplate, click_treehouse | Proxies | Treehouse: hover label only. Nameplate: inert (no label or action) |
 | window_view | Quad behind the window glass | Night-city video texture; until P5, its emissive texture is the baked city view, already display-referred (AgX), so show it unlit with tone mapping off |
 | lamp_bulb, crt_glow | Emissive meshes | Bloom sources; intensity tied to lamp state |
 | cam_overview, cam_screen, cam_mobile | Empties (or cameras) | Camera positions and look targets |

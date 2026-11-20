@@ -48,6 +48,7 @@ GROUPS = {
 }
 WEIGHTS = {name: w for w, names in GROUPS.items() for name in names}
 NOTE_WEIGHT = 3  # at 1x the 6 cm note had ~4 texels across, all under strokes, so unink had no paper to refill from
+MUG_WEIGHT = 2  # at MID the ~5 mm rim lip got about one texel, and sampling it read its neighbours' light as a jagged band
 LIGHTMAP_SPP, PREVIEW_SPP = 256, 32
 JOINS = {  # bake rule 1: same-material props become one object (mobile draw-call budget)
     'baked_pencilcup': ['baked_pencil', 'baked_pen'],
@@ -109,6 +110,8 @@ def set_state(snap, lights, emitters, screen_white, world):
 def texel_weight(o, f):
     if o.name == 'baked_crt_monitor' and (o.data.attributes['note'].data[f.index].value or o.data.attributes['pen'].data[f.index].value):
         return NOTE_WEIGHT * WEIGHTS[o.name]
+    if o.name == 'baked_mug':
+        return MUG_WEIGHT
     if o.name == 'baked_desk':  # the desk top is hero, its sides and legs less so
         return 1.0 if (o.matrix_world.to_3x3() @ f.normal).normalized().z > 0.7 else 0.5
     return WEIGHTS[o.name]
@@ -200,7 +203,7 @@ def build_uvs(objs, size, margin_px, relight):
     mon = bpy.data.objects['baked_crt_monitor']
     real = atlas_strokes_in(mon)
     if relight:
-        lightmap_lock.pack(objs, size, margin_px, texel_weight)
+        lightmap_lock.pack(objs, size, margin_px, texel_weight, relight, seamed=[mug])
     else:
         bc.smart_uv(objs, 'UVMap_Light', margin_px / size, texel_weight, seamed=[mug])
     lightmap_lock.save(objs)

@@ -178,7 +178,7 @@ function setLampOn(on, jump = !animation?.running) {
 
 function initDeskObjects() {
   deskObjects = createDeskObjects({ proxies: stage.proxies, camera, canvas: canvasEl, actions: {
-    machine: enterScreen, lamp: () => setLampOn(!lampState.on), nameplate: () => openWindow("about"),
+    machine: enterScreen, lamp: () => setLampOn(!lampState.on),
     ...Object.fromEntries(FLOPPIES.map((_, i) => [`project:${i}`, () => openProject(i)])),
   } });
   lampBtn = document.getElementById("lamp-toggle");
@@ -188,6 +188,11 @@ function initDeskObjects() {
 function onHoverTarget(target) {
   hover.target = target === "machine" ? 1 : 0;
   deskObjects?.show(target);
+  if (animation?.running || !stage) return;
+  // Reduced motion runs no loop: the screen's glow steps instead of easing.
+  hover.value = hover.target;
+  stage.crt.setHover(hover.value);
+  render();
 }
 
 function applyVoidColor() {
@@ -258,7 +263,7 @@ function openProject(i) {
   enterScreen();
 }
 
-// The corner menu, the nameplate and the credits link: zoom in and open a desktop window.
+// The corner menu and the credits link: zoom in and open a desktop window.
 export function openWindow(id) {
   pendingProject = { window: id };
   enterScreen();
@@ -871,7 +876,7 @@ export async function initScene(canvas) {
   interaction = createInteraction({ canvas, camera, proxies: stage.proxies, parallax,
     canOrbit: () => navigation.allowed(), isDragging: () => navigation.dragging,
     canLeaveScreen, overScreen, beginParallax, endParallax,
-    onHoverTarget, onLamp: () => setLampOn(!lampState.on), onNameplate: () => openWindow("about"),
+    onHoverTarget, onLamp: () => setLampOn(!lampState.on),
     onEnter: enterScreen, onProject: openProject, onExit: flyFromScreen });
 
   initDeskObjects();
@@ -893,7 +898,6 @@ export async function initScene(canvas) {
     }
   }
 
-  let hoverStyle = "";
   animation = createAnimationLoop((dt) => {
     perf?.begin();
 
@@ -914,11 +918,7 @@ export async function initScene(canvas) {
     lampState.tick(dt);
     const k = 1 - Math.exp(-HOVER_RATE * dt);
     hover.value += (hover.target - hover.value) * k;
-    const nextHoverStyle = hover.value.toFixed(3);
-    if (nextHoverStyle !== hoverStyle) {
-      hoverStyle = nextHoverStyle;
-      screenEl?.style.setProperty("--hover", hoverStyle);
-    }
+    stage.crt.setHover(hover.value);
 
     if (fly.value < 1 || dive.dir !== 0) render();
 

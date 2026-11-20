@@ -952,7 +952,6 @@ body {
      three gradients and every distinct value costs a full raster of the
      box. --settle is the crossfade's slight scale. */
   --zoom: 0;    /* 0 isometric, 1 arrived */
-  --hover: 0;   /* pointer over the machine */
   --scan: 12px; /* scanline pitch, in this box's own px */
   --blur: 0px;  /* CRT softness, likewise */
   --settle: 1;  /* the last fraction of the arrival's scale */
@@ -992,7 +991,7 @@ body.screen-zooming #screen {
      composited through a blur. The radius is in this box's px, so
      scene.js divides it by the current on-screen scale to keep it
      constant in device pixels. It goes to zero as the camera arrives. */
-  filter: blur(var(--blur)) brightness(calc(1 + var(--hover) * 0.09));
+  filter: blur(var(--blur));
   /* Scaled the last FADE_SCALE of the way in by the crossfade, so the
      page settles into the viewport rather than snapping to it. Exactly
      1 at both ends of the flight. */

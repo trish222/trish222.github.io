@@ -78,8 +78,9 @@ export async function createRoomScene({ renderer, boxWidth, animated, onProgress
   const screenPlane = named.get('screen_plane');
   const projects = FLOPPIES.map((_, i) => named.get(`click_project_0${i + 1}`));
   const proxies = { crt: named.get('click_crt'), lampChain: named.get('click_lamp_chain'), projects,
-    nameplate: named.get('click_nameplate'), treehouse: named.get('click_treehouse') };
-  for (const proxy of [proxies.crt, proxies.lampChain, proxies.nameplate, proxies.treehouse, ...projects]) proxy.material.visible = false;
+    treehouse: named.get('click_treehouse') };
+  // click_nameplate stays in the contract but is inert (Trish's call): About lives in the corner menu.
+  for (const proxy of [...Object.values(proxies).flat(), named.get('click_nameplate')]) proxy.material.visible = false;
 
   scene.updateMatrixWorld(true);
   const reflections = createReflections({ renderer, scene, bulb: named.get('lamp_bulb'), materials: lit, lighting });

@@ -110,6 +110,6 @@ export const UI = {
   back: 'back to desk',
   menu: 'menu',
   credits: 'credits',
-  objects: { crt: 'use computer', lamp: 'lamp', nameplate: 'about me', treehouse: 'cherry blossom treehouse' },
+  objects: { crt: 'use computer', lamp: 'lamp', treehouse: 'cherry blossom treehouse' },
   menuItems: [['about', 'About'], ['projects', 'Projects'], ['resume', 'Resume'], ['contact', 'Contact'], ['credits', 'Credits']],
 };

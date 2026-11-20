@@ -1,7 +1,7 @@
 import { desktopEvents } from './session.js';
 import { openWindow } from './windows.js';
 
-// A floppy, the nameplate or the corner menu asks for a window through `desk:open` once the
+// A floppy or the corner menu asks for a window through `desk:open` once the
 // camera lands on the screen; signed out, it signs in first and opens the window after.
 let pending = null;
 

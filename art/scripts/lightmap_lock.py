@@ -129,11 +129,11 @@ def islands(o):
     return [(np.unique(t), np.array(t)) for t in groups.values()]
 
 
-def pack(objs, size, gap, weight):
-    """Objects whose loops match the saved atlas get its UVs back; the rest are unwrapped and packed around
-    them. Raises if they can't fit."""
+def pack(objs, size, gap, weight, relight, seamed=()):
+    """Objects whose loops match the saved atlas get its UVs back; the rest, and the relit ones (so a texel weight
+    change takes), are unwrapped and packed around them. Raises if they can't fit."""
     saved = np.load(ATLAS)
-    fresh = [o for o in objs if o.name not in saved or saved[o.name].size != 2 * len(o.data.loops)]
+    fresh = [o for o in objs if o.name in relight or o.name not in saved or saved[o.name].size != 2 * len(o.data.loops)]
     locked = [o for o in objs if o not in fresh]
     for o in objs:
         uvl = o.data.uv_layers
@@ -143,7 +143,7 @@ def pack(objs, size, gap, weight):
     if not fresh:
         return
     ref = density([o for o in locked if o.name in DENSITY_REF], weight)
-    bc.smart_uv(fresh, 'UVMap_Light', gap / size, weight)
+    bc.smart_uv(fresh, 'UVMap_Light', gap / size, weight, [o for o in seamed if o in fresh])
     k = math.sqrt(ref / density(fresh, weight))
     taken = coverage(locked, size).copy()
     free = 1 - taken.mean()

@@ -97,12 +97,12 @@ export function createDesktopSnapshot({ width, height, onDraw }) {
         /* #screen-page is inset:0, so it needs a positioned parent — in
            here there is no #screen to resolve against. */
         `position:relative;width:${w}px;height:${h}px;overflow:hidden;` +
-        /* The three variables that live on #screen rather than on :root,
+        /* The two variables that live on #screen rather than on :root,
            so the copied tokens do not carry them. The bitmap is drawn
            crisp and unscaled; the blur and the settle scale are applied
            to the <img> at display time, where they can keep tracking the
            camera. */
-        `--blur:0px;--hover:0;--settle:1`,
+        `--blur:0px;--settle:1`,
     );
 
     const style = document.createElement("style");
