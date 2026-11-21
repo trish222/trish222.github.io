@@ -12,9 +12,8 @@ try {
       await page.waitForFunction(()=>performance.getEntriesByName('room:interactive').length);
       assert.equal(await page.locator('#scene-poster').count(),0);
       assert.equal(await page.evaluate(()=>document.body.classList.contains('no-scene')),false);
-      await page.waitForFunction(()=>document.body.classList.contains('intro-ready'));
-      await page.keyboard.press('Enter');
-      await page.waitForFunction(()=>document.body.classList.contains('orbit-live'));
+      await page.waitForFunction(()=>document.body.classList.contains('intro-ready'),null,{timeout:30000});
+      assert.equal(await page.evaluate(()=>document.body.classList.contains('orbit-live')),true);
       await page.locator('#lamp-toggle').focus();
       await page.keyboard.press('Space');
       assert.equal(await page.locator('#lamp-toggle').getAttribute('aria-pressed'),'false');

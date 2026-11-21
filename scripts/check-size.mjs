@@ -8,7 +8,7 @@ const LIMIT = 250;
 const CAPS = {
   'src/desktop/desktop.js': 452,
   'src/desktop/windows.js': 438,
-  'src/scene.js': 1002,
+  'src/scene.js': 1001,
   'src/style.css': 1453,
 };
 

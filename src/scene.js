@@ -271,7 +271,6 @@ export function openWindow(id) {
 
 function enterScreen() {
   if (flyFrom === "home" && navigation.offHome()) {
-
     navigation.setEnabled(false);
     navigation.returnHome(0.45, flyToScreen);
     return;
@@ -431,6 +430,7 @@ function logArrival() {
 
 function arrive() {
   fly.dir = 0;
+  intro?.at("screen");
 
   navigation.setEnabled(false);
   document.body.classList.remove("screen-zooming");
@@ -463,6 +463,7 @@ function depart() {
   navigation.setEnabled(true);
 
   snapshot?.invalidate();
+  intro?.at("desk");
 }
 
 // THE CROSSFADE
@@ -676,7 +677,6 @@ export function flyToScreen() {
 }
 
 export function flyFromScreen() {
-
   if (!screenEl || fly.value === 0 || dive.value > 0 ||
       (flyTl && flyTl.isActive() && flyTl.reversed())) return;
   // At the shared screen endpoint both paths coincide, so rebuilding here
@@ -686,7 +686,6 @@ export function flyFromScreen() {
     buildFlyPath(canvasEl.clientWidth, canvasEl.clientHeight);
   }
   document.body.classList.remove("screen-focused");
-  intro?.end();
   if (prefersReducedMotion()) return jumpFly(0);
   document.body.classList.add("screen-zooming");
   fly.dir = -1;
@@ -694,7 +693,6 @@ export function flyFromScreen() {
 }
 
 function onScreenClick(e) {
-
   if (fly.value > 0) return;
   e.preventDefault();
   if (!interaction?.firstTap(e, "machine")) flyToScreen();
@@ -750,7 +748,8 @@ export async function initScene(canvas) {
   renderer.setSize(w, h, false);
 
   performance.mark('room:renderer-ready');
-  intro = createIntro({ reducedMotion: prefersReducedMotion });
+  intro = createIntro({ boxWidth: SCREEN_BASE_W, mobile: isMobile, reducedMotion: prefersReducedMotion, enter: enterScreen,
+    onFill: (rect, options) => { stage?.crt.setFill(rect, options); if (stage && !animation?.running) render(); } });
   const loaded = await createRoomScene({ renderer, boxWidth: SCREEN_BASE_W, animated: !prefersReducedMotion(),
     onProgress: (e) => intro?.onProgress(e) });
   if (generation !== sceneGeneration) { loaded.dispose(); return false; }
@@ -884,7 +883,7 @@ export async function initScene(canvas) {
   const query = new URLSearchParams(location.search);
   const wait = !query.has('diagnostics') || query.has('intro');
   if (wait) jumpFly(1);
-  intro.start({ wait, flyOut: flyFromScreen });
+  intro.start({ wait, still: snapshot, flyOut: flyFromScreen });
   performance.mark('room:interactive');
   if (prefersReducedMotion()) return true;
 

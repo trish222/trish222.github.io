@@ -26,18 +26,6 @@
 </head>
 <body>
 
-  <!-- THE BOOT SCREEN: over everything while scene.glb downloads; its bar
-       is the real download (src/scene/intro.js). Removed without WebGL. -->
-  <div id="boot" class="ux">
-    <div class="boot-text">
-      <p>TRISH BIOS v4.51 &nbsp;Copyright 1995</p>
-      <p>Memory test: 65536K OK</p>
-      <p>Detecting desk lamp ... found</p>
-      <p>Loading scene<span class="boot-dots"></span></p>
-    </div>
-    <div class="boot-bar" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span></span></div>
-  </div>
-
   <!-- Ambient 3D backdrop; falls back to the flat teal desktop without WebGL -->
   <canvas id="scene"></canvas>
 
@@ -61,8 +49,19 @@
     <!-- Tube glass, picture, raster, glare: see src/overlay/crt.css. -->
     <div class="crt-tube" aria-hidden="true"></div>
     <div id="screen-glass">
-    <!-- The intro's "click me" (UI.introCta), over the login until it is pressed. -->
-    <div id="intro-screen" class="ux"><button id="intro-cta" type="button"></button></div>
+    <!-- THE BOOT SCREEN, on the tube from the first frame: its bar is the real load, then
+         "click me" (UI.introCta) takes its place. src/scene/intro.js; [data-live] parts are
+         drawn by the CRT shader from the desk, not in the still. -->
+    <div id="boot" class="ux">
+      <div class="boot-text">
+        <p>TRISH BIOS v4.51 &nbsp;Copyright 1995</p>
+        <p>Memory test: 65536K OK</p>
+        <p>Detecting desk lamp ... found</p>
+        <p>Loading scene<span class="boot-dots"></span></p>
+      </div>
+      <div class="boot-bar" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span data-live></span></div>
+      <p id="intro-cta"><span></span><span class="boot-cursor" data-live></span></p>
+    </div>
     <div id="screen-page" class="ui98">
       <div class="login-dialog win98" role="dialog" aria-labelledby="login-title">
         <div class="title-bar">

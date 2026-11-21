@@ -6,6 +6,11 @@ const ARRIVE_PAD = 1.2;
 const ARRIVE_PAD_MOBILE = 1.06;
 const COVER_BLEED = 0.985;
 
+// The screen's height as a fraction of the viewport's at arrival (camera straight on, centred).
+export function arrivalFill(screenAspect, viewAspect, mobile) {
+  return mobile ? 1 / ARRIVE_PAD_MOBILE : 1 / (ARRIVE_PAD * Math.max(1, screenAspect / viewAspect));
+}
+
 // Poses come from the GLB: the flight starts at cam_overview (cam_mobile on
 // narrow screens) and lands on cam_screen's axis, straight onto screen_plane.
 export function createCameraRig({ getStage, getCamera, getFov, getFlightStart,
@@ -46,7 +51,7 @@ export function createCameraRig({ getStage, getCamera, getFov, getFlightStart,
 
   function screenFrustum(aspect) {
     const { width, height } = surface();
-    return isMobile() ? ARRIVE_PAD_MOBILE * height : ARRIVE_PAD * Math.max(height, width / aspect);
+    return height / arrivalFill(width / height, aspect, isMobile());
   }
 
   function coverFrustum(aspect) {

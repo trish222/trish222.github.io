@@ -14,8 +14,11 @@ const REQUIRED = ['screen_plane', 'screen_glass', 'window_view', 'lamp_bulb', 'b
   ...FLOPPIES.map((_, i) => `click_project_0${i + 1}`)];
 
 // The glass's additive glare reads stronger than .crt-glare's screen blend at the same opacity;
-// this matches them at arrival (measured at the spot), so the hand-over keeps its brightness.
+// this matches them at arrival (measured at the spot, over the login), so the hand-over keeps its
+// brightness. A screen blend adds glare x (1 - picture), so over a darker picture (the boot screen)
+// the glass's glare grows by (1 - mean) / (1 - LOGIN_MEAN), mean the still's average sRGB level.
 const GLARE_MATCH = 0.45;
+const LOGIN_MEAN = 0.456;
 
 // The DOM quad's corners are the plane's UV corners, TL TR BR BL; glTF UVs start top-left.
 function averageColor(canvas) {
@@ -59,6 +62,7 @@ export async function createRoomScene({ renderer, boxWidth, animated, onProgress
   const lighting = createBakedLighting(lightmaps, extras);
   const glass = named.get('screen_glass').material;
   const glassTint = glass.opacity;
+  let glareScale = 1;
   const lit = [lighting.litMaterial(glass)];
   glass.defines.LM_SCREEN_GLASS = '';
   glass.roughness = 0.35; // blurs the 128 px room capture, so the dome's reflection of the desk reads as no shape
@@ -87,7 +91,7 @@ export async function createRoomScene({ renderer, boxWidth, animated, onProgress
   const applyLook = () => {
     windowView.applyLook(); crt.applyLook(); reflections.applyLook();
     glass.envMapIntensity = LOOK.screenEnv;
-    glass.emissiveIntensity = LOOK.screenGlare * GLARE_MATCH;
+    glass.emissiveIntensity = LOOK.screenGlare * GLARE_MATCH * glareScale;
   };
   const setTime = (t) => { crt.setTime(t); windowView.setTime(t); };
   const cams = { overview: pose(named.get('cam_overview')), screen: pose(named.get('cam_screen')),
@@ -112,7 +116,11 @@ export async function createRoomScene({ renderer, boxWidth, animated, onProgress
     map.colorSpace = THREE.SRGBColorSpace;
     map.flipY = false;
     crt.setMap(map);
-    lighting.setScreenColor(averageColor(canvas));
+    const average = averageColor(canvas);
+    lighting.setScreenColor(average);
+    const { r, g, b } = average.getRGB({}, THREE.SRGBColorSpace);
+    glareScale = (1 - (r + g + b) / 3) / (1 - LOGIN_MEAN);
+    applyLook();
   };
 
   const dispose = () => {
