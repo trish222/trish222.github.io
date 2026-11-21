@@ -339,3 +339,4 @@ Saved in `art/scene.blend`; nothing exported to `public/`, nothing committed.
 - Alternative screen OS theme (e.g. classic Mac OS or a green-phosphor terminal) per "Screen OS themes" in `docs/scene-contract.md`: own login/desktop markup, CSS and window renderer reading `CONTENT`; no change to content or the 3D scene.
 - Live-screen effects cost (SVG displacement filter, `backdrop-filter` bloom, animated grain) is unmeasured on Safari and mid-range hardware; profile in P7 and drop `screenCA`/`screenGlow` to 0 there if needed.
 - "True bulge" option for the zoomed-in screen (proposal, not built): show the shader-rendered snapshot with barrel while idle and swap to the flat live DOM on pointer/keyboard input.
+- `tests/cornerMenu.mjs` "the hint goes after the first interaction" is flaky (0/6 on 7433562, 2/6 with the intro click fix): it reads `#orbit-hint` opacity while the fade may still be running. Wait for the computed opacity instead of reading it once.

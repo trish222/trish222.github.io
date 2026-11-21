@@ -10,6 +10,7 @@ const SKIP_KEYS = new Set(['Enter', ' ', 'Escape']);
 export function createIntro({ reducedMotion }) {
   const boot = document.getElementById('boot');
   const bar = boot?.querySelector('.boot-bar');
+  const screen = document.getElementById('intro-screen');
   const cta = document.getElementById('intro-cta');
   let timer = 0, skip = null;
 
@@ -37,8 +38,9 @@ export function createIntro({ reducedMotion }) {
       if (!wait) return boot?.remove();
       document.body.classList.add('intro');
       cta.textContent = UI.introCta;
+      // The whole picture is the button (the CTA's click, and so Enter/Space, bubbles here).
       // Not on to #screen, whose own click handler would fly straight back in.
-      cta.onclick = (e) => { e.stopPropagation(); flyOut(); };
+      screen.onclick = (e) => { e.stopPropagation(); flyOut(); };
       const finish = () => {
         stopSkip();
         boot?.classList.add('gone');

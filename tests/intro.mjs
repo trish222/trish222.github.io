@@ -46,13 +46,35 @@ try {
     assert.equal(progress.at(-1), 100);
     assert.ok(progress.some((v) => v > 0 && v < 90), `the bar moved with the download: ${progress}`);
     await page.evaluate(() => { window.__introLog.zooming = false; });
-    await page.keyboard.press('Enter');
+    const key = reducedMotion === 'reduce' ? 'Space' : 'Enter';
+    await page.keyboard.press(key);
     await page.waitForFunction(() => document.body.classList.contains('orbit-live'));
     assert.equal(await page.evaluate(() => window.__introLog.zooming), reducedMotion !== 'reduce', `${reducedMotion}: ${reducedMotion === 'reduce' ? 'cuts' : 'flies'} to the desk`);
     assert.ok(Math.abs((await page.evaluate(() => window.__orbit())).swing) < 0.01, 'lands on the overview');
     assert.equal(await has(page, 'intro'), false);
     assert.deepEqual(errors, []);
-    console.log(`PASS ${reducedMotion}: boot bar ${progress.length} steps, screen, "${UI.introCta}", Enter to the desk`);
+    console.log(`PASS ${reducedMotion}: boot bar ${progress.length} steps, screen, "${UI.introCta}", ${key} to the desk`);
+    await page.close();
+  }
+
+  // A real mouse click (Enter above only reaches the focused button): #screen is pointer-events:none,
+  // so the CTA, and the picture around it, must take the click themselves.
+  for (const target of ['#intro-cta', 'picture']) {
+    const { page, errors } = await open();
+    await page.waitForFunction(() => document.body.classList.contains('intro-ready'));
+    await page.locator('#boot').waitFor({ state: 'hidden', timeout: 1000 });
+    const r = await page.locator('#intro-cta').boundingBox();
+    const [x, y] = target === 'picture' ? [r.x + r.width / 2, r.y - 60] : [r.x + r.width / 2, r.y + r.height / 2];
+    await page.mouse.click(x, y);
+    await page.waitForFunction(() => document.body.classList.contains('orbit-live'), null, { timeout: 5000 });
+    await page.waitForFunction(() => !document.body.classList.contains('screen-zooming'));
+    // Home is cam_overview with the tuned LOOK pitch/zoom/height applied (scene/camera.js home()).
+    const { swing, rise, enabled } = await page.evaluate(() => window.__orbit());
+    assert.ok(Math.abs(swing) < 0.01 && Math.abs(rise) < 0.01, `${target}: lands on the cam_overview home (${swing}, ${rise})`);
+    assert.ok(enabled, `${target}: the desk is interactive`);
+    assert.equal(await has(page, 'intro'), false);
+    assert.deepEqual(errors, []);
+    console.log(`PASS first visit: clicking ${target} flies out to the overview`);
     await page.close();
   }
 

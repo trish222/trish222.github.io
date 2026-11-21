@@ -49,6 +49,8 @@
   background: radial-gradient(ellipse at center, #0f1a17 0%, #060a09 80%);
 }
 body.intro #intro-screen { display: grid; }
+/* #screen is pointer-events:none (only the focused page opts back in), so the CTA must too. */
+body.intro-ready #intro-screen { pointer-events: auto; cursor: pointer; }
 #intro-cta {
   padding: 14px 34px;
   border: 2px solid rgb(183 240 176 / 0.7);
