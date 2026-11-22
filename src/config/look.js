@@ -53,4 +53,26 @@ export const LOOK = {
   screenEnv: 1,
   screenRim: 2.5,
   screenSheen: 0.35,
+  // The post chain (src/scene/post.js, filmEffect.js): bloom and halation in linear light before AgX,
+  // the grade after it in sRGB values. ca is px at the corners; caStart and vignetteOffset are radii (0 centre, 1 corner).
+  exposure: 1,
+  bloomIntensity: 1,
+  bloomThreshold: 0.2,
+  displayGlow: 0.35,
+  displayThreshold: 0.3,
+  halation: 0.35,
+  halationThreshold: 1,
+  glowRadius: 0.7, // bloom and halation share one blur
+  halationTint: [1, 0.45, 0.25],
+  soften: 0.25,
+  ca: 1.5,
+  caStart: 0.55,
+  vignette: 0.42,
+  vignetteOffset: 0.35,
+  grain: 0.04,
+  lift: 0.03,
+  liftColor: [0.75, 0.72, 0.8], // slightly cool shadows against the warm highlights
+  fade: 0.06,
+  warmth: 0.14,
+  saturation: 1.02,
 };

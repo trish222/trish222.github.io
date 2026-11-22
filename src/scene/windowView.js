@@ -26,7 +26,8 @@ vec3 rain(vec2 uv, float t) {
   return vec3(off, light);
 }`;
 
-// The bake's night city is already graded and AgX-mapped, so it bypasses lighting and tone mapping.
+// The bake's night city is already graded and AgX-mapped, so it bypasses lighting and tone mapping
+// (alpha 0.5 tells the post chain it is display-referred; filmEffect.js).
 // The look adds saturation, a contrast curve pivoting on mid-grey, and rain on the glass in front.
 export function createWindowView(mesh, animated) {
   const map = mesh.material.emissiveMap;
@@ -43,7 +44,8 @@ export function createWindowView(mesh, animated) {
   diffuseColor *= sampledDiffuseColor;
   diffuseColor.rgb += vec3(0.55, 0.65, 0.8) * wet.z * rainStreaks * rainAmount * 0.12;
   diffuseColor.rgb = max(mix(vec3(dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722))), diffuseColor.rgb, windowSaturation), 0.0);
-  diffuseColor.rgb = 0.18 * pow(diffuseColor.rgb / 0.18, vec3(windowContrast));`);
+  diffuseColor.rgb = 0.18 * pow(diffuseColor.rgb / 0.18, vec3(windowContrast));`)
+      .replace('#include <dithering_fragment>', '#include <dithering_fragment>\n  gl_FragColor.a = 0.5;');
   };
   return {
     applyLook() {

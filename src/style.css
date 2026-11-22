@@ -92,9 +92,9 @@
   /* Must match BACKGROUND in src/scene.js: the 3D canvas stops at the taskbar,
      so this is what shows in the strip the taskbar vacates during the
      fly-in. The room is a finite diorama floating in this colour, so
-     it is the void rather than the floor now — and src/tonemap.js is
-     what keeps the rendered void landing on exactly this value
-     despite the tone mapping sitting after it. */
+     it is the void rather than the floor now. It lands on exactly this
+     value because it is cleared at alpha 0, which the post chain
+     (src/scene/filmEffect.js) leaves untouched. */
   --scene-void: #1c1a2a;
   /* Chrome: title bars, buttons, menus, icon labels, the taskbar, the
      login dialog. The vendored 98.css falls back to --font too, so

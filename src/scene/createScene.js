@@ -5,11 +5,12 @@ import { labelFloppies } from './floppyLabels.js';
 import { createWindowView } from './windowView.js';
 import { createCrtMaterial } from './crtMaterial.js';
 import { createReflections } from './reflections.js';
+import { markEmitters } from './post.js';
 import { LOOK } from '../config/look.js';
 import { crtGlare } from '../config/crt.js';
 import { FLOPPIES } from '../content/content.js';
 
-const REQUIRED = ['screen_plane', 'screen_glass', 'window_view', 'lamp_bulb', 'baked_floppy_labels',
+const REQUIRED = ['screen_plane', 'screen_glass', 'window_view', 'lamp_bulb', 'crt_glow', 'baked_floppy_labels',
   'click_crt', 'click_lamp_chain', 'click_nameplate', 'click_treehouse', 'cam_overview', 'cam_screen', 'cam_mobile',
   ...FLOPPIES.map((_, i) => `click_project_0${i + 1}`)];
 
@@ -75,6 +76,15 @@ export async function createRoomScene({ renderer, boxWidth, animated, onProgress
       if (!material.isMeshBasicMaterial) lit.push(material);
     });
   }
+  // Glass keeps the alpha of what is behind it: that alpha tells the post chain what to tone-map (filmEffect.js).
+  scene.traverse((o) => {
+    if (!o.material?.transparent) return;
+    if (o.material.blending === THREE.NormalBlending) {
+      Object.assign(o.material, { blending: THREE.CustomBlending, blendSrc: THREE.SrcAlphaFactor, blendDst: THREE.OneMinusSrcAlphaFactor });
+    }
+    Object.assign(o.material, { blendSrcAlpha: THREE.ZeroFactor, blendDstAlpha: THREE.OneFactor });
+  });
+  markEmitters([named.get('lamp_bulb'), named.get('crt_glow')]);
   const windowView = createWindowView(named.get('window_view'), animated);
   windowView.applyLook();
   await labelFloppies(named.get('baked_floppy_labels').material);

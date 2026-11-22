@@ -91,34 +91,6 @@ export function installExperienceDiagnostics(context) {
     if (deg !== undefined) context.setFov(deg);
     return { fov: context.fov };
   };
-  /* Switches the tone-mapping operator on a live page and re-derives
-     the void's pre-image with it, which is what let AgX and ACES be
-     compared off one build rather than two. No argument just reports.
-     Materials recompile themselves: three's `setProgram` treats
-     `renderer.toneMapping` as part of the program cache key. */
-  window.__tonemap = (name) => {
-    if (name !== undefined) {
-      const m = context.TONE_MAPPINGS[name];
-      if (m === undefined) return { error: `unknown: ${name}`, known: Object.keys(context.TONE_MAPPINGS) };
-      context.renderer.toneMapping = m;
-      context.applyVoidColor();
-      context.render();
-    }
-    const found = Object.entries(context.TONE_MAPPINGS)
-      .find(([, v]) => v === context.renderer.toneMapping);
-    const target = new THREE.Color(context.background);
-    return {
-      tonemap: found ? found[0] : context.renderer.toneMapping,
-      exposure: context.renderer.toneMappingExposure,
-      void: context.background,
-      /* What the clear is actually set to, and what the void would
-         have come out as with no pre-image — the error this is all
-         here to remove. */
-      background: `#${context.scene.background.getHexString()}`,
-      untreated: `#${context.tonemapForward(target, THREE.NoToneMapping, context.renderer.toneMappingExposure).getHexString()}`,
-    };
-  };
-
   window.__lamp = (next = {}) => {
     if (next.on !== undefined) context.setLampOn(next.on, next.jump !== false);
     return {

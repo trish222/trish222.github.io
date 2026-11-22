@@ -54,6 +54,14 @@ const SLIDERS = [
   ['screenSheen', 0, 1, 0.01],
   ['monitorTint', 0.5, 1.2, 0.01, 0], ['monitorTint', 0.5, 1.2, 0.01, 1], ['monitorTint', 0.5, 1.2, 0.01, 2],
   ['caseTint', 0.5, 3, 0.01, 0], ['caseTint', 0.5, 3, 0.01, 1], ['caseTint', 0.5, 3, 0.01, 2],
+  ['exposure', 0.25, 3, 0.01],
+  ['bloomIntensity', 0, 4, 0.01], ['bloomThreshold', 0, 2, 0.01], ['displayGlow', 0, 2, 0.01], ['displayThreshold', 0, 1, 0.01],
+  ['halation', 0, 2, 0.01], ['halationThreshold', 0, 4, 0.01], ['glowRadius', 0, 1, 0.01],
+  ...[0, 1, 2].map((i) => ['halationTint', 0, 1, 0.01, i]),
+  ['soften', 0, 1, 0.01], ['ca', 0, 6, 0.05], ['caStart', 0, 1, 0.01],
+  ['vignette', 0, 1, 0.01], ['vignetteOffset', 0, 1, 0.01], ['grain', 0, 0.2, 0.002],
+  ['lift', 0, 0.2, 0.002], ...[0, 1, 2].map((i) => ['liftColor', 0, 1, 0.01, i]),
+  ['fade', 0, 0.5, 0.005], ['warmth', -0.2, 0.2, 0.002], ['saturation', 0, 2, 0.01],
 ];
 const CAMERA = ['overviewZoom', 'overviewHeight', 'overviewPitch'];
 // Frames the lamp like the r14 lamp panel (art/previews/b2-lamp-before-after.png).
@@ -77,6 +85,7 @@ export function installLampTuning(context, stage) {
   let pose = CAMERA.map((k) => LOOK[k]).join();
   function apply() {
     stage.applyLook();
+    context.post.applyLook();
     applyScreenFx();
     context.navigation.applyLimits();
     context.render();

@@ -48,7 +48,6 @@ try {
       passes: c.passes.map((p, i) => ({ name: ['RenderPass', 'OutputPass'][i], enabled: p.enabled })),
       targets: [c.renderTarget1, c.renderTarget2].map(t => ({ width: t.width, height: t.height, samples: t.samples, type: t.texture.type })),
       camera: { position: window.__camera.position.toArray(), quaternion: window.__camera.quaternion.toArray(), fov: window.__camera.fov },
-      toneMapping: window.__tonemap(),
       meshes, triangles, materials: materials.size, textures: [...textures.values()] };
   });
   await writeFile(`${output}/inventory.json`, JSON.stringify(inventory, null, 2));

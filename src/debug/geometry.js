@@ -39,6 +39,8 @@ export function installGeometryDiagnostics({ scene, camera, renderer, render }) 
   // Void is any pixel no geometry covers. It renders as exact black, which crushed shadows reach too, so
   // colour cannot tell them apart: redraw every mesh flat white and call whatever stays black void.
   // (The material is swapped per mesh because the render pass resets scene.overrideMaterial.)
+  // The film look's vignette takes white down to ~125 in the corners; the void stays at 28.
+  const VOID_MAX = 64;
   const coverage = new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false, side: THREE.DoubleSide });
   const read = (gl) => {
     const buf = new Uint8Array(gl.drawingBufferWidth * gl.drawingBufferHeight * 4);
@@ -67,7 +69,7 @@ export function installGeometryDiagnostics({ scene, camera, renderer, render }) 
     const { gl, buf, mask } = frameAndMask();
     const w = gl.drawingBufferWidth;
     const h = gl.drawingBufferHeight;
-    const isVoid = (i) => mask[i] < 128;
+    const isVoid = (i) => mask[i] < VOID_MAX;
     const lumas = [];
     for (let i = 0; i < buf.length; i += 4) {
       if (isVoid(i)) continue;
@@ -96,9 +98,9 @@ export function installGeometryDiagnostics({ scene, camera, renderer, render }) 
     const w = gl.drawingBufferWidth;
     const h = gl.drawingBufferHeight;
     let voids = 0;
-    for (let i = 0; i < mask.length; i += 4) if (mask[i] < 128) voids++;
+    for (let i = 0; i < mask.length; i += 4) if (mask[i] < VOID_MAX) voids++;
     const centre = (Math.floor(h / 2) * w + Math.floor(w / 2)) * 4;
-    return { voidShare: Number((voids / (w * h)).toFixed(3)), centreIsVoid: mask[centre] < 128 };
+    return { voidShare: Number((voids / (w * h)).toFixed(3)), centreIsVoid: mask[centre] < VOID_MAX };
   };
 return () => {
   delete window.__fit;

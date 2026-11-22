@@ -12,6 +12,7 @@ const HOVER_GLOW = 0.3;
 // The boot screen's bar fill and cursor are left out of the still and drawn here, so they move without
 // a redraw: `fill` is a rect in uv, optionally striped like .boot-bar (10 of every 13 px) or blinking.
 const fragmentShader = `#define HOVER_GLOW ${HOVER_GLOW.toFixed(2)}
+#include <tonemapping_pars_fragment>
 uniform sampler2D map;
 uniform vec3 idle, tint, fillColor;
 uniform vec4 fill;
@@ -61,9 +62,8 @@ void main() {
   col *= 1.0 + flicker * sin(time * 47.0) * sin(time * 3.1);
   gl_FragColor = vec4(col * (1.0 - smoothstep(1.0 - soft - fwidth(d), 1.0, d)), 1.0);
   // The live DOM is never tone-mapped, so AgX fades out on the way in; at arrival the picture matches it.
-  vec3 raw = gl_FragColor.rgb;
-  #include <tonemapping_fragment>
-  gl_FragColor.rgb = mix(gl_FragColor.rgb, raw, arrival);
+  // Alpha 0.5 marks the result display-referred, so the post chain does not map it again (filmEffect.js).
+  gl_FragColor = vec4(mix(AgXToneMapping(gl_FragColor.rgb), gl_FragColor.rgb, arrival), 0.5);
   #include <colorspace_fragment>
 }`;
 

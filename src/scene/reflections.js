@@ -54,8 +54,10 @@ export function createReflections({ renderer, scene, bulb, materials, lighting }
   lighting.uniforms.envMapOff.value = envOff.texture;
   for (const m of materials) m.envMap = envOn.texture;
 
+  const bulbGlow = bulb.material.emissiveIntensity;
   function setLampMix(v) {
     lighting.setLampMix(v);
+    bulb.material.emissiveIntensity = bulbGlow * v; // its bloom (post.js) fades with the lamp
     spec.intensity = LOOK.specIntensity * v;
     if (shade) shade.emissiveIntensity = LOOK.shadeEmissive * v;
   }

@@ -175,10 +175,14 @@ Generated in P0 from [visual-plan.md](visual-plan.md). Work the first unchecked 
 
 ## P6 — Look-dev
 
-- [ ] Add pmndrs `postprocessing` (ask first; it is a new dependency) with one EffectPass: AgX tone mapping, selective bloom on `lamp_bulb`/`crt_glow`, vignette, grain, and mild edge chromatic aberration, plus a dev-only tuning panel. Done when: the post chain is one merged pass.
-- [ ] The post chain must not tone-map the window view twice (it ships already AgX-mapped): render it after tone mapping, exclude it via a mask/selective pass, or apply an inverse-AgX lookup. Done when the window matches its look without the composer.
-- [ ] Delete `src/tonemap.js` once the AgX pass replaces it. Done when: nothing imports it.
-- [ ] Capture `cam_overview` at 1440×900 and 390×844 with the `scripts/review/` capture tools, set the captures next to `docs/refs/`, and write `docs/lookdev-review.md` covering lighting, color and detail differences with fixes. Done when: code-side fixes are applied and the Blender-side fixes are listed for Trish.
+- [x] Add pmndrs `postprocessing` (ask first; it is a new dependency) with one EffectPass: AgX tone mapping, selective bloom on `lamp_bulb`/`crt_glow`, vignette, grain, and mild edge chromatic aberration, plus a dev-only tuning panel. Done when: the post chain is one merged pass.
+  - Note: `postprocessing` 6.39.6 (Trish asked for it, 2026-11-22). `src/scene/post.js` + `filmEffect.js`: one EffectPass with one effect. It does AgX once (`renderer.toneMapping` is `NoToneMapping`), then the grade (warm highlights, cool lift, fade, saturation), vignette, grain, the softness tent and edge-only CA. Its update first draws a quarter-res glow source plus one MipmapBlurPass: emitter bloom (alpha 2 marker on `lamp_bulb`/`crt_glow`, depth-correct without a re-render), `displayGlow` (screen and city) and warm halation. SelectiveBloomEffect plus a second BloomEffect cost ~9 ms at DPR 2, so they were dropped. The bulb's emissive × lampMix (`reflections.js`). The film look fades on the CRT's arrival curve; crt.mjs peaks at 2.5 (was ≤ 2.1, cap 3). Every key is in LOOK and the `?debug` panel. MSAA 4 only below DPR 2. The geometry diagnostics render with still grain; the void mask threshold is 64 (the vignette takes white to ~125). Frame time in `docs/lookdev-review.md`. Known: `lamp_bulb` and `crt_glow` are both occluded from every view, so their bloom shows nothing yet (Blender items in the review).
+- [x] The post chain must not tone-map the window view twice (it ships already AgX-mapped): render it after tone mapping, exclude it via a mask/selective pass, or apply an inverse-AgX lookup. Done when the window matches its look without the composer.
+  - Note: the window view and the CRT write alpha 0.5 (display-referred), so the film effect grades them but never maps them. The CRT keeps its own AgX → raw blend. The void clears at alpha 0 and is left exact. Glass blends keep the alpha behind them. `tests/lamp.mjs`: window 19 → 19 across the toggle.
+- [x] Delete `src/tonemap.js` once the AgX pass replaces it. Done when: nothing imports it.
+  - Note: deleted with `__tonemap` (experience.js, lifecycle.mjs, render-quality.mjs) and the `TONE_MAPPINGS`/`tonemapForward` diagnostics.
+- [x] Capture `cam_overview` at 1440×900 and 390×844 with the `scripts/review/` capture tools, set the captures next to `docs/refs/`, and write `docs/lookdev-review.md` covering lighting, color and detail differences with fixes. Done when: code-side fixes are applied and the Blender-side fixes are listed for Trish.
+  - Note: `capture.mjs` also shoots lamp off. Captures are in `docs/refs/lookdev/`; [docs/lookdev-review.md](lookdev-review.md) lists them. Code fixes applied: `displayGlow`, halation, the grade and vignette values. Tuned values left alone, with proposals in the review: `glassEnvIntensity` (the iced coffee reads milky under linear-light glass blending; 2.2 fixes it), `windowSaturation`/`windowContrast`. Blender list for Trish: bulb visible or diffuser as emitter, `crt_glow` occluded, tighter lamp pool, lamp-off CRT spill, warm curtains, clutter props, plastic grime, wall texture.
 
 ## P7 — Mobile and fallbacks
 
@@ -326,7 +330,10 @@ Saved in `art/scene.blend`; nothing exported to `public/`, nothing committed.
 - The `blendermcp_*` add-on properties still export as scene extras (harmless; they disappear if the add-on is disabled when baking).
 - `npm run preview` binds to `::1` on this Mac; the tests need `npx vite preview --port 4320 --host 127.0.0.1`.
 - The iced-coffee drink may show the same faint lightmap panels the mug had; give it a seam unwrap via `smart_uv(seamed=...)` if Trish sees them.
-- `scripts/review/render-quality.mjs` reads `window.__composer`, which no longer exists (composer dropped in P4); rework it with the P6 post chain.
+- `scripts/review/render-quality.mjs` reads `window.__composer` (three's EffectComposer API, gone since P4); rework it against the P6 post chain (`post.js`), e.g. by exposing the composer through the diagnostics.
+- P6 post chain on mobile: profile the composer (HalfFloat buffer, glow pass) on a mid-range phone in P7; DPR 2 phones already skip MSAA.
+- DPR 1 desktops pay ~5 ms for MSAA 4 on the HalfFloat buffer (9.6 → 14.9 ms); try MSAA 2 there if the budget gets tight.
+- Glass composites in linear light now; re-tune `glassEnvIntensity` (the iced coffee reads milky; 2.2 looked right) and, if the hand-over margin shrinks further, `GLARE_MATCH` (crt.mjs 2.5 of 3).
 - The KTX2 lightmap fix made the earlier B2 banding check moot (it ran on decoded data); re-run it on the shipped lampOn if the desk falloff ever looks banded.
 - `tests/alignment.mjs` hung once inside `npm test` (2026-11-16, after `interaction.mjs`; no output for 10 min) and passed when rerun alone. Add a per-test timeout so a hang fails instead of stalling, and find the wait that never resolves.
 - The nameplate face is `nameplate_engraving` (unlit albedo × lightmap) and reads pale cream vs r14's warm brass; darken/warm its texture in Blender or add it to the reflective list.

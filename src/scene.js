@@ -11,14 +11,14 @@ import { createDesktopSnapshot } from "./overlay/desktopSnapshot.js";
 import { createLampState } from "./lamp.js";
 import * as THREE from "three";
 import { gsap } from "gsap/gsap-core";
-import { tonemapForward, TONE_MAPPINGS } from "./tonemap.js";
+import { createPost } from "./scene/post.js";
 import { FLOPPIES } from "./content/content.js";
 import { createDeskObjects } from "./ui/deskObjects.js";
 import { createIntro } from "./scene/intro.js";
 
 let interaction = null;
 
-const diagnosticNames = new Set(["__cam", "__camera", "__diveTo", "__enter", "__flyFrom", "__flyTo", "__fov", "__lamp", "__orbit", "__pick", "__scene", "__stillReady", "__tonemap"]);
+const diagnosticNames = new Set(["__cam", "__camera", "__diveTo", "__enter", "__flyFrom", "__flyTo", "__fov", "__lamp", "__orbit", "__pick", "__scene", "__stillReady"]);
 let sceneGeneration = 0;
 
 // Experience state and rendering configuration
@@ -60,6 +60,7 @@ function syncRenderQuality() {
   const ratio = scenePixelRatio();
   if (renderer.getPixelRatio() === ratio) return;
   renderer.setPixelRatio(ratio);
+  post?.resize();
 }
 
 // LOOKING AROUND
@@ -98,6 +99,7 @@ let fly = { value: 0, dir: 0 };
 
 let dive = { value: 0, dir: 0 };
 let camera = null;
+let post = null;
 let stage = null;
 
 let lampLevel = LAMP_START_ON ? 1 : 0;
@@ -197,7 +199,7 @@ function onHoverTarget(target) {
 
 function applyVoidColor() {
   if (!scene || !renderer) return;
-  scene.background = new THREE.Color(BACKGROUND);
+  renderer.setClearColor(BACKGROUND, 0); // alpha 0: the post chain leaves the void exact (filmEffect.js)
 }
 
 // CAMERA
@@ -373,17 +375,11 @@ function updateScreenOverlay(transformOnly = false) {
 
   const snap = (v, step) => Math.round(v / step) * step;
   let blur = (0.9 / scale) * (1 - fly.value);
-  if (cameraMoving()) {
-    blur = snap(blur, BLUR_STEP);
-  }
+  if (cameraMoving()) blur = snap(blur, BLUR_STEP);
   set("--blur", `${blur.toFixed(2)}px`);
 }
 
-// HOVER, AND THE CURSOR
-
-// THE FLY-IN
-
-function render() {
+function render(grainSeed) {
   syncRenderQuality();
   if (!prefersReducedMotion()) stage.setTime(performance.now() / 1000);
   const shifted = beginParallax();
@@ -391,7 +387,7 @@ function render() {
   if (shifted || parallaxPresented) updateScreenOverlay(true);
   parallaxPresented = shifted;
   try {
-    renderer.render(scene, camera);
+    post.render(grainSeed ?? (prefersReducedMotion() ? 0 : performance.now() / 1000));
     deskObjects?.place();
   } finally {
     if (shifted) endParallax();
@@ -401,6 +397,7 @@ function render() {
 function setFly(p) {
   fly.value = p;
   stage.setZoom(p);
+  post?.setZoom(p);
   applyFly(p, canvasEl.clientWidth, canvasEl.clientHeight);
   updateScreenOverlay();
 
@@ -732,7 +729,7 @@ export async function initScene(canvas) {
   // Construct the actual renderer once; a throwaway capability probe
   // initializes a second graphics context and cannot test this canvas.
   try {
-    renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
   } catch {
     return false;
   }
@@ -742,8 +739,8 @@ export async function initScene(canvas) {
 
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-  // AgX at exposure 1, as the bake previews (preview_baked.py) and the Cycles references use.
-  renderer.toneMapping = THREE.AgXToneMapping;
+  // Materials write linear light; AgX (exposure 1, as preview_baked.py and the Cycles references) runs once, in post.js.
+  renderer.toneMapping = THREE.NoToneMapping;
   renderer.setPixelRatio(scenePixelRatio());
   renderer.setSize(w, h, false);
 
@@ -760,6 +757,7 @@ export async function initScene(canvas) {
   applyLampLevel(lampLevel);
   performance.mark('room:geometry-ready');
   camera = buildCamera();
+  post = createPost(renderer, scene, camera);
 
   scene.updateMatrixWorld(true);
   SCREEN_TARGET.copy(stage.projectionSurface.center);
@@ -777,11 +775,10 @@ export async function initScene(canvas) {
       import('./debug/geometry.js'), import('./debug/experience.js'),
     ]);
     if (generation !== sceneGeneration) return false;
-    disposeDiagnostics = installGeometryDiagnostics({ scene, camera, renderer, render });
+    disposeDiagnostics = installGeometryDiagnostics({ scene, camera, renderer, render: () => render(0) }); // pixel reads see still grain
     const diagnostics = {
       get FACING() { return facingAngle; },
       get LAMP_FADE_S() { return LAMP_FADE_S; },
-      get TONE_MAPPINGS() { return TONE_MAPPINGS; },
       get applyFade() { return applyFade; },
       get applyVoidColor() { return applyVoidColor; },
       get background() { return BACKGROUND; },
@@ -818,7 +815,7 @@ export async function initScene(canvas) {
       get setLampOn() { return setLampOn; },
       get snapshot() { return snapshot; },
       get tanHalfFov() { return tanHalfFov(); },
-      get tonemapForward() { return tonemapForward; },
+      get post() { return post; },
       get updateScreenOverlay() { return updateScreenOverlay; },
     };
     installExperienceDiagnostics(diagnostics);
@@ -841,6 +838,7 @@ export async function initScene(canvas) {
     if (!width || !height) return;
     syncRenderQuality();
     renderer.setSize(width, height, false);
+    post.resize();
 
     buildFlyPath(width, height);
 
@@ -994,8 +992,9 @@ export function disposeScene() {
   dive = { value: 0, dir: 0 };
   screenEl = null;
   canvasEl = null;
+  post?.dispose();
   renderer?.dispose();
   hover = { target: 0, value: 0 };
-  renderer = scene = camera = null;
+  renderer = scene = camera = post = null;
   onResize = onScreenInput = null;
 }

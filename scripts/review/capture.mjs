@@ -20,6 +20,11 @@ try {
       return { width: innerWidth, classes: document.body.className, hint: {hidden: hint.hidden, opacity: style.opacity, display: style.display}, camera: window.__camera.position.toArray() };
     }));
     await page.screenshot({ path: `${output}/home-${width}.png` });
+    await page.evaluate(() => window.__lamp({ on: false }));
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: `${output}/home-${width}-lampoff.png` });
+    await page.evaluate(() => window.__lamp({ on: true }));
+    await page.waitForTimeout(300);
     await page.evaluate(() => window.__enter());
     await page.waitForFunction(() => document.body.classList.contains('screen-focused'));
     await page.waitForTimeout(400);
