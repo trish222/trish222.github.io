@@ -24,6 +24,7 @@ const SLIDERS = [
   ['overviewHeight', -0.2, 0.3, 0.005],
   ['overviewPitch', -5, 15, 0.1],
   ['parallaxStrength', 0, 1.5, 0.05],
+  ['pivotDepth', 0.2, 2, 0.01],
   ['yawLimit', 0, 40, 0.5],
   ['pitchUpLimit', 0, 25, 0.5],
   ['pitchDownLimit', 0, 25, 0.5],
@@ -63,7 +64,7 @@ const SLIDERS = [
   ['lift', 0, 0.2, 0.002], ...[0, 1, 2].map((i) => ['liftColor', 0, 1, 0.01, i]),
   ['fade', 0, 0.5, 0.005], ['warmth', -0.2, 0.2, 0.002], ['saturation', 0, 2, 0.01],
 ];
-const CAMERA = ['overviewZoom', 'overviewHeight', 'overviewPitch'];
+const CAMERA = ['overviewZoom', 'overviewHeight', 'overviewPitch', 'lookMode', 'pivotDepth'];
 // Frames the lamp like the r14 lamp panel (art/previews/b2-lamp-before-after.png).
 const CLOSE_UP = { position: new THREE.Vector3(-0.45, 1.12, 0.85), target: new THREE.Vector3(-0.54, 0.93, -0.04) };
 
@@ -118,6 +119,11 @@ export function installLampTuning(context, stage) {
     return b;
   };
   button('lamp', () => context.setLampOn(!context.lampOn, false));
+  const mode = button(`look: ${LOOK.lookMode}`, () => {
+    LOOK.lookMode = LOOK.lookMode === 'turn' ? 'orbit' : 'turn';
+    mode.textContent = `look: ${LOOK.lookMode}`;
+    apply();
+  });
 
   let saved = null;
   button('close-up', () => {

@@ -42,12 +42,18 @@ export function createCameraRig({ getStage, getCamera, getFov, getFlightStart,
     cam.updateProjectionMatrix();
   }
 
-  // Orbit pivot: on the overview's line of sight, as far out as the screen.
-  const seatedTarget = new THREE.Vector3();
-  function homeTarget() {
+  // A point on the overview's line of sight, `depth` times as far out as the screen.
+  function alongSight(out, depth) {
     const { position, forward } = home();
-    return seatedTarget.copy(position).addScaledVector(forward, position.distanceTo(surface().center));
+    return out.copy(position).addScaledVector(forward, depth * position.distanceTo(surface().center));
   }
+  const seatedTarget = new THREE.Vector3();
+  const homeTarget = () => alongSight(seatedTarget, 1);
+  // Look-around pivot (LOOK.lookMode): "orbit" swings the camera around LOOK.pivotDepth; "turn" puts the
+  // pivot a hair in front of the eye, so the camera rotates in place (OrbitControls needs a radius above 0).
+  const TURN_DEPTH = 0.001;
+  const orbitTarget = new THREE.Vector3();
+  const orbitPivot = () => alongSight(orbitTarget, LOOK.lookMode === 'turn' ? TURN_DEPTH : LOOK.pivotDepth);
 
   function screenFrustum(aspect) {
     const { width, height } = surface();
@@ -69,7 +75,13 @@ export function createCameraRig({ getStage, getCamera, getFov, getFlightStart,
     const fromTarget = homeTarget().clone();
     const fromOffset = home().position.clone().sub(fromTarget);
     const flyStart = getFlightStart();
-    if (flyStart) fromOffset.setFromSpherical(orbitSpherical.set(getOrbitRadius(), flyStart.phi, flyStart.theta));
+    if (flyStart) {
+      // Start from the swung pose, aimed at a point as far out as the screen whatever the pivot is.
+      const dist = fromOffset.length();
+      fromOffset.setFromSpherical(orbitSpherical.set(1, flyStart.phi, flyStart.theta));
+      fromTarget.copy(orbitPivot()).addScaledVector(fromOffset, getOrbitRadius() - dist);
+      fromOffset.multiplyScalar(dist);
+    }
     const toDist = distFor(screenFrustum(width / height));
     flyPath = {
       fromTarget,
@@ -121,6 +133,6 @@ export function createCameraRig({ getStage, getCamera, getFov, getFlightStart,
     return f;
   }
 
-  return { homeTarget, screenFrustum, coverFrustum, buildFlyPath, applyFly, applyDive,
+  return { homeTarget, orbitPivot, screenFrustum, coverFrustum, buildFlyPath, applyFly, applyDive,
     target: flyTarget, pose: flyPose, resetPath() { flyPath = null; } };
 }

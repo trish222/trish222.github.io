@@ -11,8 +11,14 @@ const RETURN_EASE = "power2.out";
 const RETURN_FAST_S = 0.45;
 const ORBIT_EPS = THREE.MathUtils.degToRad(0.2);
 const ORBIT_SETTLE_MS = 120;
+// Where the yaw limit would show the void past the side walls (measured at the pitch limits): turning in place,
+// the frame's edge sits yaw + half the horizontal FOV off the overview's sight line, and the walls end 49.4-50.6°
+// out (tests/debug.mjs); orbiting, a landscape phone's wide frame runs out at about 30.5 × 1.79 / aspect
+// (tests/lookaround.mjs).
+const TURN_WALL = 48.5;
+const LANDSCAPE_ASPECT = 1.7;
 
-export function createNavigation({ homeTarget, isAtDesk, reducedMotion, hasFrame,
+export function createNavigation({ orbitPivot, isAtDesk, isHandheld, reducedMotion, hasFrame,
   onChange, render, resetParallax, onDisable }) {
   let camera = null;
   let canvasEl = null;
@@ -35,9 +41,18 @@ export function createNavigation({ homeTarget, isAtDesk, reducedMotion, hasFrame
 
   const orbitLeash = { min: 0, max: 0, softMin: 0, softMax: 0 };
 
+  function yawLimit() {
+    if (LOOK.lookMode === 'turn') {
+      const halfWidth = THREE.MathUtils.radToDeg(Math.atan(Math.tan(rad(camera.fov) / 2) * camera.aspect));
+      return Math.min(LOOK.yawLimit, TURN_WALL - halfWidth);
+    }
+    return isHandheld() ? LOOK.yawLimit * Math.min(1, LANDSCAPE_ASPECT / camera.aspect) : LOOK.yawLimit;
+  }
+
   function applyOrbitLimits() {
-    orbitLeash.softMin = orbitHome.theta - rad(LOOK.yawLimit);
-    orbitLeash.softMax = orbitHome.theta + rad(LOOK.yawLimit);
+    const yaw = rad(yawLimit());
+    orbitLeash.softMin = orbitHome.theta - yaw;
+    orbitLeash.softMax = orbitHome.theta + yaw;
     if (orbitLeash.softMin > orbitHome.theta || orbitLeash.softMax < orbitHome.theta) {
       orbitLeash.softMin = orbitLeash.softMax = orbitHome.theta;
     }
@@ -138,7 +153,7 @@ export function createNavigation({ homeTarget, isAtDesk, reducedMotion, hasFrame
     camera = cameraInstance;
     canvasEl = canvas;
     controls = new OrbitControls(camera, canvasEl);
-    controls.target.copy(homeTarget());
+    controls.target.copy(orbitPivot());
 
     controls.update();
     controls.enablePan = false;

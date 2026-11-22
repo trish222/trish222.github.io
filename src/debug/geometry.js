@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-export function installGeometryDiagnostics({ scene, camera, renderer, render }) {
+export function installGeometryDiagnostics({ scene, camera, renderer, render, renderBare }) {
   window.__fit = (...names) => {
     const box = new THREE.Box3();
     for (const n of names.length ? names : ["screen_plane"]) {
@@ -39,7 +39,7 @@ export function installGeometryDiagnostics({ scene, camera, renderer, render }) 
   // Void is any pixel no geometry covers. It renders as exact black, which crushed shadows reach too, so
   // colour cannot tell them apart: redraw every mesh flat white and call whatever stays black void.
   // (The material is swapped per mesh because the render pass resets scene.overrideMaterial.)
-  // The film look's vignette takes white down to ~125 in the corners; the void stays at 28.
+  // The mask is drawn without the film look (renderBare), so the vignette can't take white near the void's 28.
   const VOID_MAX = 64;
   const coverage = new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false, side: THREE.DoubleSide });
   const read = (gl) => {
@@ -59,7 +59,7 @@ export function installGeometryDiagnostics({ scene, camera, renderer, render }) 
       if (o.name.startsWith('click_')) o.visible = false;
       else o.material = coverage;
     });
-    render();
+    renderBare();
     const mask = read(gl);
     for (const [o, material, visible] of swapped) { o.material = material; o.visible = visible; }
     render();

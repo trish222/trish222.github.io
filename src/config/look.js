@@ -41,10 +41,14 @@ export const LOOK = {
   rainSpeed: 0,
   rainRefraction: 0,
   rainStreaks: 0,
-  parallaxStrength: 0.6,
+  parallaxStrength: 0.7,
+  // Drag look-around: "orbit" swings the camera around a pivot pivotDepth times as far out as the screen
+  // (1: the monitor), "turn" rotates it in place (camera.js). Same limits either way.
+  lookMode: 'orbit',
+  pivotDepth: 1.19,
   yawLimit: 30.5,
   pitchUpLimit: 25,
-  pitchDownLimit: 25,
+  pitchDownLimit: 16,
   plasticEnvIntensity: 0.2,
   plasticSpec: 0.85,
   standLift: [0.41, 0.25, 0.14], // the monitor's stand, in the chin's shadow (bakedMaterial.js)

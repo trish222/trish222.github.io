@@ -38,6 +38,31 @@ try {
   assert.ok(lit, 'canvas rendered non-black pixels');
   assert.deepEqual(errors, []);
   console.log('PASS ?debug scene renders with the look panel');
+
+  // "turn" (the panel's look toggle) narrows the yaw limit so no void shows past the side walls.
+  for (const [width, height, touch] of [[1920, 1080, false], [1440, 900, false], [844, 390, true]]) {
+    const context = await browser.newContext({ viewport: { width, height }, isMobile: touch, hasTouch: touch });
+    const turn = await context.newPage();
+    await turn.goto(base + '?debug&diagnostics=1');
+    await turn.waitForFunction(() => window.__stillReady?.());
+    await turn.getByRole('button', { name: 'look: orbit' }).click();
+    const { limits, radius } = await turn.evaluate(() => window.__orbit());
+    assert.ok(radius < 0.01, `${width}x${height} turns in place: pivot ${radius} m away`);
+    const worst = [];
+    for (const swing of limits.swing) {
+      for (const rise of limits.rise) {
+        const voidPixels = await turn.evaluate(([s, r]) => {
+          window.__orbit(s, r);
+          const canvas = document.querySelector('#scene');
+          return canvas.width * canvas.height - window.__histogram().roomPixels;
+        }, [swing, rise]);
+        if (voidPixels) worst.push(`${swing.toFixed(1)},${rise}: ${voidPixels}px`);
+      }
+    }
+    assert.deepEqual(worst, [], `${width}x${height} turn shows void at its yaw limit ${limits.swing[1].toFixed(1)}`);
+    console.log(`PASS ${width}x${height} turn: no void at yaw ±${limits.swing[1].toFixed(1)}`);
+    await context.close();
+  }
 } finally {
   await browser.close();
   await server.close();

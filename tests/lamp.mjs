@@ -27,10 +27,13 @@ try {
     const toCamera = camera.position.clone().sub(bulb).setY(0).normalize();
     const desk = bulb.clone().addScaledVector(toCamera, 0.05)
       .addScaledVector(new V(-toCamera.z, 0, toCamera.x), 0.15).setY(box('baked_desk').max.y);
+    // The view is bigger than the frame (its top-left corner projects off screen), so take the
+    // upper-left of the part on screen.
     const view = box('window_view');
-    const corner = new V().lerpVectors(view.min, view.max, 0.5).setX(view.min.x + 0.25 * (view.max.x - view.min.x))
-      .setY(view.max.y - 0.1 * (view.max.y - view.min.y));
-    return { desk: screen(desk), view: screen(corner) };
+    const left = screen(view.min.clone().setY(view.max.y)), right = screen(view.max.clone().setY(view.min.y));
+    const u0 = Math.max(left.u, 0), v0 = Math.max(left.v, 0);
+    const corner = { u: u0 + 0.25 * (Math.min(right.u, 1) - u0), v: v0 + 0.1 * (Math.min(right.v, 1) - v0) };
+    return { desk: screen(desk), view: corner };
   });
   assert.ok(probes.desk && probes.view, `found desk and window probes: ${JSON.stringify(probes)}`);
   // The view is sampled without the lightmapped window glass (8% opaque), which dims with the lamp.

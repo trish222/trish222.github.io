@@ -90,14 +90,14 @@ try {
     await page.mouse.move(width * .85, height * .85, { steps: 12 });
     await page.waitForTimeout(150);
     const heldRight = await page.evaluate(() => window.__orbit());
-    assert.ok(heldRight.swing < heldLeft.swing - 10 && heldRight.swing >= -LOOK.yawLimit - .01 && heldRight.rise > 2 && heldRight.rise <= LOOK.pitchUpLimit + .01,
+    assert.ok(heldRight.swing < heldLeft.swing - 10 && heldRight.swing >= -LOOK.yawLimit - .01 && heldRight.rise > heldLeft.rise + 10 && heldRight.rise <= LOOK.pitchUpLimit + .01,
       `reverse drag stays inside the opposite head-turn limits: ${JSON.stringify(heldRight)}`);
     await page.mouse.up();
     if (reducedMotion !== 'reduce') {
       await page.waitForTimeout(100);
       const returning = await page.evaluate(() => window.__orbit());
       assert.ok(Math.abs(returning.swing) > .05 && Math.abs(returning.swing) < Math.abs(heldRight.swing),
-        'release starts a gradual return immediately without snapping');
+        `release starts a gradual return immediately without snapping: ${returning.swing} of ${heldRight.swing}`);
     }
     await page.waitForTimeout(reducedMotion === 'reduce' ? 100 : 950);
     assert.equal(await page.evaluate(() => window.__canvasWrites), 0, 'camera motion must not resize WebGL canvas');

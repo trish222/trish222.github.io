@@ -122,7 +122,7 @@ function parallaxAllowed() {
 }
 
 function tickParallax(dt) { parallax.tick(dt, parallaxAllowed()); }
-function beginParallax() { return parallax.begin(camera, navigation.controls?.target, parallaxAllowed()); }
+function beginParallax() { return parallax.begin(camera, homeTarget(), parallaxAllowed()); }
 function endParallax() { parallax.end(camera); }
 let animation = null;
 let onResize = null;
@@ -207,14 +207,14 @@ function applyVoidColor() {
 const SCREEN_TARGET = new THREE.Vector3();
 const flyOffset = new THREE.Vector3();
 const clamp01 = (v) => Math.max(0, Math.min(1, v));
-const navigation = createNavigation({ homeTarget: () => rig.homeTarget(),
-  isAtDesk: () => fly.value === 0, reducedMotion: prefersReducedMotion,
+const navigation = createNavigation({ orbitPivot: () => rig.orbitPivot(),
+  isAtDesk: () => fly.value === 0, isHandheld, reducedMotion: prefersReducedMotion,
   hasFrame: () => !!animation?.running, onChange: () => updateScreenOverlay(), render: () => render(),
   resetParallax: () => parallax.reset(), onDisable: () => interaction?.cancel() });
 const rig = createCameraRig({ getStage: () => stage, getCamera: () => camera,
   getFov: currentFov, getFlightStart: () => flyStart,
   getOrbitRadius: () => navigation.home.radius, distFor, isMobile });
-const { homeTarget, screenFrustum, coverFrustum, buildFlyPath, applyFly, applyDive,
+const { homeTarget, orbitPivot, screenFrustum, coverFrustum, buildFlyPath, applyFly, applyDive,
   target: flyTarget, pose: flyPose } = rig;
 function applyPose(width, height) {
   return dive.value > 0
@@ -298,7 +298,7 @@ function reframeHome() {
   if (navigation.controls) {
     navigation.killReturn();
     navigation.cancelIdle();
-    navigation.controls.target.copy(homeTarget());
+    navigation.controls.target.copy(orbitPivot());
 
     navigation.controls.minPolarAngle = 0;
     navigation.controls.maxPolarAngle = Math.PI;
@@ -775,7 +775,8 @@ export async function initScene(canvas) {
       import('./debug/geometry.js'), import('./debug/experience.js'),
     ]);
     if (generation !== sceneGeneration) return false;
-    disposeDiagnostics = installGeometryDiagnostics({ scene, camera, renderer, render: () => render(0) }); // pixel reads see still grain
+    disposeDiagnostics = installGeometryDiagnostics({ scene, camera, renderer, render: () => render(0), // pixel reads see still grain
+      renderBare: () => { post.setZoom(1); render(0); post.setZoom(fly.value); } }); // film strength 0
     const diagnostics = {
       get FACING() { return facingAngle; },
       get LAMP_FADE_S() { return LAMP_FADE_S; },

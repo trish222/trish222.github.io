@@ -3,7 +3,10 @@ import { chromium } from 'playwright';
 
 // The widened drag-to-look range (LOOK.yawLimit / pitchUpLimit / pitchDownLimit) never shows the void
 // past the room, at every orbit extreme and corner, on desktop and on cam_mobile; a real drag (mouse)
-// or swipe (touch) far past the range stops at it and eases back home on release.
+// or swipe (touch) far past the range stops at it and eases back home on release. In the default orbit mode the camera
+// stays on a sphere around the pivot (the home distance) at every extreme and during a drag.
+// radius > 0.1 m: an orbit about the desk, not "turn" (a ~1 mm pivot).
+const onSphere = (o) => o.radius > 0.1 && Math.abs(o.distance - o.radius) < 1e-4 * o.radius;
 const url = process.argv[2] || 'http://127.0.0.1:4320/?diagnostics=1';
 const SIZES = [[1920, 1080, false], [1440, 900, false], [1024, 768, false], [650, 900, false],
   [390, 844, true], [360, 640, true], [844, 390, true]];
@@ -24,7 +27,8 @@ try {
     const worst = [];
     for (const swing of [yawMin, 0, yawMax]) {
       for (const rise of [pitchDown, 0, pitchUp]) {
-        await page.evaluate(([s, r]) => window.__orbit(s, r), [swing, rise]);
+        const orbit = await page.evaluate(([s, r]) => window.__orbit(s, r), [swing, rise]);
+        assert.ok(onSphere(orbit), `${width}x${height} ${swing},${rise}: orbits at the home distance: ${orbit.distance} vs ${orbit.radius}`);
         const voidPixels = await page.evaluate(() => {
           const canvas = document.querySelector('#scene');
           return canvas.width * canvas.height - window.__histogram().roomPixels;
@@ -54,6 +58,7 @@ try {
       await page.waitForTimeout(250);
       const held = await page.evaluate(() => window.__orbit());
       const [yawMin, yawMax] = held.limits.swing, [down, up] = held.limits.rise;
+      assert.ok(onSphere(held), `${width}x${height} drag ${dx},${dy} orbits at the home distance: ${held.distance} vs ${held.radius}`);
       assert.ok(held.swing >= yawMin - 0.5 && held.swing <= yawMax + 0.5 && held.rise >= down - 0.5 && held.rise <= up + 0.5,
         `${width}x${height} drag ${dx},${dy} stays inside the leash: ${held.swing.toFixed(1)}, ${held.rise.toFixed(1)}`);
       const limit = dx ? (held.swing < 0 ? -yawMin : yawMax) : (held.rise < 0 ? -down : up);

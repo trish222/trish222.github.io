@@ -137,6 +137,8 @@ export function createBakedLighting({ lightmap_lampOn, lightmap_lampOff, lightma
     if (material.name === 'lamp_shade') material.defines = { LM_SHADE: '' };
     if (PLASTIC.has(material.name)) material.defines = { LM_PLASTIC: '' };
     if (material.name === 'Material.018') material.defines.LM_STAND = '';
+    // The spec light is for the lamp and the props; on the window it shows as a rectangle in the pane.
+    if (material.name === 'window_glass') material.defines = { ...material.defines, LM_NO_SPEC: '' };
     material.onBeforeCompile = (shader) => {
       Object.assign(shader.uniforms, uniforms);
       shader.vertexShader = shader.vertexShader
@@ -153,7 +155,8 @@ export function createBakedLighting({ lightmap_lampOn, lightmap_lampOff, lightma
         .replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\nreflectedLight.directDiffuse = vec3(0.0);\n'
           + '#ifdef LM_PLASTIC\nreflectedLight.directSpecular *= plasticSpec;\n#endif\n'
           + `#ifdef LM_STAND\nif (vWorldY < ${STAND_TOP.toFixed(3)}) {\n  vec3 lift = material.diffuseColor * standLift * lampMix;\n  reflectedLight.indirectDiffuse += lift * lift / (reflectedLight.indirectDiffuse + lift + 1e-4);\n  reflectedLight.directSpecular *= standSpec;\n}\n#endif\n`
-          + '#ifdef LM_SCREEN_GLASS\nreflectedLight.directSpecular *= glassSpec;\n#endif')
+          + '#ifdef LM_SCREEN_GLASS\nreflectedLight.directSpecular *= glassSpec;\n#endif\n'
+          + '#ifdef LM_NO_SPEC\nreflectedLight.directSpecular = vec3(0.0);\n#endif')
         .replace('#include <opaque_fragment>', GLASS_ALPHA);
     };
     material.customProgramCacheKey = () => 'baked-lit';

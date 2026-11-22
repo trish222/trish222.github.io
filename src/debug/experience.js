@@ -52,6 +52,8 @@ export function installExperienceDiagnostics(context) {
       swing: deg(theta - context.navigation.home.theta), // off home
       front: deg(theta - context.FACING), // off the monitor's front
       rise: deg(context.navigation.home.phi - context.navigation.spherical.phi),
+      distance: context.navigation.spherical.radius, // from the pivot
+      radius: context.navigation.home.radius,
       enabled: context.navigation.controls.enabled,
       facing: context.screenFacing(),
       limits: {
