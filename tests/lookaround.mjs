@@ -3,10 +3,10 @@ import { chromium } from 'playwright';
 
 // The widened drag-to-look range (LOOK.yawLimit / pitchUpLimit / pitchDownLimit) never shows the void
 // past the room, at every orbit extreme and corner, on desktop and on cam_mobile; a real drag (mouse)
-// or swipe (touch) far past the range stops at it and eases back home on release. In the default orbit mode the camera
-// stays on a sphere around the pivot (the home distance) at every extreme and during a drag.
-// radius > 0.1 m: an orbit about the desk, not "turn" (a ~1 mm pivot).
-const onSphere = (o) => o.radius > 0.1 && Math.abs(o.distance - o.radius) < 1e-4 * o.radius;
+// or swipe (touch) far past the range stops at it and eases back home on release. The limits come from
+// framing the room (roomFit.js); the camera stays on a sphere around the pivot (the home distance, a ~1 mm
+// radius when turning in place) at every extreme and during a drag.
+const onSphere = (o) => Math.abs(o.distance - o.radius) < 1e-4 * o.radius;
 const url = process.argv[2] || 'http://127.0.0.1:4320/?diagnostics=1';
 const SIZES = [[1920, 1080, false], [1440, 900, false], [1024, 768, false], [650, 900, false],
   [390, 844, true], [360, 640, true], [844, 390, true]];
@@ -22,8 +22,10 @@ try {
     const { limits } = await page.evaluate(() => window.__orbit());
     const [yawMin, yawMax] = limits.swing;
     const [pitchDown, pitchUp] = limits.rise; // [-down, up]
-    assert.ok(yawMax >= 19.9 && -yawMin >= 19.9, `yaw limit is about +-20 degrees: ${limits.swing}`);
-    assert.ok(pitchUp >= 9.9 && -pitchDown >= 9, `pitch limit is +10 up, -9 down (capped inside the 16:9 corner void at 10: ${limits.rise}`);
+    // Desktops keep the tuned ranges; a phone that backs off to frame the desk (camera.js) gets a smaller one (navigation.js).
+    const [yawFloor, downFloor] = width >= 1024 ? [19.9, 9] : [8.5, 2];
+    assert.ok(yawMax >= yawFloor && -yawMin >= yawFloor, `yaw limit is at least +-${yawFloor} degrees: ${limits.swing}`);
+    assert.ok(pitchUp >= 9.9 && -pitchDown >= downFloor, `pitch limit is at least +10 up, -${downFloor} down: ${limits.rise}`);
     const worst = [];
     for (const swing of [yawMin, 0, yawMax]) {
       for (const rise of [pitchDown, 0, pitchUp]) {

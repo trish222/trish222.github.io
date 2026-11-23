@@ -4,7 +4,7 @@ import { FLOPPIES, UI } from '../src/content/content.js';
 
 // Hovering a click_* proxy shows its friendly pill label with a pointer cursor and the glow (for the computer,
 // only its screen glows; the nameplate is inert: nothing labels or presses it); on touch
-// the first tap only labels and the second presses; the keyboard reaches every object through a
+// the first tap only labels and the second presses (the monitor zooms in on one tap); the keyboard reaches every object through a
 // focusable button that shows the same label with a visible focus ring.
 const url = process.argv[2] || 'http://127.0.0.1:4320/?diagnostics=1';
 const OBJECTS = [['click_crt', 'machine', UI.objects.crt], ['click_lamp_chain', 'lamp', UI.objects.lamp],
@@ -89,18 +89,23 @@ try {
   const phone = await context.newPage();
   await phone.goto(url);
   await phone.waitForFunction(() => document.body.classList.contains('orbit-live') && window.__stillReady?.());
-  // cam_mobile frames the monitor alone, so the phone taps the CRT: its press flies to the screen.
-  const object = OBJECTS[0], point = await pointFor(phone, object);
-  assert.ok(point, 'an object is tappable in the phone framing');
-  const pressed = () => phone.evaluate((lamp) => lamp ? window.__lamp().on : document.body.classList.contains('screen-active'), object[1] === 'lamp');
-  const before = await pressed();
+  // The phone's home view shows the lamp too: its first tap labels, its second presses.
+  const object = OBJECTS[1], point = await pointFor(phone, object);
+  assert.ok(point, 'the lamp is tappable in the phone framing');
+  const lampOn = () => phone.evaluate(() => window.__lamp().on);
+  const before = await lampOn();
   await phone.touchscreen.tap(point.x, point.y);
   await phone.waitForFunction(() => document.body.classList.contains('desk-hover'));
   assert.equal(await phone.evaluate(() => document.getElementById('hover-label').textContent), object[2], `first tap labels ${object[2]}`);
-  assert.equal(await pressed(), before, 'first tap does not press it');
+  assert.equal(await lampOn(), before, 'first tap does not press it');
   await phone.touchscreen.tap(point.x, point.y);
   await phone.waitForTimeout(100);
-  assert.equal(await pressed(), !before, 'second tap presses it');
+  assert.equal(await lampOn(), !before, 'second tap presses it');
+  // The monitor is the exception: one tap zooms in.
+  const crt = await pointFor(phone, OBJECTS[0]);
+  assert.ok(crt, 'the monitor is tappable in the phone framing');
+  await phone.touchscreen.tap(crt.x, crt.y);
+  await phone.waitForFunction(() => document.body.classList.contains('screen-active'));
   await context.close();
   console.log(`PASS hover labels on ${OBJECTS.length} proxies, keyboard pills, touch tap-to-label`);
 } finally { await browser.close(); }

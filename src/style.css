@@ -1245,28 +1245,6 @@ body.glass-fullscreen #scene {
   .desktop-icon span { font-size: 13px; }
 }
 
-/* ================================
-   NO WEBGL
-
-   The monitor is the only way to the login, so without a scene there
-   would be no way in at all. The overlay drops its matrix and simply
-   fills the viewport: same login, no room around it. scene.js never
-   ran, so nothing is writing the sizes or the CRT variables either.
-   ================================ */
-body.no-scene #screen {
-  position: fixed;
-  inset: 0;
-  width: auto !important;
-  height: auto !important;
-  transform: none;
-  opacity: 1;
-  --blur: 0px;
-}
-
-body.no-scene #screen-page {
-  pointer-events: auto;
-}
-
 body.screen-active #screen {
   z-index: 3000;
 }

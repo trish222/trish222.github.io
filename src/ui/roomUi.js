@@ -9,6 +9,7 @@ export function initRoomUi(scene, events) {
   $('screen-back').textContent = UI.back;
   $('corner-name').textContent = CONTENT.owner.name;
   $('credits-link').textContent = UI.credits;
+  $('lofi-link').textContent = UI.lofi;
   document.body.classList.toggle('hint-seen', !firstVisit);
   // The first interaction once the room is showing (not the intro's own click) retires the hint.
   const seen = () => {

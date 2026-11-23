@@ -185,6 +185,23 @@ body.glass-fullscreen #corner { display: none; }
 #credits-link:focus-visible { opacity: 1; outline: 2px solid var(--ux-accent); outline-offset: 2px; }
 body:not(.orbit-live) #credits-link { opacity: 0; visibility: hidden; }
 
+/* The way out to the plain-HTML page: there from the first paint (the room may take a while), clear of the screen. */
+#lofi-link {
+  position: fixed;
+  right: 16px;
+  bottom: 14px;
+  z-index: 2500;
+  color: var(--ux-dim);
+  font: 12px/1.2 var(--ux-font);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgb(244 232 214 / 0.3);
+  opacity: 0.7;
+  transition: opacity 0.3s ease, visibility 0.3s;
+}
+#lofi-link:hover, #lofi-link:focus-visible { opacity: 1; }
+body.screen-active #lofi-link, body.lofi #lofi-link { opacity: 0; visibility: hidden; }
+
 /* Inside the Win98 About and Credits windows. */
 .link-button {
   padding: 0;

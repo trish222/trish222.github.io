@@ -5,9 +5,10 @@ import { LOOK } from '../config/look.js';
 
 const MSAA = 4;
 const GLOW_LEVELS = 8; // mip levels of the glow blur, as BloomEffect's default
+const GLOW_LEVELS_HANDHELD = 4; // each level is a down and an up draw; phones stay under 50 draws a frame
 const GLOW_DIV = 4; // the glow source's resolution divisor; it is blurred wide anyway
 // At DPR 2 the pixels are small and the film softness hides the steps; MSAA there costs ~5.5 ms (1440x900, M1).
-const msaaFor = (ratio) => (ratio < 2 ? MSAA : 0);
+const msaaFor = (ratio, handheld) => (ratio >= 2 ? 0 : handheld ? LOOK.msaaHandheld : MSAA);
 
 // The glow source, at quarter resolution: the emitters (alpha 2, see markEmitters) over bloomThreshold
 // for bloom, the display-referred pictures (alpha 0.5: the CRT, the city) over displayThreshold, and
@@ -45,12 +46,13 @@ export function markEmitters(meshes) {
 }
 
 // One merged EffectPass (the film effect); its update draws the glow first.
-export function createPost(renderer, scene, camera) {
-  const composer = new EffectComposer(renderer, { frameBufferType: HalfFloatType, multisampling: msaaFor(renderer.getPixelRatio()) });
+export function createPost(renderer, scene, camera, isHandheld) {
+  const composer = new EffectComposer(renderer, { frameBufferType: HalfFloatType, multisampling: msaaFor(renderer.getPixelRatio(), isHandheld()) });
   const glowTarget = new WebGLRenderTarget(1, 1, { type: HalfFloatType, depthBuffer: false });
   const source = new ShaderPass(glowSource);
   const blur = new MipmapBlurPass();
-  blur.levels = GLOW_LEVELS;
+  const glowLevels = () => (isHandheld() ? GLOW_LEVELS_HANDHELD : GLOW_LEVELS);
+  blur.levels = glowLevels();
   blur.initialize(renderer, false, HalfFloatType);
   const film = new FilmEffect(blur.texture, (r, input) => {
     source.render(r, input, glowTarget);
@@ -60,16 +62,18 @@ export function createPost(renderer, scene, camera) {
   composer.addPass(new EffectPass(camera, film));
 
   const resize = () => {
-    composer.multisampling = msaaFor(renderer.getPixelRatio());
+    composer.multisampling = msaaFor(renderer.getPixelRatio(), isHandheld());
     composer.setSize();
     const { width, height } = composer.inputBuffer;
     glowTarget.setSize(Math.ceil(width / GLOW_DIV), Math.ceil(height / GLOW_DIV));
+    blur.levels = glowLevels(); // a no-op unless the window crossed the phone breakpoint
     blur.setSize(width / GLOW_DIV, height / GLOW_DIV);
   };
   resize();
 
   const applyLook = () => {
     film.applyLook(LOOK);
+    composer.multisampling = msaaFor(renderer.getPixelRatio(), isHandheld()); // the setter ignores no change
     const u = glowSource.uniforms;
     u.bloom.value = LOOK.bloomIntensity;
     u.bloomThreshold.value = LOOK.bloomThreshold;

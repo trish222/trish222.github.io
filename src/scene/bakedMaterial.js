@@ -6,7 +6,7 @@ const DECODE = /* glsl */`
 uniform float lampMix;
 uniform sampler2D lmOn, lmOff, lmScreen;
 uniform float lmRange, lmScreenRange, lmOffGain;
-uniform vec3 screenTint;
+uniform vec3 screenTint, shadowFloorLevel;
 vec3 lmDecode(sampler2D map, vec2 uv) {
   vec3 s = texture2D(map, uv).rgb;
   s *= s;
@@ -30,6 +30,13 @@ vec3 lmLight() {
   vec2 u = vec2(t.x, -t.y);
   return (lmSoftAt(vLightMapUv + t) + lmSoftAt(vLightMapUv - t) + lmSoftAt(vLightMapUv + u) + lmSoftAt(vLightMapUv - u))
     * 0.25 * lmRange;
+}
+#elif defined(LM_SHADOW_FLOOR)
+// Soft per-channel max(light, floor), so the deepest shadow rises to the floor and lit texels stay put.
+// Scaled by lampMix: the lamp-off bake is dark on purpose.
+vec3 lmLight() {
+  vec3 l = lmAt(vLightMapUv), f = shadowFloorLevel * lampMix, d = l - f;
+  return 0.5 * (l + f + sqrt(d * d + 0.1225 * f * f));
 }
 #else
 vec3 lmLight() { return lmAt(vLightMapUv); }
@@ -102,6 +109,7 @@ export function createBakedLighting({ lightmap_lampOn, lightmap_lampOff, lightma
     envMapOff: { value: null },
     shadeSaturation: { value: 1 },
     plasticSpec: { value: 1 },
+    shadowFloorLevel: { value: new THREE.Color(0, 0, 0) },
     standLift: { value: new THREE.Color(0, 0, 0) },
     standSpec: { value: 1 },
     glassSpec: { value: 1 },
@@ -112,12 +120,13 @@ export function createBakedLighting({ lightmap_lampOn, lightmap_lampOff, lightma
   const channels = [0, 1].map((channel) => Object.assign(lightmap_lampOn.clone(), { channel }));
 
   // Flat albedo × lightmap; keeps the GLB's map, tint, vertex colours and alpha.
-  function bakeBasic(mesh, channel) {
+  function bakeBasic(mesh, channel, floor) {
     const { name, map, color, vertexColors, transparent, opacity, alphaTest, side } = mesh.material;
     mesh.material.dispose();
     const material = new THREE.MeshBasicMaterial({ name, map, color, vertexColors, transparent, opacity, alphaTest, side,
       lightMap: channels[channel] });
     if (name === 'curtain_sheer') material.defines = { LM_SOFT: '' };
+    else if (floor) material.defines = { LM_SHADOW_FLOOR: '' };
     material.onBeforeCompile = (shader) => {
       Object.assign(shader.uniforms, uniforms);
       shader.fragmentShader = shader.fragmentShader
@@ -163,8 +172,9 @@ export function createBakedLighting({ lightmap_lampOn, lightmap_lampOff, lightma
     return material;
   }
 
-  function bake(mesh, channel) {
-    mesh.material = LIT.has(mesh.material.name) ? litMaterial(mesh.material, channel) : bakeBasic(mesh, channel);
+  // `floor` meshes (the room's floor, wall and the desk) get LOOK.shadowFloor's lift.
+  function bake(mesh, channel, floor = false) {
+    mesh.material = LIT.has(mesh.material.name) ? litMaterial(mesh.material, channel) : bakeBasic(mesh, channel, floor);
     return mesh.material;
   }
 

@@ -23,6 +23,9 @@ const SLIDERS = [
   ['overviewZoom', 0.9, 1.3, 0.005],
   ['overviewHeight', -0.2, 0.3, 0.005],
   ['overviewPitch', -5, 15, 0.1],
+  ['mobileFitMargin', 0.8, 1.5, 0.005], ['mobileFov', 30, 80, 0.5],
+  ['mobileOffsetX', -0.5, 0.5, 0.005], ['mobileOffsetY', -0.5, 0.5, 0.005],
+  ['mobileYaw', -45, 45, 0.5], ['mobilePitch', -20, 30, 0.5], ['mobileHeight', -0.4, 0.4, 0.005],
   ['parallaxStrength', 0, 1.5, 0.05],
   ['pivotDepth', 0.2, 2, 0.01],
   ['yawLimit', 0, 40, 0.5],
@@ -55,6 +58,7 @@ const SLIDERS = [
   ['screenSheen', 0, 1, 0.01],
   ['monitorTint', 0.5, 1.2, 0.01, 0], ['monitorTint', 0.5, 1.2, 0.01, 1], ['monitorTint', 0.5, 1.2, 0.01, 2],
   ['caseTint', 0.5, 3, 0.01, 0], ['caseTint', 0.5, 3, 0.01, 1], ['caseTint', 0.5, 3, 0.01, 2],
+  ['msaaHandheld', 0, 4, 2],
   ['exposure', 0.25, 3, 0.01],
   ['bloomIntensity', 0, 4, 0.01], ['bloomThreshold', 0, 2, 0.01], ['displayGlow', 0, 2, 0.01], ['displayThreshold', 0, 1, 0.01],
   ['halation', 0, 2, 0.01], ['halationThreshold', 0, 4, 0.01], ['glowRadius', 0, 1, 0.01],
@@ -63,15 +67,17 @@ const SLIDERS = [
   ['vignette', 0, 1, 0.01], ['vignetteOffset', 0, 1, 0.01], ['grain', 0, 0.2, 0.002],
   ['lift', 0, 0.2, 0.002], ...[0, 1, 2].map((i) => ['liftColor', 0, 1, 0.01, i]),
   ['fade', 0, 0.5, 0.005], ['warmth', -0.2, 0.2, 0.002], ['saturation', 0, 2, 0.01],
+  ['shadowFloor', 0, 1, 0.01], ...[0, 1, 2].map((i) => ['shadowFloorColor', 0, 1, 0.01, i]),
 ];
-const CAMERA = ['overviewZoom', 'overviewHeight', 'overviewPitch', 'lookMode', 'pivotDepth'];
+const CAMERA = ['overviewZoom', 'overviewHeight', 'overviewPitch', 'lookMode', 'lookModeHandheld', 'pivotDepth',
+  'mobileFitMargin', 'mobileFov', 'mobileOffsetX', 'mobileOffsetY', 'mobileYaw', 'mobilePitch', 'mobileHeight'];
 // Frames the lamp like the r14 lamp panel (art/previews/b2-lamp-before-after.png).
 const CLOSE_UP = { position: new THREE.Vector3(-0.45, 1.12, 0.85), target: new THREE.Vector3(-0.54, 0.93, -0.04) };
 
 export function installLampTuning(context, stage) {
   const panel = Object.assign(document.createElement('form'), { id: 'look-panel' });
-  panel.style.cssText = 'position:fixed;top:8px;right:8px;z-index:9999;padding:8px;width:260px;'
-    + 'font:11px/1.3 monospace;color:#eee;background:#000c;border-radius:4px';
+  panel.style.cssText = 'position:fixed;top:8px;right:8px;z-index:9999;padding:8px;width:min(260px,calc(100vw - 16px));'
+    + 'box-sizing:border-box;font:11px/1.3 monospace;color:#eee;background:#000c;border-radius:4px';
   // Keep the panel's gestures away from the scene's look-around and zoom handlers.
   for (const type of ['wheel', 'pointerdown', 'pointermove', 'pointerup', 'touchstart', 'touchmove', 'touchend']) {
     panel.addEventListener(type, (e) => e.stopPropagation(), { passive: true });
@@ -79,7 +85,7 @@ export function installLampTuning(context, stage) {
   const bar = document.createElement('div');
   const list = document.createElement('div');
   list.id = 'look-list';
-  list.style.cssText = 'overflow-y:auto;max-height:calc(100vh - 70px);overscroll-behavior:contain;touch-action:pan-y';
+  list.style.cssText = 'overflow-y:auto;max-height:calc(100dvh - 80px);overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch';
   panel.append(bar, list);
 
   // Camera keys re-frame the home pose (and the orbit around it).
@@ -118,12 +124,21 @@ export function installLampTuning(context, stage) {
     bar.append(b, ' ');
     return b;
   };
-  button('lamp', () => context.setLampOn(!context.lampOn, false));
-  const mode = button(`look: ${LOOK.lookMode}`, () => {
-    LOOK.lookMode = LOOK.lookMode === 'turn' ? 'orbit' : 'turn';
-    mode.textContent = `look: ${LOOK.lookMode}`;
-    apply();
+  // Collapsed to the button bar on a phone, so the panel does not cover the scene it tunes.
+  const collapse = button('', () => {
+    list.hidden = !list.hidden;
+    collapse.textContent = list.hidden ? 'show' : 'hide';
   });
+  list.hidden = matchMedia('(max-width: 760px)').matches;
+  collapse.textContent = list.hidden ? 'show' : 'hide';
+  button('lamp', () => context.setLampOn(!context.lampOn, false));
+  for (const key of ['lookMode', 'lookModeHandheld']) {
+    const toggle = button(`${key}: ${LOOK[key]}`, () => {
+      LOOK[key] = LOOK[key] === 'turn' ? 'orbit' : 'turn';
+      toggle.textContent = `${key}: ${LOOK[key]}`;
+      apply();
+    });
+  }
 
   let saved = null;
   button('close-up', () => {

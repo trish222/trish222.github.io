@@ -1,0 +1,40 @@
+/* The plain-HTML portfolio (lofi.js): the screen's Win98 windows stacked on the desktop teal. */
+html:has(body.lofi), body.lofi {
+  width: auto;
+  height: auto;
+  overflow: auto;
+  user-select: text;
+  background: var(--desktop);
+}
+body.lofi > :not(#lofi) { display: none !important; }
+
+#lofi {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 12px 12px 48px;
+  color: var(--black);
+  font-family: var(--font-body);
+}
+.lofi-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin-bottom: 14px;
+  padding: 6px 10px;
+  background: var(--bg);
+  border-top: 2px solid var(--white);
+  border-left: 2px solid var(--white);
+  border-right: 2px solid var(--darker);
+  border-bottom: 2px solid var(--darker);
+}
+.lofi-bar h1 { flex: 1 1 auto; margin: 0; font: bold 16px/1.2 var(--font); }
+.lofi-bar nav { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.lofi-bar a { color: var(--title-active); text-decoration: underline; }
+.lofi-bar a:focus-visible, #lofi .link-button:focus-visible { outline: 2px dotted var(--black); outline-offset: 2px; }
+body.no-scene .lofi-3d { display: none; }
+
+#lofi .window { position: static; max-width: none; max-height: none; margin-bottom: 14px; scroll-margin-top: 12px; }
+#lofi .window-titlebar { cursor: default; touch-action: auto; }
+#lofi .window-title { margin: 0; font-size: 12px; }
+#lofi .window-body { overflow: visible; contain: none; background: var(--white); }

@@ -47,10 +47,10 @@ const BACKGROUND = "#1c1a2a";
 const HOVER_RATE = 7; // hover easing, per second
 
 const MAX_DPR = 2;
-const MOBILE_MAX_DPR = 2;
+const HANDHELD_MAX_DPR = 1.5;
 
 function scenePixelRatio() {
-  return Math.min(window.devicePixelRatio || 1, isMobile() ? MOBILE_MAX_DPR : MAX_DPR);
+  return Math.min(window.devicePixelRatio || 1, isHandheld() ? HANDHELD_MAX_DPR : MAX_DPR);
 }
 
 // Keep drawing buffers allocated across camera motion: even a single canvas
@@ -207,13 +207,14 @@ function applyVoidColor() {
 const SCREEN_TARGET = new THREE.Vector3();
 const flyOffset = new THREE.Vector3();
 const clamp01 = (v) => Math.max(0, Math.min(1, v));
-const navigation = createNavigation({ orbitPivot: () => rig.orbitPivot(),
+const navigation = createNavigation({ orbitPivot: () => rig.orbitPivot(), framesRoom: (cam) => stage.roomFit(cam),
   isAtDesk: () => fly.value === 0, isHandheld, reducedMotion: prefersReducedMotion,
   hasFrame: () => !!animation?.running, onChange: () => updateScreenOverlay(), render: () => render(),
   resetParallax: () => parallax.reset(), onDisable: () => interaction?.cancel() });
 const rig = createCameraRig({ getStage: () => stage, getCamera: () => camera,
   getFov: currentFov, getFlightStart: () => flyStart,
-  getOrbitRadius: () => navigation.home.radius, distFor, isMobile });
+  getOrbitRadius: () => navigation.home.radius, distFor, isMobile, isHandheld,
+  getAspect: () => canvasEl.clientWidth / canvasEl.clientHeight });
 const { homeTarget, orbitPivot, screenFrustum, coverFrustum, buildFlyPath, applyFly, applyDive,
   target: flyTarget, pose: flyPose } = rig;
 function applyPose(width, height) {
@@ -414,17 +415,6 @@ function setDive(q) {
   updateScreenOverlay();
 }
 
-function logArrival() {
-  const round = (v) => Math.round(v * 1000) / 1000;
-  console.log("[scene] arrived at the screen", {
-    position: camera.position.toArray().map(round),
-    target: flyTarget.toArray().map(round),
-    frustumHeight: round(flyPose.frustum),
-    fov: currentFov(),
-    dist: round(flyPose.dist),
-  });
-}
-
 function arrive() {
   fly.dir = 0;
   intro?.at("screen");
@@ -443,7 +433,6 @@ function arrive() {
   if (!document.body.classList.contains("signed-in")) {
     document.getElementById("login-user")?.focus({ preventScroll: true });
   }
-  logArrival();
 }
 
 function depart() {
@@ -457,6 +446,7 @@ function depart() {
     if (canvasEl) buildFlyPath(canvasEl.clientWidth, canvasEl.clientHeight);
   }
 
+  if (isHandheld()) reframeHome();
   navigation.setEnabled(true);
 
   snapshot?.invalidate();
@@ -692,7 +682,7 @@ export function flyFromScreen() {
 function onScreenClick(e) {
   if (fly.value > 0) return;
   e.preventDefault();
-  if (!interaction?.firstTap(e, "machine")) flyToScreen();
+  flyToScreen();
 }
 
 function initScreenOverlay() {
@@ -757,7 +747,7 @@ export async function initScene(canvas) {
   applyLampLevel(lampLevel);
   performance.mark('room:geometry-ready');
   camera = buildCamera();
-  post = createPost(renderer, scene, camera);
+  post = createPost(renderer, scene, camera, isHandheld);
 
   scene.updateMatrixWorld(true);
   SCREEN_TARGET.copy(stage.projectionSurface.center);
@@ -844,6 +834,7 @@ export async function initScene(canvas) {
     buildFlyPath(width, height);
 
     if (dive.value > 0 && dive.dir === 0 && !isHandheld()) jumpDive(0);
+    if (isHandheld() && fly.value === 0) return reframeHome(); // the home framing follows the aspect
 
     const keep = navigation.allowed()
       ? { theta: navigation.controls.getAzimuthalAngle(), phi: navigation.controls.getPolarAngle() }

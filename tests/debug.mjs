@@ -39,19 +39,32 @@ try {
   assert.deepEqual(errors, []);
   console.log('PASS ?debug scene renders with the look panel');
 
-  // "turn" (the panel's look toggle) narrows the yaw limit so no void shows past the side walls.
+  // Desktops default to "orbit" (LOOK.lookMode), phones and tablets to "turn" (LOOK.lookModeHandheld). Orbit swings the
+  // camera about a pivot pivotDepth times as far out as the screen; turn rotates it in place. The limits keep void out
+  // of the frame at every corner in the default mode, and the panel's toggle for the device's own mode swaps to the other.
+  const pivotRadius = (page) => page.evaluate(() => {
+    window.__orbit(0, 0);
+    const { world } = window.__fit('screen_plane');
+    const centre = world[0].map((v, i) => (v + world[1][i]) / 2);
+    const eye = window.__camera.position;
+    const toScreen = Math.hypot(eye.x - centre[0], eye.y - centre[1], eye.z - centre[2]);
+    return { radius: window.__orbit().radius, expected: window.__look.LOOK.pivotDepth * toScreen };
+  });
   for (const [width, height, touch] of [[1920, 1080, false], [1440, 900, false], [844, 390, true]]) {
     const context = await browser.newContext({ viewport: { width, height }, isMobile: touch, hasTouch: touch });
-    const turn = await context.newPage();
-    await turn.goto(base + '?debug&diagnostics=1');
-    await turn.waitForFunction(() => window.__stillReady?.());
-    await turn.getByRole('button', { name: 'look: orbit' }).click();
-    const { limits, radius } = await turn.evaluate(() => window.__orbit());
-    assert.ok(radius < 0.01, `${width}x${height} turns in place: pivot ${radius} m away`);
+    const page = await context.newPage();
+    await page.goto(base + '?debug&diagnostics=1');
+    await page.waitForFunction(() => window.__stillReady?.() && window.__look);
+    const key = touch ? 'lookModeHandheld' : 'lookMode';
+    const [mode, other] = touch ? ['turn', 'orbit'] : ['orbit', 'turn'];
+    const { limits } = await page.evaluate(() => window.__orbit());
+    const first = await pivotRadius(page);
+    if (touch) assert.ok(first.radius < 0.01, `${width}x${height} turns in place: pivot ${first.radius} m away`);
+    else assert.ok(Math.abs(first.radius - first.expected) < 0.02, `${width}x${height} orbits a pivot ${first.radius} m away, expected ${first.expected}`);
     const worst = [];
     for (const swing of limits.swing) {
       for (const rise of limits.rise) {
-        const voidPixels = await turn.evaluate(([s, r]) => {
+        const voidPixels = await page.evaluate(([s, r]) => {
           window.__orbit(s, r);
           const canvas = document.querySelector('#scene');
           return canvas.width * canvas.height - window.__histogram().roomPixels;
@@ -59,10 +72,45 @@ try {
         if (voidPixels) worst.push(`${swing.toFixed(1)},${rise}: ${voidPixels}px`);
       }
     }
-    assert.deepEqual(worst, [], `${width}x${height} turn shows void at its yaw limit ${limits.swing[1].toFixed(1)}`);
-    console.log(`PASS ${width}x${height} turn: no void at yaw ±${limits.swing[1].toFixed(1)}`);
+    assert.deepEqual(worst, [], `${width}x${height} ${mode} shows void at its yaw limit ${limits.swing[1].toFixed(1)}`);
+    console.log(`PASS ${width}x${height} ${mode}: pivot ${first.radius.toFixed(2)} m, no void at yaw ${limits.swing.map((v) => v.toFixed(1))}`);
+    await page.getByRole('button', { name: `${key}: ${mode}` }).click();
+    const swapped = await pivotRadius(page);
+    if (touch) assert.ok(Math.abs(swapped.radius - swapped.expected) < 0.02, `${width}x${height} ${key} orbit pivot ${swapped.radius} m away, expected ${swapped.expected}`);
+    else assert.ok(swapped.radius < 0.01, `${width}x${height} ${key} turns in place: pivot ${swapped.radius} m away`);
+    console.log(`PASS ${width}x${height} ${key} toggle to ${other}: pivot ${swapped.radius.toFixed(2)} m`);
     await context.close();
   }
+
+  // Handheld home angles (LOOK.mobileYaw / mobilePitch / mobileHeight): the framing stays centred on the screen and the
+  // re-clamped drag limits keep void out of every corner.
+  const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const angled = await phone.newPage();
+  await angled.goto(base + '?debug&diagnostics=1');
+  await angled.waitForFunction(() => window.__stillReady?.() && window.__look);
+  for (const [yaw, pitch, height] of [[-15, 0, 0], [15, 0, 0], [0, 8, 0], [0, 0, 0.1]]) {
+    const result = await angled.evaluate(async ([yaw, pitch, height]) => {
+      Object.assign(window.__look.LOOK, { mobileYaw: yaw, mobilePitch: pitch, mobileHeight: height });
+      window.__look.apply();
+      await new Promise((r) => setTimeout(r, 300));
+      const { limits } = window.__orbit();
+      const voids = [];
+      for (const s of [limits.swing[0], 0, limits.swing[1]]) {
+        for (const r of [limits.rise[0], 0, limits.rise[1]]) {
+          window.__orbit(s, r);
+          const canvas = document.querySelector('#scene');
+          voids.push(canvas.width * canvas.height - window.__histogram().roomPixels);
+        }
+      }
+      window.__orbit(0, 0);
+      const { ndc } = window.__fit('screen_plane');
+      return { voids, centre: (ndc.x0 + ndc.x1) / 2 };
+    }, [yaw, pitch, height]);
+    assert.deepEqual(result.voids.filter(Boolean), [], `yaw ${yaw} pitch ${pitch} height ${height}: void in the limits`);
+    assert.ok(Math.abs(result.centre) < 0.2, `yaw ${yaw} pitch ${pitch} height ${height}: screen centred (${result.centre.toFixed(2)})`);
+    console.log(`PASS 390x844 mobile home yaw ${yaw} pitch ${pitch} height ${height}: no void, screen at ${result.centre.toFixed(2)}`);
+  }
+  await phone.close();
 } finally {
   await browser.close();
   await server.close();

@@ -8,14 +8,18 @@ import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 
 // art/ export -> public/models. Mobile gets 1024 px textures, desktop 2048.
 // `npm run assets -- art/export/scene-raw-preview.glb [outdir]` packs a bake.py --preview run.
-const INPUT = process.argv[2] ?? 'art/export/scene-raw.glb';
+const [INPUT = 'art/export/scene-raw.glb', OUT = 'public/models'] = process.argv.slice(2).filter((a) => !a.startsWith('--only='));
 const BAKES = INPUT.endsWith('-preview.glb') ? 'art/bakes/preview' : 'art/bakes';
 const LIGHTMAPS = ['lightmap_lampOn', 'lightmap_lampOff', 'lightmap_screen'];
 // Hero maps ETC1S visibly damages (Trish's call): blocks on the lamp's metal, a grey city.
 // UASTC with RDO, at these sizes on mobile to stay in its download budget.
 const DETAIL = { albedo_lamp: 512, DefaultMaterial_metallicRoughness: 256, emit_window_view: 512 };
-const VARIANTS = [['scene.glb', 2048], ['scene-mobile.glb', 1024]];
-const OUT = process.argv[3] ?? 'public/models';
+// Props and surfaces that are small or dark on a phone's screen: 512 px there, 1024 on desktop's 2048 pass.
+const SMALL_ON_MOBILE = ['stationery_supplies_diff_1k', 'albedo_crt_cables', 'plank_flooring_04_Diffuse_2k',
+  'painted_plaster_wall_warm_2k', 'book_encyclopedia_set_01_cover_diff_1k', 'book_encyclopedia_set_01_paper_diff_1k'];
+// `--only=scene-mobile.glb` rebuilds one variant and leaves the other's bytes alone.
+const ONLY = process.argv.find((a) => a.startsWith('--only='))?.slice(7);
+const VARIANTS = [['scene.glb', 2048], ['scene-mobile.glb', 1024]].filter(([name]) => !ONLY || name === ONLY);
 
 if (!existsSync(INPUT)) {
   console.error(`Missing ${INPUT}. Run the Blender bake (art/scripts/bake.py) first.`);
@@ -80,11 +84,13 @@ for (const [name, size] of VARIANTS) {
   // lampOn, the hero map, stays at full size without RDO.
   gt('resize', a, a, '--pattern', 'lightmap_lampOff', '--width', size / 2, '--height', size / 2);
   gt('resize', a, a, '--pattern', 'lightmap_screen', '--width', 1024, '--height', 1024);
+  if (size < 2048) for (const map of SMALL_ON_MOBILE) gt('resize', a, a, '--pattern', map, '--width', 512, '--height', 512);
   if (size < 2048) for (const [map, px] of Object.entries(DETAIL)) gt('resize', a, a, '--pattern', map, '--width', px, '--height', px);
   await retagLightmaps(a);
-  gt('uastc', a, b, '--pattern', 'lightmap_lampOff', '--rdo');
+  // The lightmaps are sampled at level 0 only (loadScene.js), so they ship without a mip chain (a third smaller).
+  gt('uastc', a, b, '--pattern', 'lightmap_lampOff', '--rdo', '--mipmaps', 'false');
   for (const map of Object.keys(DETAIL)) gt('uastc', b, b, '--pattern', map, '--rdo');
-  for (const map of ['lightmap_lampOn', 'lightmap_screen']) gt('uastc', b, b, '--pattern', map);
+  for (const map of ['lightmap_lampOn', 'lightmap_screen']) gt('uastc', b, b, '--pattern', map, '--mipmaps', 'false');
   // etc1s skips textures that are already KTX2.
   gt('etc1s', b, c);
   gt('meshopt', c, path.join(OUT, name));

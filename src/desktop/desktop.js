@@ -1,5 +1,4 @@
 import { desktopEvents } from './session.js';
-import * as roomScene from '../scene.js';
 import { initProjectLinks, openPendingProject } from './projects.js';
 import { initRoomUi } from '../ui/roomUi.js';
 import { renderWindowContent } from './windowContent.js';
@@ -354,16 +353,11 @@ function enterDesktop() {
   else signIn();
 }
 
-/* No WebGL: there is no monitor to click, so the login is shown flat
-   over the viewport instead and the desktop is reached the same way.
-   scene.js never unhid the overlay or wrote its sizes, hence both here
-   (the rest is CSS — see "NO WEBGL" in style.css). */
+/* No WebGL: there is no monitor to click, so the visitor gets the plain-HTML portfolio (src/lofi). */
 function initWithoutScene() {
   document.body.classList.add('no-scene');
   document.getElementById('boot')?.remove();
-  const screen = document.getElementById('screen');
-  if (screen) screen.hidden = false;
-  document.getElementById('login-user')?.focus({ preventScroll: true });
+  import('../lofi/lofi.js').then(({ showLofi }) => showLofi());
 }
 
 /* Wired only once the scene is live, since the way back out is a camera
@@ -393,8 +387,9 @@ function initScreenControls(scene) {
    ========================================== */
 
 let desktopGeneration = 0;
+let roomScene = null; // ../scene.js, once main.js has imported it
 
-export function initDesktop() {
+export function initDesktop(sceneModule) {
   disposeDesktop();
   const generation = ++desktopGeneration;
   desktopEvents.reset();
@@ -419,34 +414,33 @@ export function initDesktop() {
 
   initLoginScreen();
 
-  /* Fetch the first-view scene with the entry, before DOM setup. */
+  /* Fetch the first-view scene with the entry, before DOM setup. `sceneModule` is main.js's import of
+     ../scene.js, null without WebGL; without the canvas there is nothing to draw on either. */
   const canvas = document.getElementById('scene');
-  if (canvas) {
-    Promise.resolve(roomScene)
-      .then(async scene => {
-        if (generation !== desktopGeneration) return;
-        /* The way to the login is the 3D monitor, so the overlay stays
-           hidden unless the scene actually came up. */
-        const ready = await scene.initScene(canvas);
-        if (generation !== desktopGeneration) return;
-        if (ready) initScreenControls(scene);
-        else initWithoutScene();
-      })
-      /* A throw anywhere in the scene's build lands here and the page
-         quietly becomes the no-WebGL fallback — which looks exactly
-         like a machine without WebGL, and cost a long hunt once. The
-         fallback still happens; it just says why first. */
-      .catch((e) => { if (generation !== desktopGeneration) return; console.error('scene failed to start', e); roomScene.disposeScene(); initWithoutScene(); });
-  } else {
-    initWithoutScene();
-  }
+  Promise.resolve(canvas && sceneModule)
+    .then(async scene => {
+      roomScene = scene;
+      if (generation !== desktopGeneration) return;
+      if (!scene) return initWithoutScene();
+      /* The way to the login is the 3D monitor, so the overlay stays
+         hidden unless the scene actually came up. */
+      const ready = await scene.initScene(canvas);
+      if (generation !== desktopGeneration) return;
+      if (ready) initScreenControls(scene);
+      else initWithoutScene();
+    })
+    /* A throw anywhere in the scene's build lands here and the page
+       quietly becomes the no-WebGL fallback — which looks exactly
+       like a machine without WebGL, and cost a long hunt once. The
+       fallback still happens; it just says why first. */
+    .catch((e) => { if (generation !== desktopGeneration) return; console.error('scene failed to start', e); roomScene?.disposeScene(); initWithoutScene(); });
 }
 
 export function disposeDesktop() {
   desktopGeneration++;
   desktopEvents.dispose();
   resetWindows();
-  roomScene.disposeScene();
+  roomScene?.disposeScene();
   sceneApi = null;
   signingIn = false;
 }

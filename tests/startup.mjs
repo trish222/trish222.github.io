@@ -38,6 +38,6 @@ try {
   });
   await fallback.goto(url);
   await fallback.waitForFunction(()=>document.body.classList.contains('no-scene'));
-  assert.equal(await fallback.locator('#screen').getAttribute('hidden'),null);
-  console.log('PASS no-WebGL login fallback');
+  await fallback.locator('#lofi').waitFor();
+  console.log('PASS no-WebGL lands on lo-fi');
 } finally {await browser.close();}

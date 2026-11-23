@@ -16,10 +16,21 @@ export const LOOK = {
   windowGain: 1.63,
   windowSaturation: 1.3,
   windowContrast: 1.19,
-  overviewZoom: 1.195,
-  overviewHeight: 0.02,
-  overviewPitch: -2.5,
-  plasticBrightness: 0.9,
+  overviewZoom: 1.21,
+  overviewHeight: 0.045,
+  overviewPitch: 2.3,
+  // Handheld home view (camera.js): margin 1 = monitor and keyboard edge to edge, the lens capped at mobileFov
+  // degrees, the framing slid mobileOffsetX / Y metres right / up in the image.
+  mobileFitMargin: 1.36,
+  mobileFov: 52.5,
+  mobileOffsetX: 0.02,
+  mobileOffsetY: -0.1,
+  // Handheld home pose, measured from the straight-on view: yaw (deg, + looks toward the left wall) rotates
+  // it around the monitor, pitch (deg, + looks down more), height (m) lifts the camera. The fit still centres
+  // on the screen; the drag limits are measured from this pose.
+  mobileYaw: 0,
+  mobilePitch: 0,
+  mobileHeight: 0,  plasticBrightness: 0.9,
   // Matched to the monitor's cream as seen from the overview, lamp on (their albedos are darker and yellower, and they sit lower in the lamp's light)
   monitorTint: [0.78, 0.67, 0.56],
   caseTint: [2.33, 2.05, 1.8],
@@ -43,9 +54,11 @@ export const LOOK = {
   rainStreaks: 0,
   parallaxStrength: 0.7,
   // Drag look-around: "orbit" swings the camera around a pivot pivotDepth times as far out as the screen
-  // (1: the monitor), "turn" rotates it in place (camera.js). Same limits either way.
+  // (1: the monitor), "turn" rotates it in place (camera.js). lookMode is for desktops, lookModeHandheld for
+  // phones and tablets (usesMobileScene).
   lookMode: 'orbit',
-  pivotDepth: 1.19,
+  lookModeHandheld: 'turn',
+  pivotDepth: 1.17,
   yawLimit: 30.5,
   pitchUpLimit: 25,
   pitchDownLimit: 16,
@@ -60,6 +73,7 @@ export const LOOK = {
   // The post chain (src/scene/post.js, filmEffect.js): bloom and halation in linear light before AgX,
   // the grade after it in sRGB values. ca is px at the corners; caStart and vignetteOffset are radii (0 centre, 1 corner).
   exposure: 0.92,
+  msaaHandheld: 2, // samples on phones (DPR capped at 1.5); desktops below DPR 2 use 4, DPR 2 none (post.js)
   bloomIntensity: 1,
   bloomThreshold: 0.2,
   displayGlow: 0.25,
@@ -79,4 +93,8 @@ export const LOOK = {
   fade: 0.015,
   warmth: -0.086,
   saturation: 1.17,
+  // Baked floor, walls and desk underside: lightmap values darker than shadowFloor x shadowFloorColor
+  // (linear, per channel) lift toward it, so the shadow under the desk stays a dim warm grey.
+  shadowFloor: 0.2,
+  shadowFloorColor: [0.5, 0.42, 0.34],
 };

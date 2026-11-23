@@ -5,13 +5,23 @@ import { labelFloppies } from './floppyLabels.js';
 import { createWindowView } from './windowView.js';
 import { createCrtMaterial } from './crtMaterial.js';
 import { createReflections } from './reflections.js';
+import { createRoomFit } from './roomFit.js';
 import { markEmitters } from './post.js';
 import { LOOK } from '../config/look.js';
 import { crtGlare } from '../config/crt.js';
 import { FLOPPIES } from '../content/content.js';
 
+// What the handheld home view must show (camera.js).
+const FIT_NODES = ['baked_crt_monitor', 'baked_crt_case', 'baked_crt_keyboard'];
+
+// Baked surfaces whose deepest shadow LOOK.shadowFloor lifts (bakedMaterial.js).
+const SHADOW_FLOOR = new Set(['baked_floor', 'baked_wall', 'baked_desk']);
+
+// The surfaces the look-around limits keep the frame on (roomFit.js); the curtains are left out, the wall is behind them.
+const SHELL = ['baked_floor', 'baked_wall', 'baked_desk', 'baked_sill', 'baked_window_glass', 'window_view'];
+
 const REQUIRED = ['screen_plane', 'screen_glass', 'window_view', 'lamp_bulb', 'crt_glow', 'baked_floppy_labels',
-  'click_crt', 'click_lamp_chain', 'click_nameplate', 'click_treehouse', 'cam_overview', 'cam_screen', 'cam_mobile',
+  ...FIT_NODES, ...SHELL, 'baked_lamp', 'click_crt', 'click_lamp_chain', 'click_nameplate', 'click_treehouse', 'cam_overview', 'cam_screen', 'cam_mobile',
   ...FLOPPIES.map((_, i) => `click_project_0${i + 1}`)];
 
 // The glass's additive glare reads stronger than .crt-glare's screen blend at the same opacity;
@@ -72,7 +82,7 @@ export async function createRoomScene({ renderer, boxWidth, animated, onProgress
     if (!name.startsWith('baked_') || !('lightmap_uv' in node.userData)) continue;
     node.traverse((o) => {
       if (!o.isMesh) return;
-      const material = lighting.bake(o, node.userData.lightmap_uv);
+      const material = lighting.bake(o, node.userData.lightmap_uv, SHADOW_FLOOR.has(name));
       if (!material.isMeshBasicMaterial) lit.push(material);
     });
   }
@@ -97,6 +107,9 @@ export async function createRoomScene({ renderer, boxWidth, animated, onProgress
   for (const proxy of [...Object.values(proxies).flat(), named.get('click_nameplate')]) proxy.material.visible = false;
 
   scene.updateMatrixWorld(true);
+  const fitBox = new THREE.Box3();
+  for (const name of FIT_NODES) fitBox.expandByObject(named.get(name));
+  const roomFit = createRoomFit(SHELL.map((name) => named.get(name)));
   const reflections = createReflections({ renderer, scene, bulb: named.get('lamp_bulb'), materials: lit, lighting });
   const applyLook = () => {
     windowView.applyLook(); crt.applyLook(); reflections.applyLook();
@@ -144,5 +157,5 @@ export async function createRoomScene({ renderer, boxWidth, animated, onProgress
 
   return { scene, screenPlane, proxies, cams, setStill, crt, setZoom, setTime, dispose,
     setLampMix: reflections.setLampMix, applyLook, lampMix: () => lighting.uniforms.lampMix.value,
-    projectionSurface };
+    projectionSurface, fitBox, roomFit };
 }

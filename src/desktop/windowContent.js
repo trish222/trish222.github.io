@@ -2,7 +2,7 @@ import { CONTENT, CREDITS } from '../content/content.js';
 
 // The Win98 theme's window bodies, filled from src/content/content.js. The chrome (title bars,
 // menus, status bars) stays in index.html; only what is said about Trish comes from content.
-const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+export const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const link = ({ text, href }) => `<a href="${esc(href)}"${href.startsWith('http') ? ' target="_blank" rel="noopener noreferrer"' : ''}>${esc(text)}</a>`;
 const list = (items, render) => items.map(render).join('');
 
@@ -64,9 +64,11 @@ const resume = ({ owner, resume: r }) => `<article class="resume">
   <section class="resume-section"><h2>Activities</h2>${list(r.activities, entry)}</section>
 </article>`;
 
+export const renderers = { about, projects, contact, resume, credits };
+
 export function renderWindowContent() {
   const content = CONTENT;
-  for (const [id, render] of Object.entries({ about, projects, contact, resume, credits })) {
+  for (const [id, render] of Object.entries(renderers)) {
     const body = document.querySelector(`#window-${id} .window-body`);
     if (body) body.innerHTML = render(content);
   }

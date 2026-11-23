@@ -110,6 +110,8 @@ export const UI = {
   back: 'back to desk',
   menu: 'menu',
   credits: 'credits',
+  lofi: 'lo-fi',
+  lofiBack: 'back to 3D',
   objects: { crt: 'use computer', lamp: 'lamp', treehouse: 'cherry blossom treehouse' },
   menuItems: [['about', 'About'], ['projects', 'Projects'], ['resume', 'Resume'], ['contact', 'Contact'], ['credits', 'Credits']],
 };

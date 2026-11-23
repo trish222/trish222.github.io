@@ -21,6 +21,8 @@ const atOpeningPose = ({ overviewZoom: zoom, overviewHeight: height, overviewPit
   const d = from.distanceTo(center);
   const expected = from.clone().addScaledVector(glb, d).addScaledVector(forward, -zoom * d).addScaledVector(up, height);
   const looking = camera.getWorldDirection(new V());
+  // A phone looks the same way but backs off (or widens the lens) until the desk scene fits (tests/mobileFrame.mjs).
+  if (innerWidth <= 760) return looking.angleTo(forward) < 1e-4 && camera.position.clone().sub(expected).dot(forward) <= 1e-4;
   return camera.position.distanceTo(expected) < 1e-4 && looking.angleTo(forward) < 1e-4;
 };
 // Parallax scales with the look-around yaw limit (tuned against the original 7 degrees) and LOOK.parallaxStrength.
@@ -72,11 +74,18 @@ try {
     const initial = await page.evaluate(() => {
       return { width: scene.width, height: scene.height, orbit: window.__orbit() };
     });
-    assert.deepEqual([initial.width, initial.height], [width * Math.min(dpr, 2), height * Math.min(dpr, 2)], 'color buffer uses up to native DPR 2 independently of the HTML desktop');
-    for (const [actual, expected] of initial.orbit.limits.swing.map((v, i) => [v, [-LOOK.yawLimit, LOOK.yawLimit][i]])) {
-      assert.ok(Math.abs(actual - expected) < .01, 'horizontal limits follow the neutral pose by ±LOOK.yawLimit degrees');
-    }
-    assert.deepEqual(initial.orbit.limits.rise, [-LOOK.pitchDownLimit, LOOK.pitchUpLimit]);
+    assert.deepEqual([initial.width, initial.height], [width * Math.min(dpr, touch ? 1.5 : 2), height * Math.min(dpr, touch ? 1.5 : 2)], 'color buffer uses up to native DPR 2 (1.5 on phones) independently of the HTML desktop');
+    // roomFit.js trims the look-around to what keeps void out of the frame (tests/lookaround.mjs checks that), so the
+    // yaw is at most LOOK.yawLimit: desktops keep at least 20 degrees of it, phones (which back off to frame the desk) some.
+    const [yawMinus, yawPlus] = initial.orbit.limits.swing;
+    const yawFloor = touch ? 5 : 20;
+    assert.ok(-yawMinus >= yawFloor && yawPlus >= yawFloor && -yawMinus <= LOOK.yawLimit + .01 && yawPlus <= LOOK.yawLimit + .01,
+      `horizontal limits are between ${yawFloor} and ±yawLimit degrees: ${initial.orbit.limits.swing}`);
+    if (!touch) assert.ok(Math.abs(yawMinus + yawPlus) < .5, `a centred desktop frame turns equally both ways: ${initial.orbit.limits.swing}`);
+    const [pitchDown, pitchUp] = initial.orbit.limits.rise;
+    const pitchDownLimit = -pitchDown;
+    assert.ok(pitchUp <= LOOK.pitchUpLimit + .01 && -pitchDown <= LOOK.pitchDownLimit + .01, `vertical limits stay within the tuned range: ${initial.orbit.limits.rise}`);
+    if (!touch) assert.deepEqual(initial.orbit.limits.rise, [-LOOK.pitchDownLimit, LOOK.pitchUpLimit]);
     await page.evaluate(() => { window.__canvasWrites = 0; window.__measureAllocations = true; });
     // A drag, reversal, damping glide, and automatic walk home must never
     // reallocate the drawing buffer or accidentally activate the monitor.
@@ -85,12 +94,12 @@ try {
     await page.mouse.move(width * .15, height * .15, { steps: 12 });
     await page.waitForTimeout(150);
     const heldLeft = await page.evaluate(() => window.__orbit());
-    assert.ok(heldLeft.swing > 2 && heldLeft.swing <= LOOK.yawLimit + .01 && heldLeft.rise < -2 && heldLeft.rise >= -LOOK.pitchDownLimit - .01,
+    assert.ok(heldLeft.swing > 2 && heldLeft.swing <= yawPlus + .01 && heldLeft.rise < -2 && heldLeft.rise >= -pitchDownLimit - .01,
       `large diagonal drag stays inside the head-turn limits: ${JSON.stringify(heldLeft)}`);
     await page.mouse.move(width * .85, height * .85, { steps: 12 });
     await page.waitForTimeout(150);
     const heldRight = await page.evaluate(() => window.__orbit());
-    assert.ok(heldRight.swing < heldLeft.swing - 10 && heldRight.swing >= -LOOK.yawLimit - .01 && heldRight.rise > heldLeft.rise + 10 && heldRight.rise <= LOOK.pitchUpLimit + .01,
+    assert.ok(heldRight.swing < heldLeft.swing - 10 && heldRight.swing >= yawMinus - .01 && heldRight.rise > heldLeft.rise + 10 && heldRight.rise <= LOOK.pitchUpLimit + .01,
       `reverse drag stays inside the opposite head-turn limits: ${JSON.stringify(heldRight)}`);
     await page.mouse.up();
     if (reducedMotion !== 'reduce') {
@@ -259,12 +268,12 @@ try {
     assert.ok(await page.evaluate(atOpeningPose, LOOK), 'return navigation restores the cam_overview view');
     assert.ok(back.every((v, i) => Math.abs(v - home[i]) < .001), 'screen exit restores the seated camera position');
     const overviewLimits = await page.evaluate(() => window.__orbit().limits.swing);
-    assert.ok(Math.abs(overviewLimits[0] + LOOK.yawLimit) < .01 && Math.abs(overviewLimits[1] - LOOK.yawLimit) < .01,
+    assert.ok(Math.abs(overviewLimits[0] - yawMinus) < .01 && Math.abs(overviewLimits[1] - yawPlus) < .01,
       'programmed overview navigation reseeds the limited drag range around its own neutral pose');
     await page.setViewportSize({ width: width - 10, height: height - 10 });
     await page.waitForTimeout(200);
     const raster = await page.locator('#scene').evaluate(c => ({ width: c.width, height: c.height, cssWidth: c.clientWidth, cssHeight: c.clientHeight }));
-    const ratio = Math.min(dpr, 2);
+    const ratio = Math.min(dpr, touch ? 1.5 : 2);
     assert.equal(raster.width, Math.floor(raster.cssWidth * ratio));
     assert.equal(raster.height, Math.floor(raster.cssHeight * ratio));
     assert.deepEqual(errors, []);

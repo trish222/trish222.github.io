@@ -32,9 +32,10 @@ export function createInteraction({ canvas, camera, proxies, parallax,
   }
 
 
-  // Touch has no hover, so a first tap on an object only shows its label.
+  // Touch has no hover, so a first tap on an object only shows its label. The monitor is the exception:
+  // one tap zooms in.
   function firstTap(e, target) {
-    if (!e.pointerType || e.pointerType === "mouse" || target === armed) {
+    if (!e.pointerType || e.pointerType === "mouse" || target === armed || target === "machine") {
       armed = null;
       return false;
     }

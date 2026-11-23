@@ -2,23 +2,25 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { gsap } from 'gsap/gsap-core';
 import { LOOK } from '../config/look.js';
+import { lookMode } from '../config/experience.js';
+import { roomLimits } from './roomFit.js';
 const rad = THREE.MathUtils.degToRad;
 const ORBIT_DAMPING = 0.075;
 const ORBIT_SPEED = 0.16;
 const IDLE_MS = 0;
 const RETURN_S = 0.8;
 const RETURN_EASE = "power2.out";
-const RETURN_FAST_S = 0.45;
 const ORBIT_EPS = THREE.MathUtils.degToRad(0.2);
 const ORBIT_SETTLE_MS = 120;
-// Where the yaw limit would show the void past the side walls (measured at the pitch limits): turning in place,
-// the frame's edge sits yaw + half the horizontal FOV off the overview's sight line, and the walls end 49.4-50.6°
-// out (tests/debug.mjs); orbiting, a landscape phone's wide frame runs out at about 30.5 × 1.79 / aspect
-// (tests/lookaround.mjs).
-const TURN_WALL = 48.5;
 const LANDSCAPE_ASPECT = 1.7;
+// Orbiting, a phone that backs off to frame the desk (camera.js) swings a wider arc around a farther pivot. Past
+// the desktop's orbit radius (1.73 m at 1440x900) the yaw shrinks with (1.73 / radius) ^ 3.5, and the pitch down
+// stops where the eye would sink below EYE_MIN (m; the desktop's tuned pitchDownLimit leaves it at 0.855).
+// roomFit.js trims whatever these leave, for either look mode.
+const DESKTOP_RADIUS = 1.73;
+const EYE_MIN = 1.06;
 
-export function createNavigation({ orbitPivot, isAtDesk, isHandheld, reducedMotion, hasFrame,
+export function createNavigation({ orbitPivot, framesRoom, isAtDesk, isHandheld, reducedMotion, hasFrame,
   onChange, render, resetParallax, onDisable }) {
   let camera = null;
   let canvasEl = null;
@@ -40,28 +42,37 @@ export function createNavigation({ orbitPivot, isAtDesk, isHandheld, reducedMoti
   }
 
   const orbitLeash = { min: 0, max: 0, softMin: 0, softMax: 0 };
-
   function yawLimit() {
-    if (LOOK.lookMode === 'turn') {
-      const halfWidth = THREE.MathUtils.radToDeg(Math.atan(Math.tan(rad(camera.fov) / 2) * camera.aspect));
-      return Math.min(LOOK.yawLimit, TURN_WALL - halfWidth);
-    }
-    return isHandheld() ? LOOK.yawLimit * Math.min(1, LANDSCAPE_ASPECT / camera.aspect) : LOOK.yawLimit;
+    if (lookMode() === 'turn' || !isHandheld()) return LOOK.yawLimit;
+    return LOOK.yawLimit * Math.min(1, LANDSCAPE_ASPECT / camera.aspect) * Math.min(1, DESKTOP_RADIUS / orbitHome.radius) ** 3.5;
   }
 
+  const probe = new THREE.PerspectiveCamera();
+  // Whether the frame still lands on the room `swing` degrees right of home and `drop` degrees lower (polar +).
+  function inRoom(swing, drop) {
+    Object.assign(probe, { fov: camera.fov, aspect: camera.aspect }).updateProjectionMatrix();
+    probe.position.setFromSphericalCoords(orbitHome.radius, orbitHome.phi + rad(drop), orbitHome.theta + rad(swing))
+      .add(controls.target);
+    probe.lookAt(controls.target);
+    return framesRoom(probe);
+  }
+
+  function pitchDownLimit() {
+    if (!isHandheld() || orbitHome.radius < DESKTOP_RADIUS * 1.02) return LOOK.pitchDownLimit;
+    const lowest = Math.acos(THREE.MathUtils.clamp((EYE_MIN - controls.target.y) / orbitHome.radius, -1, 1));
+    return Math.min(LOOK.pitchDownLimit, Math.max(0, THREE.MathUtils.radToDeg(lowest - orbitHome.phi)));
+  }
+
+  let limits = [0, 0, 0, 0];
   function applyOrbitLimits() {
-    const yaw = rad(yawLimit());
-    orbitLeash.softMin = orbitHome.theta - yaw;
-    orbitLeash.softMax = orbitHome.theta + yaw;
-    if (orbitLeash.softMin > orbitHome.theta || orbitLeash.softMax < orbitHome.theta) {
-      orbitLeash.softMin = orbitLeash.softMax = orbitHome.theta;
-    }
-    orbitLeash.min = orbitLeash.softMin;
-    orbitLeash.max = orbitLeash.softMax;
+    const yaw = yawLimit();
+    limits = roomLimits([yaw, yaw, LOOK.pitchUpLimit, pitchDownLimit()], inRoom);
+    orbitLeash.softMin = orbitLeash.min = orbitHome.theta - rad(limits[0]);
+    orbitLeash.softMax = orbitLeash.max = orbitHome.theta + rad(limits[1]);
     controls.minAzimuthAngle = orbitLeash.min;
     controls.maxAzimuthAngle = orbitLeash.max;
-    controls.minPolarAngle = orbitHome.phi - rad(LOOK.pitchUpLimit);
-    controls.maxPolarAngle = orbitHome.phi + rad(LOOK.pitchDownLimit);
+    controls.minPolarAngle = orbitHome.phi - rad(limits[2]);
+    controls.maxPolarAngle = orbitHome.phi + rad(limits[3]);
   }
 
   function orbitOffHome() {
@@ -213,7 +224,6 @@ export function createNavigation({ orbitPivot, isAtDesk, isHandheld, reducedMoti
     return !!controls && controls.enabled && isAtDesk();
   }
 
-
   return {
     init: initOrbit, tick: tickOrbit, allowed: orbitAllowed, offHome: orbitOffHome,
     setEnabled: setOrbitEnabled, setAngles: setOrbitAngles,
@@ -225,7 +235,7 @@ export function createNavigation({ orbitPivot, isAtDesk, isHandheld, reducedMoti
     get returning() { return !!orbitTween; },
     get moving() { return orbitDragging || !!orbitTween || performance.now() - orbitChangedAt < ORBIT_SETTLE_MS; },
     cancelIdle() { orbitIdleAt = 0; },
-    get riseLimits() { return [-LOOK.pitchDownLimit, LOOK.pitchUpLimit]; },
+    get riseLimits() { return [-limits[3], limits[2]]; },
     dispose() {
       killReturn();
       controls?.disconnect();
