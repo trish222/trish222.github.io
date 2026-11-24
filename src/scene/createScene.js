@@ -105,6 +105,9 @@ export async function createRoomScene({ renderer, boxWidth, animated, onProgress
     treehouse: named.get('click_treehouse') };
   // click_nameplate stays in the contract but is inert (Trish's call): About lives in the corner menu.
   for (const proxy of [...Object.values(proxies).flat(), named.get('click_nameplate')]) proxy.material.visible = false;
+  // The lamp is pressable by its whole body too, not just the chain: the visible baked_lamp meshes (about 7.5k
+  // triangles) join the picker as they are, so the shade, arm and base hover and click like the chain.
+  proxies.lampBody = named.get('baked_lamp');
 
   scene.updateMatrixWorld(true);
   const fitBox = new THREE.Box3();

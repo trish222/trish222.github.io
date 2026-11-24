@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { CREDITS } from '../src/content/content.js';
 
-// The Credits window lists exactly the CC BY assets and OFL fonts in art/credits.md, and every
+// The Credits window lists exactly the CC BY assets and the OFL and ITF FFL fonts in art/credits.md, and every
 // font shipped in public/fonts is among them.
 const md = await readFile(new URL('../art/credits.md', import.meta.url), 'utf8');
 function table(heading) {
@@ -15,9 +15,12 @@ function table(heading) {
 const pick = (rows) => rows.map(({ title, author, href }) => ({ title, author, href }));
 
 assert.deepEqual(pick(CREDITS.assets), table('CC BY'), 'Credits assets match the CC BY table');
-assert.deepEqual(pick(CREDITS.fonts).sort((a, b) => a.title.localeCompare(b.title)),
-  table('SIL Open Font License').sort((a, b) => a.title.localeCompare(b.title)), 'Credits fonts match the OFL table');
-assert.ok(CREDITS.assets.every((a) => a.license === 'CC BY 4.0') && CREDITS.fonts.every((f) => f.license === 'SIL OFL 1.1'));
+const byTitle = (a, b) => a.title.localeCompare(b.title);
+const ofl = table('SIL Open Font License'), ffl = table('ITF Free Font License');
+assert.deepEqual(pick(CREDITS.fonts).sort(byTitle), [...ofl, ...ffl].sort(byTitle), 'Credits fonts match the OFL and ITF FFL tables');
+assert.ok(CREDITS.assets.every((a) => a.license === 'CC BY 4.0'));
+const licenseOf = (font) => (ffl.some((row) => row.title === font.title) ? 'ITF FFL 2.0' : 'SIL OFL 1.1');
+assert.ok(CREDITS.fonts.every((f) => f.license === licenseOf(f)), 'each font names the license of the table it is listed in');
 
 const shipped = (await readdir(new URL('../public/fonts/', import.meta.url))).filter((f) => f.endsWith('.woff2'));
 for (const file of shipped) {

@@ -22,13 +22,14 @@ export function createInteraction({ canvas, camera, proxies, parallax,
     pickRay.setFromCamera(pickNdc, camera);
     if (shifted) endParallax();
 
-    const { lampChain, crt, treehouse, projects } = proxies;
-    const hits = pickRay.intersectObjects([lampChain, crt, treehouse, ...projects], false);
+    const { lampChain, lampBody, crt, treehouse, projects } = proxies;
+    const hits = pickRay.intersectObjects([lampChain, lampBody, crt, treehouse, ...projects], true);
     if (!hits.length) return null;
     const hit = hits[0].object;
     const project = projects.indexOf(hit);
     if (project >= 0) return `project:${project}`;
-    return { [lampChain.id]: "lamp", [treehouse.id]: "treehouse" }[hit.id] ?? "machine";
+    if (hit === lampChain || hit.parent === lampBody) return "lamp";
+    return hit === treehouse ? "treehouse" : "machine";
   }
 
 

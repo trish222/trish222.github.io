@@ -1,0 +1,100 @@
+/* The corner menu: "menu" and its items are one borderless Martian Mono column over the scene. Every
+   entry has the same left edge and the same left padding (--menu-gutter) that holds the shared ▶ cursor
+   (menuCursor.js), which therefore never shifts the text. --menu-cols (set from the longest label) sizes
+   the column, so it keeps its left edge whether the list is open or not. Wider than 760px there is no
+   "menu" word: the items are a horizontal row on the name's line (the 760px matches roomUi.js). */
+@font-face {
+  font-family: 'Martian Mono';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/martian-mono-latin-600-normal.woff2') format('woff2');
+}
+
+/* The desk hover labels (lamp, computer, floppies). Shipped unmodified, per its license. */
+@font-face {
+  font-family: 'RX100';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/rx100-regular.woff2') format('woff2');
+}
+
+#corner-menu {
+  display: flex;
+  flex-direction: column;
+  width: calc(var(--menu-gutter) + var(--menu-cols, 8) * (1ch + 0.04em));
+  font: 600 var(--menu-font-size)/1.2 var(--ux-mono);
+  letter-spacing: 0.04em;
+}
+#menu-list { margin: 0; padding: 0; list-style: none; }
+#menu-list[hidden] { display: none; }
+#menu-button, .ux-menu-item, #screen-back {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 0 0 var(--menu-gutter);
+  border: 0;
+  background: none;
+  color: var(--ux-ink);
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  text-shadow: var(--ux-text-shadow);
+  text-transform: lowercase;
+  cursor: pointer;
+}
+
+@media (min-width: 761px) {
+  #corner-menu { width: auto; }
+  #menu-button { display: none; }
+  #menu-list { display: flex; margin-right: calc(var(--menu-pad-r) * -1); } /* the last item's padding sits in the margin */
+  .ux-menu-item { width: auto; padding-right: var(--menu-pad-r); }
+  #menu-list li:has(> [data-window="credits"]) { display: none; } /* credits lives bottom-left */
+}
+/* "back to desk": the menu items' text (it is outside #corner-menu, so it sets the font itself), its ▶ always on. */
+#screen-back { position: relative; width: auto; font: 600 var(--menu-font-size)/1.2 var(--ux-mono); letter-spacing: 0.04em; }
+
+.ux-cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 4000;
+  margin: calc(var(--ux-cursor-size) / -2) 0 0 var(--ux-cursor-offset);
+  color: var(--ux-cursor-color);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform var(--ux-cursor-glide) ease-out, opacity var(--ux-cursor-glide) ease-out;
+}
+.ux-cursor.is-jump { transition: opacity var(--ux-cursor-glide) ease-out; }
+.ux-cursor.is-on { opacity: 1; }
+.ux-cursor.is-static { position: absolute; top: 50%; transform: scaleX(-1); } /* inside its button, not following the pointer; mirrored so it points back, away from the text */
+.ux-cursor svg {
+  display: block;
+  width: calc(var(--ux-cursor-size) / 2);
+  height: var(--ux-cursor-size);
+  fill: currentColor;
+}
+.ux-cursor.is-on:not(.is-static) svg { animation: ux-cursor-bob var(--ux-cursor-bob) ease-in-out infinite alternate; }
+@keyframes ux-cursor-bob { to { transform: translateX(var(--ux-cursor-bob-dist)); } }
+/* "◀ desk": its arrow is always on and slides a little left when the button is hovered or focused. */
+#screen-back:is(:hover, :focus-visible) .ux-cursor.is-static { transform: scaleX(-1) translateX(var(--ux-back-nudge)); }
+
+/* The ▼ under a desk object's pill (lamp, computer, floppies), bobbing toward the object. */
+.desk-arrow {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  width: var(--desk-arrow-size);
+  margin-top: 3px;
+  color: var(--ux-cursor-color);
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+.desk-arrow svg { display: block; width: 100%; height: auto; fill: currentColor; animation: desk-arrow-bob var(--desk-arrow-bob) ease-in-out infinite alternate; }
+@keyframes desk-arrow-bob { to { transform: translateY(var(--desk-arrow-bob-dist)); } }
+@media (prefers-reduced-motion: reduce) {
+  .ux-cursor, .ux-cursor.is-jump { transition: none; }
+  .ux-cursor.is-on svg, .desk-arrow svg { animation: none; }
+  #screen-back:is(:hover, :focus-visible) .ux-cursor.is-static { transform: scaleX(-1); }
+}

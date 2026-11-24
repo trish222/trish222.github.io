@@ -34,8 +34,17 @@ Modifications: decimated, rescaled, re-oriented, materials simplified (normal an
 | Departure Mono | Floppy label text (`art/textures/floppy_labels.png`, via `art/scripts/floppy_labels.py`) and the resume (`public/fonts/`) | Helena Zhang | https://departuremono.com |
 | Cinzel | Nameplate engraving (`art/fonts/`, OFL alongside) | Natanael Gama | https://fonts.google.com/specimen/Cinzel |
 | Atkinson Hyperlegible | Body copy in windows (`public/fonts/`) | Braille Institute | https://brailleinstitute.org/freefont |
+| Martian Mono | Corner "menu" label (`public/fonts/`) | Evil Martians | https://github.com/evilmartians/mono |
 | Playfair Display | Display face (`public/fonts/`) | Claus Eggers Sørensen | https://fonts.google.com/specimen/Playfair+Display |
+
+## ITF Free Font License (FFL) 2.0
+
+Free for personal and commercial use, self-hosting on our own site included. The font file is shipped unmodified (no subsetting or conversion), as the license requires; the license text is `art/fonts/RX100-FFL.txt`.
+
+| Asset | Used as | Author | Source |
+| --- | --- | --- | --- |
+| RX100 | Hover labels over the lamp, computer and floppies (`public/fonts/`) | Anurag Gautam, Indian Type Foundry | https://www.fontshare.com/fonts/rx-100 |
 
 ## Made in Blender Python (no third-party license)
 
-Room shell (wall, floor, window frame, sill, glass, `window_view`), sheer curtains (`baked_curtains`), floppy label quads, `screen_plane`, `crt_glow`, `lamp_bulb`, the lamp pull chain, the nameplate, the LEGO-style treehouse (`art/scripts/treehouse.py`), and all `click_*` proxies.
+Room shell (wall, floor, window frame, sill, glass, `window_view`), sheer curtains (`baked_curtains`), floppy label quads, `screen_plane`, `crt_glow`, `lamp_bulb`, the lamp pull chain, the nameplate, the LEGO-style treehouse (`art/scripts/treehouse.py`), and all `click_*` proxies. The pixel ▶ menu cursor (`src/ui/menuCursor.js`) is hand-drawn for this site, so no third-party license applies.

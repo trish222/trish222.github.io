@@ -7,9 +7,9 @@ The handoff between the Blender scene and the site code. If public/models/scene.
 | screen_plane | Flat quad, UVs 0–1, sits just behind the glass | Projection corners, CRT shader, snapshot texture |
 | screen_glass | Convex cap in front of screen_plane: rim 0.5 mm in front, centre sag `CRT.bulge` × half-height (7.2 mm); UV0 spans the plane 0–1 like screen_plane | Reflection and glare only, transparent (`crt_glass`, alpha 0.12) |
 | click_crt | Low-poly invisible proxy around the monitor | Raycast target to zoom in |
-| click_lamp_chain | Proxy around the pull chain | Lamp toggle |
+| click_lamp_chain | Proxy around the pull chain | Lamp toggle. The visible `baked_lamp` meshes (shade, arm, base) are picked too and count as the lamp; no extra proxy |
 | click_project_01 … click_project_06 | Proxies on each floppy or CD | Open that project's window |
-| click_nameplate, click_treehouse | Proxies | Treehouse: hover label only. Nameplate: inert (no label or action) |
+| click_nameplate, click_treehouse | Proxies | Treehouse: hover glow only, no label or arrow. Nameplate: inert (no label or action) |
 | window_view | Quad behind the window glass | Night-city video texture; until P5, its emissive texture is the baked city view, already display-referred (AgX), so show it unlit with tone mapping off |
 | lamp_bulb, crt_glow | Emissive meshes | Bloom sources; intensity tied to lamp state |
 | cam_overview, cam_screen, cam_mobile | Empties (or cameras) | Camera positions and look targets |

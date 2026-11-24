@@ -336,13 +336,13 @@
   <header id="corner" class="ux" hidden>
     <p id="corner-name"></p>
     <nav id="corner-menu" aria-label="Site">
-      <button id="menu-button" class="ux-pill" type="button" aria-expanded="false" aria-controls="menu-list"></button>
+      <button id="menu-button" data-cursor type="button" aria-expanded="false" aria-controls="menu-list"></button>
       <ul id="menu-list" hidden></ul>
     </nav>
   </header>
-  <button id="credits-link" class="ux" type="button" hidden></button>
+  <button id="credits-link" class="ux" data-cursor type="button" hidden></button>
   <!-- The plain-HTML portfolio (src/lofi), for slow connections and anyone who does not want the room. -->
-  <a id="lofi-link" class="ux" href="?lofi">lo-fi</a>
+  <a id="lofi-link" class="ux" data-cursor href="?lofi">skip 3D</a>
 
   <!-- THE DESK, FOR EVERYONE WHO IS NOT HOLDING A POINTER
 
@@ -356,7 +356,7 @@
        the monitor (clicking the room around it and Escape also leave).
        Outside #screen, so a press never lands in the desktop. -->
   <div id="screen-back-bar" class="ux" hidden>
-    <button id="screen-back" class="ux-pill" type="button"></button>
+    <button id="screen-back" type="button"></button>
   </div>
 
 </body>

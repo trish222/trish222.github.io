@@ -1,5 +1,6 @@
 import './style.css';
 import './ui/ux.css';
+import './ui/menuCursor.css';
 import './ui/intro.css';
 import { hasWebGL } from './config/experience.js';
 
