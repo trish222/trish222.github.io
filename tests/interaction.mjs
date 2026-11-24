@@ -97,8 +97,16 @@ try {
     assert.ok(heldLeft.swing > 2 && heldLeft.swing <= yawPlus + .01 && heldLeft.rise < -2 && heldLeft.rise >= -pitchDownLimit - .01,
       `large diagonal drag stays inside the head-turn limits: ${JSON.stringify(heldLeft)}`);
     await page.mouse.move(width * .85, height * .85, { steps: 12 });
-    await page.waitForTimeout(150);
-    const heldRight = await page.evaluate(() => window.__orbit());
+    // The camera eases toward the held pose: wait until it has arrived (the pose stops changing), not a fixed
+    // 150 ms, which a slow-rendering machine misses and then releases mid-travel.
+    let heldRight = await page.evaluate(() => window.__orbit());
+    for (let i = 0; i < 50; i++) {
+      await page.waitForTimeout(100);
+      const next = await page.evaluate(() => window.__orbit());
+      const arrived = Math.abs(next.swing - heldRight.swing) < .02 && Math.abs(next.rise - heldRight.rise) < .02;
+      heldRight = next;
+      if (arrived) break;
+    }
     assert.ok(heldRight.swing < heldLeft.swing - 10 && heldRight.swing >= yawMinus - .01 && heldRight.rise > heldLeft.rise + 10 && heldRight.rise <= LOOK.pitchUpLimit + .01,
       `reverse drag stays inside the opposite head-turn limits: ${JSON.stringify(heldRight)}`);
     await page.mouse.up();

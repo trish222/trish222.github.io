@@ -7,6 +7,12 @@
   <style>
     html, body { margin: 0; background: #1c1a2a; }
   </style>
+  <!-- RX100 for the desk hover labels, from Fontshare (its license forbids shipping the file in this repo). It loads
+       without blocking the first paint: if Fontshare is slow or blocked, the labels use the fallback face in ux.css. -->
+  <link rel="preconnect" href="https://api.fontshare.com">
+  <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin>
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=rx-100@400&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=rx-100@400&display=swap"></noscript>
   <!--
     The CRT's greeting is drawn with canvas 2D, so the webfont has to be
     resident before the first 3D frame or it silently falls back to

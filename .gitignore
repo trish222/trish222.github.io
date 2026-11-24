@@ -45,3 +45,6 @@ art/bakes/*.exr
 art/_*.blend
 __pycache__/
 *.blend1
+
+# RX100 (ITF FFL) may not be redistributed: it loads from Fontshare's CSS (index.html), never from this repo.
+public/fonts/rx100*

@@ -11,13 +11,12 @@
   src: url('/fonts/martian-mono-latin-600-normal.woff2') format('woff2');
 }
 
-/* The desk hover labels (lamp, computer, floppies). Shipped unmodified, per its license. */
+/* The label font's fallback while Fontshare's RX100 loads, or if it is slow or blocked: a local monospace shrunk
+   to RX100's width (about 0.45em a character against 0.6em), so the pills keep their size and the caps stay tidy. */
 @font-face {
-  font-family: 'RX100';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/rx100-regular.woff2') format('woff2');
+  font-family: 'RX100 fallback';
+  src: local('Menlo Regular'), local('Menlo-Regular'), local('Consolas'), local('DejaVu Sans Mono'), local('Liberation Mono'), local('Courier New');
+  size-adjust: 80%;
 }
 
 #corner-menu {

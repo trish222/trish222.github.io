@@ -124,6 +124,28 @@ try {
   assert.equal((await labelState(lively)).arrow.motion, 'desk-arrow-bob', 'the arrow bobs');
   await lively.context().close();
 
+  // Fontshare slow or blocked: RX100 never loads, and the labels still show in capitals at about its width.
+  const blocked = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
+  await blocked.route(/fontshare\.com/, (route) => route.abort());
+  await blocked.goto(url);
+  await blocked.waitForFunction(() => document.body.classList.contains('orbit-live') && window.__stillReady?.());
+  const lampBlocked = await pointFor(blocked, OBJECTS[1]);
+  await blocked.mouse.move(lampBlocked.x, lampBlocked.y);
+  await blocked.waitForFunction((text) => document.getElementById('hover-label').textContent === text && getComputedStyle(document.getElementById('hover-label')).opacity === '1', UI.objects.lamp);
+  const fallback = await blocked.evaluate(() => {
+    const label = document.getElementById('hover-label'), range = document.createRange();
+    range.selectNodeContents(label.firstChild);
+    const style = getComputedStyle(label);
+    return { rx100: [...document.fonts].some((f) => f.family === 'RX100' && f.status === 'loaded'), upper: style.textTransform,
+      em: range.getBoundingClientRect().width / label.firstChild.length / parseFloat(style.fontSize), stack: style.fontFamily };
+  });
+  assert.equal(fallback.rx100, false, 'RX100 is not loaded when Fontshare is blocked');
+  assert.equal(fallback.upper, 'uppercase');
+  assert.ok(fallback.em < 0.55, `the fallback is condensed like RX100 (${fallback.em.toFixed(2)}em a character)`);
+  assert.match(fallback.stack, /RX100 fallback/);
+  await blocked.screenshot({ path: '.review-artifacts/menu/label-fallback.png', clip: { x: Math.max(0, lampBlocked.x - 200), y: Math.max(0, lampBlocked.y - 160), width: 400, height: 220 } });
+  await blocked.context().close();
+
   // Touch: tap once to label, again to press.
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, reducedMotion: 'reduce' });
   const phone = await context.newPage();

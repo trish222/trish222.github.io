@@ -39,11 +39,11 @@ Modifications: decimated, rescaled, re-oriented, materials simplified (normal an
 
 ## ITF Free Font License (FFL) 2.0
 
-Free for personal and commercial use, self-hosting on our own site included. The font file is shipped unmodified (no subsetting or conversion), as the license requires; the license text is `art/fonts/RX100-FFL.txt`.
+Free for personal and commercial use. Its license forbids redistributing the font file, so it is not in this repo (`public/fonts/rx100*` is git-ignored): `index.html` loads it from Fontshare's CSS (`api.fontshare.com`). The license text is `art/fonts/RX100-FFL.txt`.
 
 | Asset | Used as | Author | Source |
 | --- | --- | --- | --- |
-| RX100 | Hover labels over the lamp, computer and floppies (`public/fonts/`) | Anurag Gautam, Indian Type Foundry | https://www.fontshare.com/fonts/rx-100 |
+| RX100 | Hover labels over the lamp, computer and floppies (loaded from Fontshare) | Anurag Gautam, Indian Type Foundry | https://www.fontshare.com/fonts/rx-100 |
 
 ## Made in Blender Python (no third-party license)
 

@@ -25,7 +25,7 @@
   --back-margin: 8px; /* extra room between "◀ desk" and the left edge of the screen */
   --ux-back-nudge: 3px; /* how far "◀ desk"'s arrow slides left on hover or focus */
   /* The ▼ over the lamp, computer and floppies: width (its height is half), bob period and distance. */
-  --desk-label-font: 'RX100', var(--ux-font); /* the pill text over the lamp, computer and floppies, in capitals */
+  --desk-label-font: 'RX100', 'RX100 fallback', ui-monospace, monospace; /* the pill text over the lamp, computer and floppies, in capitals */
   --desk-label-font-size: 15px;
   --desk-arrow-size: 18px;
   --desk-arrow-bob: 0.7s;
