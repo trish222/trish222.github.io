@@ -23,5 +23,5 @@ export function showLofi() {
 <main>${UI.menuItems.map(section).join('')}</main>`;
   document.body.append(page);
   document.body.classList.add('lofi');
-  document.title = `${CONTENT.owner.name} — ${CONTENT.owner.title}`;
+  document.title = CONTENT.owner.name;
 }

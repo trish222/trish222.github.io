@@ -196,9 +196,12 @@ Generated in P0 from [visual-plan.md](visual-plan.md). Work the first unchecked 
 
 ## P8 — Content and ship
 
-- [ ] Audit `index.html` content: resume, projects, links, and a Credits window for CC-BY assets. Done when: every CC-BY asset is credited.
-- [ ] Add OG/Twitter meta with a screenshot. Done when: the meta validates.
-- [ ] Run every check, then open a PR from `theme/crt-baked` to `main` with a summary and before/after screenshots (only when Trish asks). Done when: all acceptance criteria in visual-plan are ticked and the Pages deploy succeeds.
+- [x] Audit `index.html` content: resume, projects, links, and a Credits window for CC-BY assets. Done when: every CC-BY asset is credited.
+  - Note: Credits window matches `art/credits.md` (`tests/credits.mjs`); lo-fi renders the same `renderers` as the screen. Open for Trish: contact list still has `hello@example.com` and a LinkedIn `href: "#"` (`src/content/resume.js`); the Resume window is the HTML resume and nothing links to `public/resume.pdf` yet. All other links return 200 (LinkedIn blocks bots).
+- [x] Add OG/Twitter meta with a screenshot. Done when: the meta validates.
+  - Note: title "Trish Nguyen", description, og:/twitter: tags with absolute `https://trish222.github.io/` URLs, `public/og.png` (1200x630 desk view), `public/favicon.svg`. Not run through an external validator.
+- [x] Run every check, then open a PR from `theme/crt-baked` to `main` with a summary and before/after screenshots (only when Trish asks). Done when: all acceptance criteria in visual-plan are ticked and the Pages deploy succeeds.
+  - Note: PR opened, not merged. `deploy.yml` now deploys on push to `main` only; the Pages deploy itself is unverified until the merge.
 
 ## UX layer
 
