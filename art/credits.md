@@ -36,6 +36,7 @@ Modifications: decimated, rescaled, re-oriented, materials simplified (normal an
 | Atkinson Hyperlegible | Body copy in windows (`public/fonts/`) | Braille Institute | https://brailleinstitute.org/freefont |
 | Martian Mono | Corner "menu" label (`public/fonts/`) | Evil Martians | https://github.com/evilmartians/mono |
 | Playfair Display | Display face (`public/fonts/`) | Claus Eggers Sørensen | https://fonts.google.com/specimen/Playfair+Display |
+| Liberation Serif | The "T" favicon (Bold, outline converted to paths in `public/favicon.svg` and the PNGs; no font file shipped; OFL in `art/fonts/`) | Red Hat, Inc. | https://github.com/liberationfonts/liberation-fonts |
 
 ## ITF Free Font License (FFL) 2.0
 

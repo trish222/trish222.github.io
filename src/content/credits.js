@@ -74,6 +74,12 @@ export const CREDITS = {
       href: "https://fonts.google.com/specimen/Playfair+Display",
     },
     {
+      title: "Liberation Serif",
+      author: "Red Hat, Inc.",
+      license: "SIL OFL 1.1",
+      href: "https://github.com/liberationfonts/liberation-fonts",
+    },
+    {
       title: "Cinzel",
       author: "Natanael Gama",
       license: "SIL OFL 1.1",
