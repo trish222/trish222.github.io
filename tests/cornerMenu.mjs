@@ -217,6 +217,9 @@ try {
     assert.equal(await phone.locator('#menu-list').isHidden(), true, 'Escape closes the menu');
     assert.equal(await phone.evaluate(() => document.activeElement.id), 'menu-button', 'and returns focus to its button');
     assert.equal(await phone.evaluate(() => document.body.classList.contains('orbit-live')), true, 'without leaving the room');
+    // Keyboard only from here: the pointer still rests where it hovered "Projects", and the list reopening under it
+    // re-hovers that item a frame later, which races the first cursor read.
+    await phone.mouse.move(5, 600);
     await phone.keyboard.press('ArrowDown');
     assert.equal(await phone.locator('#menu-list').isHidden(), false, 'ArrowDown opens the list');
     const [ax, ay] = await kit.pos();

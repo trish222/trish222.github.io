@@ -45,10 +45,13 @@ const entry = (e) => `<div class="resume-entry">
 const credit = (c) => `<li>${link({ text: c.title, href: c.href })} by ${esc(c.author)} <span class="credit-license">(${esc(c.license)})</span></li>`;
 
 const credits = () => `<div class="credits-content">
-  <p>Inspired by ${CREDITS.inspiredBy.map(link).join(' and ')} (not affiliated).</p>
-  <h2>3D models</h2><ul>${list(CREDITS.assets, credit)}</ul>
+  <h2>Inspired by</h2><p>${CREDITS.inspiredBy.map(link).join(' and ')} (not affiliated).</p>
+  <h2>3D models &amp; textures</h2><ul>${list(CREDITS.assets, credit)}</ul>
+  <p>Also CC0 from Poly Haven: ${CREDITS.cc0.map(({ title, author, href }) => `${link({ text: title, href })} by ${esc(author)}`).join(', ')}.</p>
   <h2>Fonts</h2><ul>${list(CREDITS.fonts, credit)}</ul>
-  <p class="credits-built">${esc(CREDITS.builtWith)}</p>
+  <h2>Code libraries</h2><ul>${list(CREDITS.libraries, credit)}</ul>
+  <p>Full license texts: ${link({ text: 'third-party-licenses.txt', href: '/third-party-licenses.txt' })}.</p>
+  <h2>Built with</h2><p class="credits-built">${esc(CREDITS.builtWith)}</p>
 </div>`;
 
 const resume = ({ owner, resume: r }) => `<article class="resume">

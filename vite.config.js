@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import tailwindcss from '@tailwindcss/vite'
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
+import { thirdPartyLicenses } from './scripts/third-party-licenses.mjs'
 
 function git(...args) {
   try { return execFileSync('git', args, { encoding: 'utf8' }).trim() }
@@ -32,6 +33,7 @@ function buildInfo() {
 export default defineConfig({
   plugins: [
     tailwindcss(),
+    thirdPartyLicenses(),
     buildInfo(),
   ],
   // Ensures GitHub Pages finds files correctly

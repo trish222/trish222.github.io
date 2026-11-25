@@ -1,4 +1,5 @@
-// The Credits window. tests/credits.mjs checks `assets` and `fonts` against art/credits.md.
+// The Credits window. tests/credits.mjs checks it against art/credits.md; scripts/third-party-licenses.mjs
+// writes the full text of each `libraries` license into dist/third-party-licenses.txt.
 export const CREDITS = {
   inspiredBy: [
     { text: "seanaiux.com/computer", href: "https://seanaiux.com/computer" },
@@ -41,6 +42,16 @@ export const CREDITS = {
       license: "CC BY 4.0",
       href: "https://sketchfab.com/models/5f5ccee1514c440887c072fae8e0d699",
     },
+  ],
+  // CC0 needs no attribution; listed as a courtesy.
+  cc0: [
+    { title: "Wooden Table 01", author: "Ethan Place", href: "https://polyhaven.com/a/WoodenTable_01" },
+    { title: "Painted Plaster Wall", author: "Amal Kumar", href: "https://polyhaven.com/a/painted_plaster_wall" },
+    { title: "Plank Flooring 04", author: "Dimitrios Savva", href: "https://polyhaven.com/a/plank_flooring_04" },
+    { title: "Book Encyclopedia Set 01", author: "John Malcolm", href: "https://polyhaven.com/a/book_encyclopedia_set_01" },
+    { title: "Office Notepads", author: "Ulan Cabanilla", href: "https://polyhaven.com/a/office_notepads" },
+    { title: "Stationery Supplies", author: "Mateusz Sadek", href: "https://polyhaven.com/a/stationery_supplies" },
+    { title: "Shanghai Bund", author: "Greg Zaal", href: "https://polyhaven.com/a/shanghai_bund" },
   ],
   fonts: [
     {
@@ -86,5 +97,15 @@ export const CREDITS = {
       href: "https://fonts.google.com/specimen/Cinzel",
     },
   ],
-  builtWith: "Built with Three.js and Blender.",
+  libraries: [
+    { title: "three.js", author: "three.js authors", license: "MIT", href: "https://threejs.org" },
+    { title: "postprocessing", author: "Raoul van Rüschen", license: "Zlib", href: "https://github.com/pmndrs/postprocessing" },
+    { title: "GSAP", author: "GreenSock", license: "GSAP Standard License", href: "https://gsap.com" },
+    { title: "meshoptimizer", author: "Arseny Kapoulkine", license: "MIT", href: "https://github.com/zeux/meshoptimizer" },
+    { title: "Basis Universal", author: "Binomial LLC", license: "Apache-2.0", href: "https://github.com/BinomialLLC/basis_universal" },
+    { title: "98.css", author: "Jordan Scales", license: "MIT", href: "https://github.com/jdan/98.css" },
+    { title: "Tailwind CSS", author: "Tailwind Labs, Inc.", license: "MIT", href: "https://tailwindcss.com" },
+    { title: "Vite", author: "VoidZero Inc. and Vite contributors", license: "MIT", href: "https://vite.dev" },
+  ],
+  builtWith: "Built with Blender, Three.js and Vite.",
 };

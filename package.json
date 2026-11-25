@@ -12,7 +12,7 @@
     "check:deployment": "node scripts/check-deployment.mjs",
     "test:interaction": "node tests/interaction.mjs",
     "profile:interaction": "node scripts/profile-interaction.mjs",
-    "preview": "vite preview --port 4320",
+    "preview": "vite preview --host 127.0.0.1 --port 4320 --strictPort",
     "vendor:98": "node scripts/vendor-98css.mjs",
     "icons": "node scripts/make-icons.mjs",
     "test:startup": "node tests/startup.mjs",

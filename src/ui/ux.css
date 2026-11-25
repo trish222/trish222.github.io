@@ -196,6 +196,7 @@ body.screen-active #lofi-link, body.lofi #lofi-link { opacity: 0; visibility: hi
 .about-credits { margin-top: 10px; text-align: right; }
 .credits-content a { color: #0000ee; text-decoration: underline; }
 .credits-content h2 { margin: 10px 0 4px; font-size: 1em; }
+.credits-content h2:first-child { margin-top: 0; }
 .credits-content ul { margin: 0 0 0 18px; }
 .credits-content li { margin: 2px 0; }
 .credit-license { color: #555; }
