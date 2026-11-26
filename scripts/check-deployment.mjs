@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 
-const origin = process.argv[2] || 'https://trish222.github.io/';
+const origin = process.argv[2] || 'https://trish-nguyen.com/';
 const context = await request.newContext();
 try {
   const html = await context.get(origin);

@@ -15,7 +15,7 @@ and `/icons/` do not resolve to files under `public/` automatically.
    **Actions** tab, watch **Deploy to GitHub Pages** finish successfully.
 
 The workflow deploys pushes to `theme/crt-baked` to the URL
-https://trish222.github.io/. The latest successful deployment replaces the
+https://trish-nguyen.com/. The latest successful deployment replaces the
 live site; branches do not have separate preview URLs. To deploy `main`
 again, change `branches` in the workflow's `push` trigger (and allow `main`
 in the github-pages environment).
@@ -37,7 +37,7 @@ Open the preview URL printed by Vite. The workflow installs the locked
 dependencies, builds the app, checks the compiled HTML and public assets,
 and uploads only `dist/` for deployment. Keep `dist/` out of Git.
 Fonts, icons, and desk textures are tracked under `public/` and copied by Vite.
-The root `base: '/'` is correct for this repository's user-site URL.
+The root `base: '/'` is correct because the site is served from the root of https://trish-nguyen.com/.
 
 After deployment, hard-refresh the live page. Its HTML should reference
 `/assets/index-*.js` and `/assets/index-*.css`, never `/src/main.js`.
