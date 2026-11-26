@@ -1,6 +1,7 @@
 import './lofi.css';
 import { CONTENT, UI } from '../content/content.js';
 import { esc, renderers } from '../desktop/windowContent.js';
+import { resumeSaveHtml, initResumeSave } from '../desktop/resumeSave.js';
 
 // The plain-HTML portfolio: the same content as the screen's windows, in the same Win98 chrome, as one
 // scrolling page. No canvas, no models; reached from the room's lo-fi link (?lofi) and used when WebGL is missing.
@@ -8,6 +9,7 @@ const ICONS = { about: 'about-me', projects: 'projects', resume: 'resume', conta
 
 const section = ([id, title]) => `<section class="window" id="lofi-${id}" aria-labelledby="lofi-${id}-title">
   <div class="window-titlebar"><h2 class="window-title" id="lofi-${id}-title"><img src="/icons/${ICONS[id]}.png" width="16" height="16" alt="">${esc(title)}</h2></div>
+  ${id === 'resume' ? `<div class="window-toolbar">${resumeSaveHtml()}</div>` : ''}
   <div class="window-body">${renderers[id](CONTENT)}</div>
 </section>`;
 
@@ -23,6 +25,7 @@ export function showLofi() {
 <main>${UI.menuItems.map(section).join('')}</main>
 <footer class="lofi-foot">${esc(UI.copyright)}</footer>`;
   document.body.append(page);
+  initResumeSave();
   document.body.classList.add('lofi');
   document.title = CONTENT.owner.name;
 }

@@ -28,11 +28,6 @@ const projects = ({ projects: items }) => `<div class="file-explorer">${list(ite
 
 const contact = ({ contact: items }) => `<div class="contact-content">
   ${list(items, (c) => `<div class="contact-item"><span class="contact-label">${esc(c.label)}:</span>${link(c)}</div>`)}
-  <div class="divider-raised" style="margin:10px 0;"></div>
-  <p style="font-weight:bold; margin-bottom:6px;">Send a Message:</p>
-  <div class="form-field"><label>Name:</label><input type="text" class="win-input" placeholder="Your name"></div>
-  <div class="form-field"><label>Message:</label><textarea class="win-input" rows="3" placeholder="Your message..."></textarea></div>
-  <button class="win-button">Send</button>
 </div>`;
 
 const entry = (e) => `<div class="resume-entry">

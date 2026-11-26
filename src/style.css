@@ -348,6 +348,7 @@ body {
 .win-btn,
 .win-button,
 .window-menubar span,
+.resume-save,
 .taskbar-item,
 #start-button,
 .start-menu-item,
@@ -371,6 +372,20 @@ body {
   background: var(--highlight);
   color: white;
 }
+
+/* Resume toolbar: one raised button; 44px square floor on touch. */
+.window-toolbar { padding: 3px 4px; border-bottom: 1px solid var(--dark); }
+.resume-save,
+.resume-save:visited,
+.resume-save:hover,
+.resume-save:active {
+  color: #000;
+  text-decoration: none;
+}
+.resume-save { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.resume-save:active { padding: 6px 16px 4px 18px; }
+.resume-save:focus-visible { outline: 1px dotted #000; outline-offset: -4px; }
+@media (pointer: coarse) { .resume-save { min-width: 44px; min-height: 44px; } }
 
 /* Body
 
@@ -742,15 +757,6 @@ body {
 .contact-item { display: flex; gap: 8px; align-items: center; }
 .contact-label { font-weight: bold; width: 60px; flex-shrink: 0; }
 .contact-content a { color: #000080; text-decoration: underline; cursor: pointer; }
-
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-bottom: 6px;
-}
-
-.form-field label { font-size: 11px; font-weight: bold; }
 
 /* ================================
    RESUME CONTENT

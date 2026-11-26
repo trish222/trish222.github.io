@@ -2,6 +2,7 @@ import { desktopEvents } from './session.js';
 import { initProjectLinks, openPendingProject } from './projects.js';
 import { initRoomUi } from '../ui/roomUi.js';
 import { renderWindowContent } from './windowContent.js';
+import { initResumeSave } from './resumeSave.js';
 import { WINDOWS, resetWindows, openWindow, closeWindow, blurWindows, updateTaskbar, fitAllWindows, initDragging, initWindowControls } from './windows.js';
 
 /* ==========================================
@@ -394,6 +395,7 @@ export function initDesktop(sceneModule) {
   const generation = ++desktopGeneration;
   desktopEvents.reset();
   renderWindowContent();
+  initResumeSave();
   initDragging();
   initStartMenu();
   initWindowControls();

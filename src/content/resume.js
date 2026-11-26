@@ -1,35 +1,15 @@
 // Contact details and the resume.
 
-export const contact = [
-  {
-    label: "Email",
-    text: "hello@example.com",
-    href: "mailto:hello@example.com",
-  },
-  {
-    label: "GitHub",
-    text: "github.com/trish222",
-    href: "https://github.com/trish222",
-  },
-  { label: "LinkedIn", text: "linkedin.com/in/trish", href: "#" },
-];
+// The one source for how to reach Trish: Contact window, Resume header and lo-fi page.
+const EMAIL = { label: "Email", text: "trishnguyen955@gmail.com", href: "mailto:trishnguyen955@gmail.com" };
+const LINKEDIN = { label: "LinkedIn", text: "linkedin.com/in/trish-nguyen-a69350243", href: "https://www.linkedin.com/in/trish-nguyen-a69350243/" };
+const GITHUB = { label: "GitHub", text: "github.com/trish222", href: "https://github.com/trish222" };
+
+export const contact = [EMAIL, LINKEDIN, GITHUB];
 
 // Follows Trish_Nguyen_Resume.pdf.
 export const resume = {
-  links: [
-    [
-      {
-        text: "trishnguyen955@gmail.com",
-        href: "mailto:trishnguyen955@gmail.com",
-      },
-    ],
-    [
-      {
-        text: "linkedin.com/in/trish-nguyen-a69350243",
-        href: "https://www.linkedin.com/in/trish-nguyen-a69350243/",
-      },
-    ],
-  ],
+  links: [[EMAIL], [LINKEDIN]],
   education: [
     {
       what: "North Carolina State University",

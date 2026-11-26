@@ -20,6 +20,7 @@ export const UI = {
   credits: "credits",
   lofi: "skip 3D",
   lofiBack: "back to 3D",
+  saveResume: "Save PDF",
   objects: {
     crt: "use computer",
     lamp: "lamp",
