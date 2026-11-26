@@ -1,6 +1,6 @@
-# Trish Nguyen — interactive portfolio
+# Trish Nguyen — interactive site
 
-A cozy rainy-night desk with a working Windows 98 desktop on its CRT. Live at **[trish-nguyen.com](https://trish-nguyen.com)**.
+A cozy desk with a working Windows 98 desktop on its CRT. Live at **[trish-nguyen.com](https://trish-nguyen.com)**.
 
 ![The desk scene](public/og.png)
 
