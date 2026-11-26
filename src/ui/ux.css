@@ -201,3 +201,4 @@ body.screen-active #lofi-link, body.lofi #lofi-link { opacity: 0; visibility: hi
 .credits-content li { margin: 2px 0; }
 .credit-license { color: #555; }
 .credits-built { margin-top: 10px; }
+.credits-copyright { margin-top: 6px; font-size: 0.85em; color: #555; }

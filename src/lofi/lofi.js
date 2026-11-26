@@ -20,7 +20,8 @@ export function showLofi() {
   <nav aria-label="Sections">${UI.menuItems.map(([id, text]) => `<a href="#lofi-${id}">${esc(text)}</a>`).join('')}</nav>
   <a class="lofi-3d" href="${esc(location.pathname)}">${esc(UI.lofiBack)}</a>
 </header>
-<main>${UI.menuItems.map(section).join('')}</main>`;
+<main>${UI.menuItems.map(section).join('')}</main>
+<footer class="lofi-foot">${esc(UI.copyright)}</footer>`;
   document.body.append(page);
   document.body.classList.add('lofi');
   document.title = CONTENT.owner.name;

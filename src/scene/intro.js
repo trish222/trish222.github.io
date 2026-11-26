@@ -27,6 +27,7 @@ function uvRect(el, root) {
 export function createIntro({ boxWidth, mobile, reducedMotion, onFill, enter }) {
   const screen = document.getElementById('screen');
   const boot = document.getElementById('boot');
+  boot.querySelector('#boot-copyright').textContent = UI.copyright;
   const bar = boot.querySelector('.boot-bar');
   const fill = bar.querySelector('span');
   const page = document.getElementById('screen-page');

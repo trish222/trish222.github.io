@@ -1,4 +1,4 @@
-import { CONTENT, CREDITS } from '../content/content.js';
+import { CONTENT, CREDITS, UI } from '../content/content.js';
 
 // The Win98 theme's window bodies, filled from src/content/content.js. The chrome (title bars,
 // menus, status bars) stays in index.html; only what is said about Trish comes from content.
@@ -52,6 +52,7 @@ const credits = () => `<div class="credits-content">
   <h2>Code libraries</h2><ul>${list(CREDITS.libraries, credit)}</ul>
   <p>Full license texts: ${link({ text: 'third-party-licenses.txt', href: '/third-party-licenses.txt' })}.</p>
   <h2>Built with</h2><p class="credits-built">${esc(CREDITS.builtWith)}</p>
+  <p class="credits-copyright">${esc(UI.copyright)}</p>
 </div>`;
 
 const resume = ({ owner, resume: r }) => `<article class="resume">

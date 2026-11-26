@@ -22,7 +22,6 @@ export const resume = {
         text: "trishnguyen955@gmail.com",
         href: "mailto:trishnguyen955@gmail.com",
       },
-      { text: "984-242-5156", href: "tel:+19842425156" },
     ],
     [
       {
@@ -49,18 +48,12 @@ export const resume = {
     },
   ],
   skills: [
-    [
-      "Languages & Frameworks",
-      "Java, Python, C, HTML, CSS, JavaScript, React",
-    ],
+    ["Languages & Frameworks", "Java, Python, C, HTML, CSS, JavaScript, React"],
     [
       "AI & Developer Tools",
       "GitHub Copilot, Claude Code, Copilot CLI, Git/GitHub, Docker",
     ],
-    [
-      "Workflows",
-      "Agile (Scrum, Kanban), Jira, sprint planning, code reviews",
-    ],
+    ["Workflows", "Agile (Scrum, Kanban), Jira, sprint planning, code reviews"],
     [
       "Tools & Platforms",
       "Visual Studio Code, Eclipse, JUnit, Jenkins, SolidWorks, Adobe Photoshop",

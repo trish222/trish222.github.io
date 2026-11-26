@@ -49,3 +49,5 @@ body.no-scene .lofi-3d { display: none; }
     background: var(--desktop);
   }
 }
+
+#lofi .lofi-foot { margin: 0 0 14px; font-size: 11px; text-align: center; color: var(--white); }

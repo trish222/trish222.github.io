@@ -6,8 +6,8 @@ export const projects = [
     id: "microlearning",
     title: "MICROLEARNING",
     name: "Microlearning",
-    icon: "📱",
-    tags: ["TypeScript", "Vue"],
+    icon: "📚",
+    tags: ["React", "Java", "SpringBoot"],
     description:
       "Web application that helps users study through short, structured lessons, visuals, audio learning, writing practice, exercises, and quizzes.",
   },
