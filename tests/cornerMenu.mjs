@@ -4,7 +4,7 @@ import { UI } from '../src/content/content.js';
 
 // The corner menu. Wider than 760px: no "menu" word, the items are one row on the name's line (credits stays
 // bottom-left); keyboard only it zooms into the screen, signs in and opens each window. At 760px and under:
-// "menu" opens a vertical column. Both share one ▶ cursor, one font and no box. Also: the desk's credits link
+// "menu" opens a vertical column, right-aligned to the corner margin open or closed. Both share one ▶ cursor, one font and no box. Also: the desk's credits link
 // and About's Credits button open Credits; the hint shows on a first visit only; "◀ desk" (aria-label "Back to desk") returns.
 const url = process.argv[2] || 'http://127.0.0.1:4320/?diagnostics=1';
 const browser = await chromium.launch({ channel: 'chromium' });
@@ -185,6 +185,7 @@ try {
     assert.ok(title.tr < button.tl && approx(title.ty, button.ty, 1), `${width}: the name and "menu" share one line without overlapping`);
     assert.ok(title.size > button.size && /Martian Mono/.test(title.font), `${width}: the name is a little larger than "menu"`);
     assert.equal(await phone.locator('#menu-list').isHidden(), true, `${width}: the list starts closed`);
+    assert.ok(approx(button.tr, width - 16) && approx(button.br, width - 16), `${width}: closed, "menu" ends at the corner margin`);
     if (width !== 390) { await phone.context().close(); continue; }
 
     await phone.locator('#menu-button').click();
@@ -193,9 +194,9 @@ try {
     assert.ok(rows.every((r) => r.transform === 'lowercase' && /Martian Mono/.test(r.font) && r.size === rows[0].size && r.weight === '600'), 'one lowercase Martian Mono size and weight');
     assert.ok(rows.every((r) => r.bg === 'rgba(0, 0, 0, 0)' && r.border === '0px'), 'no border or background');
     assert.equal(await phone.evaluate(() => { const l = getComputedStyle(document.getElementById('menu-list')); return [l.backgroundColor, l.borderTopWidth, l.borderRadius, l.padding].join('|'); }), 'rgba(0, 0, 0, 0)|0px|0px|0px', 'the list has no panel');
-    assert.ok(rows.every((r) => r.tl === rows[0].tl && r.bl === rows[0].bl), 'one shared left edge');
+    assert.ok(rows.every((r) => approx(r.tr, width - 16) && approx(r.br, width - 16)), 'every word ends at the corner margin');
     assert.ok(rows.every((r) => r.w >= 44 && r.h >= 44), '44px hit areas');
-    assert.ok(approx(rows[0].br, width - 16), 'the column ends at the page margin');
+    assert.ok(rows.every((r) => approx(r.tl - r.bl, rows[0].tl - rows[0].bl)), 'each hit box starts one gutter left of its word');
     assert.equal(await phone.locator('#menu-list [data-window="credits"]').isVisible(), true, 'credits is in the phone list');
 
     await phone.mouse.move(5, 600);
@@ -210,7 +211,8 @@ try {
     const [fx, fy] = await kit.pos();
     await phone.locator('#menu-list button').nth(1).hover();
     const [sx, sy] = await kit.pos();
-    assert.ok(sy > fy && sx === fx, 'the cursor moves down the column');
+    assert.ok(sy > fy && sx !== fx, 'the cursor moves down the column, to the left of the next word');
+    assert.equal(await kit.gutter('#menu-list li:nth-child(2) button'), menuGutter, 'and keeps the gutter there');
     assert.equal(await kit.cursor.count(), 1, 'one cursor throughout');
 
     await phone.keyboard.press('Escape');
@@ -225,7 +227,8 @@ try {
     const [ax, ay] = await kit.pos();
     await phone.keyboard.press('ArrowDown');
     const [bx, by] = await kit.pos();
-    assert.ok(by > ay && bx === ax, 'ArrowDown moves the cursor down the column');
+    assert.ok(by > ay && bx !== ax, 'ArrowDown moves the cursor down the column');
+    assert.equal(await phone.evaluate(() => document.querySelector('.ux-cursor:not(.is-static)').getBoundingClientRect().left - document.activeElement.getBoundingClientRect().left), menuGutter, 'just left of the focused word');
     await phone.keyboard.press('Enter');
     await phone.locator('#window-projects').waitFor({ state: 'visible' });
     await phone.context().close();

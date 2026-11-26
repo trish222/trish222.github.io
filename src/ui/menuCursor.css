@@ -1,7 +1,7 @@
-/* The corner menu: "menu" and its items are one borderless Martian Mono column over the scene. Every
-   entry has the same left edge and the same left padding (--menu-gutter) that holds the shared ▶ cursor
-   (menuCursor.js), which therefore never shifts the text. --menu-cols (set from the longest label) sizes
-   the column, so it keeps its left edge whether the list is open or not. Wider than 760px there is no
+/* The corner menu: "menu" and its items are one borderless Martian Mono column over the scene, right-aligned so
+   every entry ends at the corner margin, open or closed. Each entry is as wide as its word plus the left padding
+   (--menu-gutter) that holds the shared ▶ cursor (menuCursor.js), so the cursor sits just left of that word and
+   never shifts the text. Wider than 760px there is no
    "menu" word: the items are a horizontal row on the name's line (the 760px matches roomUi.js). */
 @font-face {
   font-family: 'Martian Mono';
@@ -22,15 +22,14 @@
 #corner-menu {
   display: flex;
   flex-direction: column;
-  width: calc(var(--menu-gutter) + var(--menu-cols, 8) * (1ch + 0.04em));
+  align-items: flex-end;
   font: 600 var(--menu-font-size)/1.2 var(--ux-mono);
   letter-spacing: 0.04em;
 }
-#menu-list { margin: 0; padding: 0; list-style: none; }
+#menu-list { display: flex; flex-direction: column; align-items: flex-end; margin: 0; padding: 0; list-style: none; }
 #menu-list[hidden] { display: none; }
 #menu-button, .ux-menu-item, #screen-back {
   display: block;
-  width: 100%;
   min-height: 44px;
   padding: 0 0 0 var(--menu-gutter);
   border: 0;
@@ -45,14 +44,13 @@
 }
 
 @media (min-width: 761px) {
-  #corner-menu { width: auto; }
   #menu-button { display: none; }
-  #menu-list { display: flex; margin-right: calc(var(--menu-pad-r) * -1); } /* the last item's padding sits in the margin */
-  .ux-menu-item { width: auto; padding-right: var(--menu-pad-r); }
+  #menu-list { flex-direction: row; margin-right: calc(var(--menu-pad-r) * -1); } /* the last item's padding sits in the margin */
+  .ux-menu-item { padding-right: var(--menu-pad-r); }
   #menu-list li:has(> [data-window="credits"]) { display: none; } /* credits lives bottom-left */
 }
 /* "back to desk": the menu items' text (it is outside #corner-menu, so it sets the font itself), its ▶ always on. */
-#screen-back { position: relative; width: auto; font: 600 var(--menu-font-size)/1.2 var(--ux-mono); letter-spacing: 0.04em; }
+#screen-back { position: relative; font: 600 var(--menu-font-size)/1.2 var(--ux-mono); letter-spacing: 0.04em; }
 
 .ux-cursor {
   position: fixed;

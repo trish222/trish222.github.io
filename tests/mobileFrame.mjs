@@ -52,6 +52,22 @@ function assertFramed(label, e, portrait) {
   assert.ok(desk.max[0] > 0.5 && desk.min[0] < -0.5 || desk.max[0] - desk.min[0] > 1, `${label}: some desk shows around them`);
 }
 
+// The canvas never outgrows the viewport: its CSS box is the viewport's, its backing store is that times the
+// capped ratio, and nothing widens the page. Measured against the device's size, not innerWidth: an overflowing
+// element (even under body's overflow: hidden) widens the layout viewport, innerWidth and the canvas with it,
+// and the phone then shows only a corner of the room.
+async function assertFitsViewport(page, label, w, h) {
+  const m = await page.evaluate(() => {
+    const c = document.querySelector('#scene');
+    return { css: [c.clientWidth, c.clientHeight], px: [c.width, c.height], inner: [innerWidth, innerHeight],
+      scroll: [document.documentElement.scrollWidth, document.documentElement.scrollHeight], scale: visualViewport.scale };
+  });
+  assert.ok(m.inner[0] === w && m.inner[1] === h, `${label}: the layout viewport is ${m.inner}, the device's ${w}x${h}`);
+  assert.ok(m.css[0] <= w && m.css[1] <= h, `${label}: canvas ${m.css} CSS px fits the ${w}x${h} viewport`);
+  assert.ok(m.px[0] <= w * 1.5 && m.px[1] <= h * 1.5, `${label}: canvas ${m.px} device px is at most 1.5x the viewport`);
+  assert.ok(m.scroll[0] <= w && m.scroll[1] <= h && m.scale === 1, `${label}: the page is ${m.scroll} at scale ${m.scale}, no wider than the viewport`);
+}
+
 try {
   for (const [width, height] of [[390, 844], [844, 390]]) {
     const context = await browser.newContext({ viewport: { width, height }, isMobile: true, hasTouch: true, deviceScaleFactor: 3, reducedMotion: 'reduce' });
@@ -63,6 +79,12 @@ try {
     assert.deepEqual(models, ['scene-mobile.glb'], `${width}x${height} loads only the mobile scene`);
     const ratio = await page.evaluate(() => { const c = document.querySelector('#scene'); return c.width / c.clientWidth; });
     assert.ok(ratio <= 1.5 + 1e-6, `pixel ratio capped at 1.5 (canvas is ${ratio})`);
+    await assertFitsViewport(page, `${width}x${height}`, width, height);
+    if (await page.locator('#menu-button').isVisible()) {
+      await page.tap('#menu-button');
+      await assertFitsViewport(page, `${width}x${height} menu open`, width, height);
+      await page.tap('#menu-button');
+    }
     assertFramed(`${width}x${height}`, await extents(page), width < height);
     console.log(`PASS ${width}x${height} home view frames the desk scene`);
 

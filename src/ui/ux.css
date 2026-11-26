@@ -8,7 +8,7 @@
   --ux-accent: #f2a0bd; /* the LEGO pink */
   --ux-font: 'Atkinson Hyperlegible', system-ui, sans-serif;
   --ux-mono: 'Martian Mono', ui-monospace, monospace;
-  /* The desk's clickable text: the corner menu (one column, sized by --menu-cols) and the two bottom links. */
+  /* The desk's clickable text: the corner menu (one right-aligned column) and the two bottom links. */
   --menu-font-size: clamp(16px, 8px + 1.35vw, 19.5px);
   --name-font-size: calc(var(--menu-font-size) * 1.25); /* the title reads a little larger than the items */
   --menu-pad-r: 14px; /* space after each item in the desktop row */

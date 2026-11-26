@@ -26,7 +26,6 @@ export function initRoomUi(scene, events) {
 
   const button = $('menu-button'), list = $('menu-list');
   button.textContent = UI.menu;
-  $('corner-menu').style.setProperty('--menu-cols', Math.max(UI.menu.length, ...UI.menuItems.map(([, text]) => text.length)));
   list.replaceChildren(...UI.menuItems.map(([id, text]) => {
     const item = Object.assign(document.createElement('button'), { type: 'button', className: 'ux-menu-item', textContent: text });
     item.dataset.window = id;
