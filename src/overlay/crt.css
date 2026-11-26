@@ -81,7 +81,7 @@
     linear-gradient(to right, var(--edge), transparent 6%, transparent 94%, var(--edge)),
     linear-gradient(to bottom, var(--edge), transparent 6%, transparent 94%, var(--edge)),
     radial-gradient(ellipse farthest-corner at 50% 50%,
-      transparent 42%, rgb(0 0 0 / 0.19) 66%, rgb(0 0 0 / 0.38) 89%),
+      transparent 42%, rgb(0 0 0 / 0.15) 66%, rgb(0 0 0 / 0.3) 89%),
     repeating-linear-gradient(to bottom, rgb(0 0 0 / 0.14) 0, transparent 1.5px, rgb(0 0 0 / 0.14) 3px),
     repeating-linear-gradient(to right,
       rgb(255 0 0 / var(--crt-mask, 0)) 0, rgb(0 255 0 / var(--crt-mask, 0)) 1px,
@@ -143,11 +143,11 @@
 /* The tube's rounded corners (plus the soft edge) take about 28 box px off each end of the
    taskbar's row, so Start and the clock move in clear of them. */
 body:not(.glass-fullscreen):not(.no-scene) #screen #taskbar {
-  padding-inline: 28px;
+  padding-inline: calc(28px / var(--desk-ui-scale));
 }
 
 body:not(.glass-fullscreen):not(.no-scene) #screen #start-menu {
-  left: 28px;
+  left: calc(28px / var(--desk-ui-scale));
 }
 
 /* No tube on a phone's full-page desktop or without WebGL: the page is the whole screen. */

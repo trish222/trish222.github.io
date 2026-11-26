@@ -20,14 +20,21 @@ const average = (page, url) => page.evaluate(async (url) => {
   return sum.map((v) => v / (d.length / 4));
 }, url);
 // The WebGL picture alone just before the crossfade completes, then the live DOM at arrival. Parking at
-// the desk first refreshes the still, as leaving the screen does for real.
+// the desk first refreshes the still, as leaving the screen does for real. The shader draws the live
+// screen's flicker veil at its mean, so the DOM is averaged over one 1.7 s flicker cycle (crt.css).
+const FLICKER_SAMPLES = 6;
 async function handover(page) {
   await page.evaluate(() => window.__flyTo(0));
   await page.waitForTimeout(1000); // the still redraws in idle time
   const before = await average(page, await page.evaluate(() => { window.__flyTo(0.985); return document.querySelector('#scene').toDataURL(); }));
   await page.evaluate(() => window.__flyTo(1));
   await page.waitForTimeout(400);
-  const after = await average(page, `data:image/png;base64,${(await page.screenshot()).toString('base64')}`);
+  const after = [0, 0, 0];
+  for (let i = 0; i < FLICKER_SAMPLES; i++) {
+    const shot = await average(page, `data:image/png;base64,${(await page.screenshot()).toString('base64')}`);
+    shot.forEach((v, k) => { after[k] += v / FLICKER_SAMPLES; });
+    await page.waitForTimeout(1700 / FLICKER_SAMPLES);
+  }
   return before.map((v, i) => Math.abs(v - after[i]));
 }
 const url = process.argv[2] || 'http://127.0.0.1:4320/?diagnostics=1';

@@ -38,7 +38,10 @@ void main() {
   col += hasMap > 0.5 ? textureLod(map, uv, 4.0).rgb * glow * (1.0 - zoom) : vec3(0.0);
   col *= bright * (1.0 + HOVER_GLOW * hover);
   float row = vUv.y * lines, cols = vUv.x * lines * 1.3;
-  float scan = 1.0 - scanDark * (0.5 + 0.5 * sin(row * 6.2832)) * fade(row);
+  float wave = 0.5 + 0.5 * sin(row * 6.2832);
+  float scan = 1.0 - scanDark * wave * fade(row);
+  // The DOM's lines, too fine to resolve, still darken by their mean.
+  float scanDom = 1.0 - scanDark * mix(0.5, wave, fade(row));
   float shade = rim(abs(c.x)) * rim(abs(c.y)) * (1.0 - vignette * smoothstep(0.35, 1.6, dot(c, c)));
   // The DOM's mask: R, G, B stripes at alpha mask * 1.5, linearly blended between, over the tint.
   vec3 p = fract(cols - vec3(0.0, 1.0, 2.0) / 3.0) * 3.0;
@@ -50,13 +53,14 @@ void main() {
   // On arrival: the DOM's own steps in sRGB. Chrome mixes .crt-bloom's backdrop-filter (brightness 0.7,
   // contrast 4, blur 5px) in at its opacity, which darkens mid-tones; the multiply blends (raster) and the
   // black grain specks (mean alpha ~0.22) and flicker veil (flicker * 3 at ~50%) all darken in sRGB.
-  // brightness() scales sRGB values, which near black is not the linear gain bright = B^2.2.
+  // brightness() scales sRGB values, which near black is not the linear gain bright = B^2.2, and above 1
+  // it clips white before the multiply layers darken it.
   float brightS = pow(bright, 1.0 / 2.2);
-  vec3 s = toS(col / bright) * brightS;
-  vec3 blurred = toS(mix(textureLod(map, uv, 2.0).rgb, fillColor, lit)) * brightS; // the still has no fill
+  vec3 s = min(toS(col / bright) * brightS, 1.0);
+  vec3 blurred = min(toS(mix(textureLod(map, uv, 2.0).rgb, fillColor, lit)) * brightS, 1.0); // the still has no fill
   s = mix(s, clamp((blurred * 0.7 - 0.5) * 4.0 + 0.5, 0.0, 1.0), bloom * hasMap);
   s = 1.0 - (1.0 - s) * (1.0 - lift);
-  vec3 dom = toL(s * scan * stripes * shade * (1.0 - 0.22 * grain - 1.5 * flicker));
+  vec3 dom = toL(s * scanDom * stripes * shade * (1.0 - 0.22 * grain - 1.5 * flicker));
   float arrival = smoothstep(0.5, 1.0, zoom);
   col = mix(desk, dom, arrival);
   col *= 1.0 + flicker * sin(time * 47.0) * sin(time * 3.1);

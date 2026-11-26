@@ -105,6 +105,8 @@
   /* The resume, and anything else pretending to be a terminal. */
   --font-mono: 'Departure Mono', ui-monospace, monospace;
   --font-size: 11px;
+  /* How big the whole signed-in desktop reads on the monitor (#screen-shell); 1 on a phone. */
+  --desk-ui-scale: 1.25;
 }
 
 /* ================================
@@ -244,16 +246,9 @@ body {
   display: flex;
   flex-direction: column;
   z-index: 10;
-  /* The widths in index.html are desktop figures — 560px of Projects on
-     a 390px phone would simply hang off the right. 100% of #desktop,
-     not of the viewport, so a maximized window still lands exactly on
-     the frame; main.js pulls the window's `left` back in to match
-     before this has to do any clamping at all. */
+  /* Of #desktop, so a window sized on a wide frame fits a narrow one: the
+     body gives and scrolls, the chrome stays whole (windows.js clamps). */
   max-width: 100%;
-  /* Same again vertically — the Resume is taller than a short laptop
-     window. The body is the flex child that gives, so it scrolls and
-     the chrome stays whole; paired with the `top` clamp in main.js
-     (which can then only resolve to 0) the window always fits. */
   max-height: 100%;
 }
 
@@ -827,8 +822,8 @@ body {
    grid, so the header and the rows cannot drift apart. The two
    right-hand columns drop off below 560px rather than squeezing the
    name to one character a line — a viewport query and not a container
-   one because nothing here is resizable: a window's width is its
-   inline style, clamped to the desktop by `.window`'s max-width.
+   one because a window's width is an inline style set by the window
+   manager, clamped to the desktop by `.window`'s max-width.
    ================================ */
 .bin {
   display: flex;
@@ -1022,7 +1017,11 @@ body.screen-focused #screen-page {
    ================================ */
 #screen-shell {
   position: absolute;
-  inset: 0;
+  inset: 0 auto auto 0;
+  width: calc(100% / var(--desk-ui-scale));
+  height: calc(100% / var(--desk-ui-scale));
+  transform: scale(var(--desk-ui-scale));
+  transform-origin: 0 0;
   /* Opaque, so the fade below crosses over the login still painted
      underneath rather than over the tube's own texture. */
   background: var(--desktop);
@@ -1161,6 +1160,7 @@ body.glass-fullscreen #scene {
        so this figure has to carry all three or the button overflows
        into the padding it is supposed to sit inside. */
     --taskbar-h: 54px;
+    --desk-ui-scale: 1;
   }
 
   #start-button {

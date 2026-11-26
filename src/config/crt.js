@@ -5,7 +5,7 @@ export const CRT = {
   soft: 0.025,     // the picture fades into the tube glass over this much of the half-width
   scanPx: 3,       // scanline pitch in the desktop box's own pixels
   scanDark: 0.14,
-  vignette: 0.38,
+  vignette: 0.3,   // crt.css's radial gradient: half of it at 66%, all of it at 89%
   tint: [1, 0.93, 0.84], // warm phosphor white, scaled in by LOOK.crtTint
   bulge: 0.164,    // screen_glass's centre sag over the half-height (18.3 mm dome from its tucked rim)
 };
