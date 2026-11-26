@@ -27,8 +27,10 @@
     --edge-bottom: var(--edge-bottom-to);
     transition: --edge-top var(--edge-fade) ease, --edge-bottom var(--edge-fade) ease;
   }
-  /* Solid colours only: a gradient leaves background-color unset and Safari then tints its bars white. */
-  html, body, body.screen-active { background: var(--edge-top); }
+  /* Solid colours only: a gradient leaves background-color unset and Safari then tints its bars white.
+     The bottom colour, because Safari's toolbar samples the page background while the top bar follows
+     theme-color and the top strip; desk and login have equal top and bottom, so only signed-in differs. */
+  html, body, body.screen-active { background: var(--edge-bottom); }
   /* Fixed strips touching the physical edges, which Safari samples for the status bar and toolbar. They sit
      behind the UI (first in the DOM, z-index 0) and never take a press. */
   :root::before, :root::after {
