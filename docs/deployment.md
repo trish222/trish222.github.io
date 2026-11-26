@@ -10,15 +10,15 @@ and `/icons/` do not resolve to files under `public/` automatically.
 1. In **Settings → Pages → Build and deployment**, set **Source** to
    **GitHub Actions**. Do not choose “Deploy from a branch”.
 2. In **Settings → Environments → github-pages**, if deployment branches
-   are restricted, allow both `main` and `theme/windows98`.
-3. Commit and push the deployment changes to `theme/windows98`. In the
+   are restricted, allow `theme/crt-baked`.
+3. Commit and push the deployment changes to `theme/crt-baked`. In the
    **Actions** tab, watch **Deploy to GitHub Pages** finish successfully.
 
-The workflow deploys pushes to either `main` or `theme/windows98` to
-the same URL, https://trish222.github.io/. The latest successful deployment
-replaces the live site; branches do not have separate preview URLs.
-To return to deploying only `main`, remove `theme/windows98` from the
-workflow's push branches.
+The workflow deploys pushes to `theme/crt-baked` to the URL
+https://trish222.github.io/. The latest successful deployment replaces the
+live site; branches do not have separate preview URLs. To deploy `main`
+again, change `branches` in the workflow's `push` trigger (and allow `main`
+in the github-pages environment).
 
 For a manual deployment, use **Actions → Deploy to GitHub Pages → Run
 workflow** and select the desired branch. GitHub requires a manually
