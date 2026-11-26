@@ -267,9 +267,17 @@ function openProject(i) {
 }
 
 // The corner menu and the credits link: zoom in and open a desktop window.
+// Already on the glass there is no arrival to wait for (flyToScreen returns early), so hand it over now;
+// while the phone's dive back to the login is lifting, diveLifted hands it over.
 export function openWindow(id) {
   pendingProject = { window: id };
-  enterScreen();
+  if (fly.value === 1 && fly.dir !== -1 && dive.dir >= 0) flushPendingProject();
+  else enterScreen();
+}
+
+function flushPendingProject() {
+  if (pendingProject) document.dispatchEvent(new CustomEvent("desk:open", { detail: pendingProject }));
+  pendingProject = null;
 }
 
 function enterScreen() {
@@ -427,8 +435,7 @@ function arrive() {
   onHoverTarget(null);
 
   updateScreenOverlay();
-  if (pendingProject) document.dispatchEvent(new CustomEvent("desk:open", { detail: pendingProject }));
-  pendingProject = null;
+  flushPendingProject();
 
   if (!document.body.classList.contains("signed-in")) {
     document.getElementById("login-user")?.focus({ preventScroll: true });
@@ -592,6 +599,7 @@ function diveLifted() {
   diveState.q = 0;
   onDiveLanded = null;
   diveSettled();
+  flushPendingProject();
 
   if (!document.body.classList.contains("signed-in")) {
     document.getElementById("login-user")?.focus({ preventScroll: true });

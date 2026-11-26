@@ -400,7 +400,11 @@ export function initDesktop(sceneModule) {
   initPointerKind();
   initDesktopIcons();
   initRecycleBin();
-  initProjectLinks(signedIn, enterDesktop);
+  initProjectLinks(signedIn, () => {
+    if (signingIn) return; // a sign-in is already under way; the latest request waits in `pending`
+    signingIn = true;
+    enterDesktop();
+  });
 
   /* A window positioned for a desktop viewport is off-stage once the
      viewport is a phone's — and crossing the PHONE breakpoint in either
