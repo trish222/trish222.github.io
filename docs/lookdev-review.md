@@ -1,5 +1,7 @@
 # Look-dev review (P6)
 
+Captures re-taken on 2026-11-26 from the current `theme/crt-baked` build (`npm run build`, `npm run preview`).
+
 The cam_overview captures after the post chain, from `npm run review` (scripts/review/capture.mjs, reduced motion, so rain and grain are still):
 
 | | Lamp on | Lamp off |

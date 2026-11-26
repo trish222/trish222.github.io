@@ -16,7 +16,7 @@ Use production preview on port 4320 for browser checks. Run `npm run build` firs
 | `node scripts/review/nameplate.mjs OUTPUT URL` | Focused nameplate visual/geometry inspection |
 | `node scripts/review/render-quality.mjs URL OUTPUT` | Fixed-camera DPR/AO/MSAA comparisons, renderer inventory, screenshots and frame cadence; run separately from other browser work |
 | `node scripts/review/compare-foundation.mjs OUTPUT BEFORE_URL AFTER_URL` | Matched compiled-build home/turn/entered/lamp-off captures and resting frame/startup comparisons; defaults to preserved baseline on 4323 and current preview on 4320 |
-| `npm run profile:startup` | Browser startup timings and CPU profiles |
+| `npm run profile:startup` | Browser startup timings and CPU profiles (`PROFILE_THROTTLE=slow4g` runs only 390x844 on Slow 4G with a 4x CPU slowdown) |
 | `npm run profile:interaction -- URL --trials=3` | Matched interaction measurements; explicit URLs should include `?diagnostics=1` |
 | `npm run icons`, `npm run vendor:98` | Regenerate original icons and scoped vendor CSS |
 

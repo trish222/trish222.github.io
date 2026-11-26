@@ -3,6 +3,8 @@ import { initProjectLinks, openPendingProject } from './projects.js';
 import { initRoomUi } from '../ui/roomUi.js';
 import { renderWindowContent } from './windowContent.js';
 import { initResumeSave } from './resumeSave.js';
+import { initPointerKind, initDesktopIcons } from './desktopIcons.js';
+import { initRecycleBin, refillBin } from './recycleBin.js';
 import { WINDOWS, resetWindows, openWindow, closeWindow, blurWindows, updateTaskbar, fitAllWindows, initDragging, initWindowControls } from './windows.js';
 
 /* ==========================================
@@ -96,123 +98,6 @@ function initStartMenu() {
   });
 }
 
-/* ==========================================
-   DESKTOP ICONS  (double-click with a mouse, one tap with a finger)
-   ========================================== */
-
-/* Which kind of pointer is in use *right now*, rather than what the
-   device is capable of: a laptop with a touchscreen answers yes to
-   `(pointer: coarse)` and is still being driven by a mouse. Captured on
-   the way down so the click that follows can read it. */
-let lastPointerType = 'mouse';
-
-function initPointerKind() {
-  desktopEvents.on(document, 'pointerdown', e => {
-    lastPointerType = e.pointerType || 'mouse';
-  }, true);
-}
-
-function initDesktopIcons() {
-  document.querySelectorAll('.desktop-icon').forEach(icon => {
-    let clicks = 0;
-    let timer  = null;
-
-    desktopEvents.on(icon, 'click', e => {
-      e.stopPropagation();
-      icon.classList.add('selected');
-      /* Selecting an icon is working on the desktop, so whatever window
-         was lit stops being so — opening one lights the new one
-         straight back up. */
-      blurWindows();
-
-      /* A finger opens on the first tap. Double-tap is the desktop's
-         idiom and has never been a touch one — there is no hover to
-         preview with, so the first tap has nothing else to mean, and
-         the gesture collides with double-tap-to-zoom (which
-         `touch-action: manipulation` in style.css also turns off). */
-      if (lastPointerType !== 'mouse') {
-        clearTimeout(timer);
-        clicks = 0;
-        openWindow(icon.dataset.window);
-        return;
-      }
-
-      clicks++;
-      if (clicks === 1) {
-        timer = desktopEvents.timeout(() => { clicks = 0; }, 400);
-      } else {
-        clearTimeout(timer);
-        clicks = 0;
-        openWindow(icon.dataset.window);
-      }
-    });
-  });
-
-  /* Windows live inside #desktop, so their clicks bubble here too:
-     only a click on the bare desktop clears the selection and drops
-     the focus. (The taskbar and Start menu are outside #desktop and so
-     never reach this, which is right — clicking those is not clicking
-     away.) */
-  desktopEvents.on(document.getElementById('desktop'), 'click', e => {
-    if (e.target.closest('.desktop-icon') || e.target.closest('.window')) return;
-    document.querySelectorAll('.desktop-icon').forEach(i => i.classList.remove('selected'));
-    blurWindows();
-  });
-}
-
-/* ==========================================
-   THE RECYCLE BIN
-
-   The one window carrying state. Its rows are hidden rather than
-   removed, so Start > Log Off can put them back — which makes emptying
-   it reversible, and makes it testable more than once per load.
-   ========================================== */
-
-function binRows() {
-  return [...document.querySelectorAll('#bin-list .bin-item')];
-}
-
-function updateBin() {
-  const left = binRows().filter(r => !r.hidden);
-  const empty = document.getElementById('bin-empty');
-  const count = document.getElementById('bin-count');
-  const btn   = document.getElementById('bin-empty-btn');
-  if (empty) empty.hidden = left.length > 0;
-  if (count) count.textContent = `${left.length} object(s)`;
-  /* Nothing to empty is a disabled button, not a button that does
-     nothing when pressed. */
-  if (btn) btn.disabled = left.length === 0;
-}
-
-function selectBinRow(row) {
-  binRows().forEach(r => r.classList.toggle('selected', r === row));
-}
-
-function initRecycleBin() {
-  const list = document.getElementById('bin-list');
-  if (!list) return;
-
-  /* Single selection, the way a 98 list view did it. Click and focus
-     both, so the rows answer to the keyboard as well — they carry
-     tabindex, and selection following focus is what a list view does. */
-  desktopEvents.on(list, 'click', e => selectBinRow(e.target.closest('.bin-item')));
-  desktopEvents.on(list, 'focusin', e => selectBinRow(e.target.closest('.bin-item')));
-
-  desktopEvents.on(document.getElementById('bin-empty-btn'), 'click', () => {
-    const left = binRows().filter(r => !r.hidden);
-    if (!left.length) return;
-    if (!confirm(`Are you sure you want to delete these ${left.length} items?`)) return;
-    left.forEach(r => { r.hidden = true; r.classList.remove('selected'); });
-    updateBin();
-  });
-
-  updateBin();
-}
-
-function refillBin() {
-  binRows().forEach(r => { r.hidden = false; r.classList.remove('selected'); });
-  updateBin();
-}
 
 /* ==========================================
    THE LOGIN SCREEN ON THE CRT

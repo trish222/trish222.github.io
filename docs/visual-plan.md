@@ -138,7 +138,7 @@ The work is done when:
 - [ ] No real-time shadow maps or SSAO remain; lighting comes from bakes.
 - [ ] Lamp toggle crossfades lighting in under 400 ms.
 - [ ] Clicking the CRT zooms in and the desktop text is crisp and fully usable.
-- [ ] On a phone in portrait the monitor fills the screen and every desktop app is tappable.
+- [ ] On a phone in portrait the default view shows the desk with the monitor and keyboard; one tap on the monitor zooms in, and every app (About, Projects, Resume, Contact, Credits) opens by tap from the desktop icons and from the menu (`tests/mobileFrame.mjs`, `tests/mobileApps.mjs`).
 - [ ] A visible LO-FI button opens a plain HTML portfolio; it is also the no-WebGL fallback.
 - [ ] npm test, check:build and check:source pass; GitHub Pages deploy succeeds.
 - [ ] Every CC-BY asset is credited in a Credits window.

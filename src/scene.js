@@ -15,6 +15,7 @@ import { createPost } from "./scene/post.js";
 import { FLOPPIES } from "./content/content.js";
 import { createDeskObjects } from "./ui/deskObjects.js";
 import { createIntro } from "./scene/intro.js";
+import { MOBILE_BP, LAMP_START_ON, LAMP_FADE_S, BACKGROUND, HOVER_RATE, MAX_DPR, HANDHELD_MAX_DPR, FLY_FROM, FACE_MIN, FLY_S, FADE_S, FLY_EASE, FADE_EASE, FADE_SCALE, DIVE_S, DIVE_EASE, SCREEN_BASE_W } from "./scene/sceneConfig.js";
 
 let interaction = null;
 
@@ -36,19 +37,6 @@ function distFor(frustum) {
   return frustum / (2 * tanHalfFov());
 }
 
-const MOBILE_BP = 760;
-
-const LAMP_START_ON = true;
-
-const LAMP_FADE_S = 0.3; // P4 done-when: the crossfade lands in under 400 ms
-
-const BACKGROUND = "#1c1a2a";
-
-const HOVER_RATE = 7; // hover easing, per second
-
-const MAX_DPR = 2;
-const HANDHELD_MAX_DPR = 1.5;
-
 function scenePixelRatio() {
   return Math.min(window.devicePixelRatio || 1, isHandheld() ? HANDHELD_MAX_DPR : MAX_DPR);
 }
@@ -63,28 +51,6 @@ function syncRenderQuality() {
   post?.resize();
 }
 
-// LOOKING AROUND
-
-const FLY_FROM = "current";
-
-const FACE_MIN = 0.17; // ~80° off the normal
-
-// FLYING INTO THE SCREEN
-
-const FLY_S = 1.6; // seconds, the whole camera move
-
-const FADE_S = 0.3;
-const FLY_EASE = "power3.inOut";
-const FADE_EASE = "power1.inOut";
-
-const FADE_SCALE = 0.015;
-
-// THE SECOND MOVE — the bezel framing in to a full viewport
-
-const DIVE_S = 0.9; // seconds; the flight's 1.6s would drag over a dolly this short
-const DIVE_EASE = FLY_EASE;
-
-export const SCREEN_BASE_W = 900;
 // Follows screen_plane's aspect once the GLB is loaded.
 let screenBaseH = 0;
 
@@ -769,12 +735,6 @@ export async function initScene(canvas) {
 
   // Diagnostics load only for development or an explicit review URL.
   if (import.meta.env.DEV || new URLSearchParams(location.search).has('diagnostics')) {
-    const [{ installGeometryDiagnostics }, { installExperienceDiagnostics }] = await Promise.all([
-      import('./debug/geometry.js'), import('./debug/experience.js'),
-    ]);
-    if (generation !== sceneGeneration) return false;
-    disposeDiagnostics = installGeometryDiagnostics({ scene, camera, renderer, render: () => render(0), // pixel reads see still grain
-      renderBare: () => { post.setZoom(1); render(0); post.setZoom(fly.value); } }); // film strength 0
     const diagnostics = {
       get FACING() { return facingAngle; },
       get LAMP_FADE_S() { return LAMP_FADE_S; },
@@ -817,18 +777,11 @@ export async function initScene(canvas) {
       get post() { return post; },
       get updateScreenOverlay() { return updateScreenOverlay; },
     };
-    installExperienceDiagnostics(diagnostics);
-    if (import.meta.env.DEV && new URLSearchParams(location.search).has('debug')) {
-      try {
-        const { installLampTuning } = await import('./debug/lampTuning.js');
-        if (generation !== sceneGeneration) return false;
-        const disposeGeometry = disposeDiagnostics;
-        const disposeTuning = installLampTuning(diagnostics, stage);
-        disposeDiagnostics = () => { disposeTuning(); disposeGeometry?.(); };
-      } catch (error) {
-        console.error('Debug panel failed; continuing without it.', error);
-      }
-    }
+    const { loadDiagnostics } = await import('./debug/loadDiagnostics.js');
+    disposeDiagnostics = await loadDiagnostics({ diagnostics, stage, isCurrent: () => generation === sceneGeneration,
+      geometry: { scene, camera, renderer, render: () => render(0), // pixel reads see still grain
+        renderBare: () => { post.setZoom(1); render(0); post.setZoom(fly.value); } } }); // film strength 0
+    if (generation !== sceneGeneration) { disposeDiagnostics?.(); disposeDiagnostics = null; return false; }
   }
 
   onResize = () => {

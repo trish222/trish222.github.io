@@ -7,9 +7,12 @@ import path from 'node:path';
 const url = process.env.PROFILE_URL || 'http://127.0.0.1:4320/';
 const output = path.resolve(process.argv[2] || process.env.PROFILE_OUTPUT || '.startup-profiles');
 await mkdir(output, { recursive: true });
+// PROFILE_THROTTLE=slow4g: the phone budget case only, on Lighthouse's Slow 4G (1.6 Mbit/s down, 750 kbit/s up,
+// 150 ms RTT) with the CPU 4x slower.
+const throttled = process.env.PROFILE_THROTTLE === 'slow4g';
 const browser = await chromium.launch({ channel: 'chromium' });
 try {
-  for (const [name, width, height] of [['desktop', 1440, 900], ['mobile', 390, 844]]) {
+  for (const [name, width, height] of [['desktop', 1440, 900], ['mobile', 390, 844]].filter(([name]) => !throttled || name === 'mobile')) {
     const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 });
     const page = await context.newPage();
     const errors = [];
@@ -32,10 +35,14 @@ try {
     const client = await context.newCDPSession(page);
     await client.send('Network.enable');
     await client.send('Network.setCacheDisabled', { cacheDisabled: true });
+    if (throttled) {
+      await client.send('Network.emulateNetworkConditions', { offline: false, latency: 150, downloadThroughput: 1.6e6 / 8, uploadThroughput: 750e3 / 8 });
+      await client.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+    }
     await client.send('Profiler.enable');
     await client.send('Profiler.start');
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120000 });
-    await page.waitForFunction(() => performance.getEntriesByName('room:interactive').length, { timeout: 120000 });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 300000 });
+    await page.waitForFunction(() => performance.getEntriesByName('room:interactive').length, null, { timeout: 300000 });
     const { profile } = await client.send('Profiler.stop');
     const result = await page.evaluate(() => {
       const canvas = document.querySelector('#scene');
