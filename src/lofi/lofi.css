@@ -38,3 +38,14 @@ body.no-scene .lofi-3d { display: none; }
 #lofi .window-titlebar { cursor: default; touch-action: auto; }
 #lofi .window-title { margin: 0; font-size: 12px; }
 #lofi .window-body { overflow: visible; contain: none; background: var(--white); }
+
+/* Phones: dark edges (--edge-desk; Safari tints its bars from them) with the teal page inset by the safe areas.
+   Same query as DESKTOP_FULLSCREEN_QUERY in src/config/experience.js. */
+@media (max-width: 760px), (max-height: 520px) and (pointer: coarse) {
+  html:has(body.lofi), body.lofi { background: var(--edge-desk); }
+  #lofi {
+    margin: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+      env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+    background: var(--desktop);
+  }
+}

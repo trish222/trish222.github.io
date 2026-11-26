@@ -1099,7 +1099,10 @@ body.screen-focused #screen {
    ================================ */
 body.glass-fullscreen #screen {
   position: fixed;
-  inset: 0;
+  /* Inset by the safe areas so the teal desktop and taskbar stay off the physical edges; the strips
+     left over show the page's edge colours (ui/edgeColor.css), which is also what Safari tints its bars from. */
+  inset: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+    env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
   /* The box's size is inline, written by scene.js, so it has to be
      beaten here — the same bargain as the no-WebGL rule below. The
      transform is scene.js's own doing: it stands the matrix down for
@@ -1218,29 +1221,10 @@ body.glass-fullscreen #scene {
 
   .bin-row { min-height: 44px; align-items: center; }
 
-  /* The safe areas, and only while the page *is* the viewport: on the
-     glass this box is 900 CSS pixels under a matrix and the insets
-     would be measuring the wrong rectangle. The taskbar grows by the
-     home indicator and pads it back off, so the chrome keeps its 52px
-     and `--taskbar-h` — which is also what #desktop and the Start menu
-     are measured from — accounts for the whole strip. */
-  body.glass-fullscreen {
-    --taskbar-h: calc(54px + env(safe-area-inset-bottom, 0px));
-  }
-
-  body.glass-fullscreen #taskbar {
-    padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
-  }
-
   /* Icons: a bigger label and a bigger box under the same 32px art,
-     spaced so two columns never share a thumb. Clear of a notch in
-     landscape, where the inset is on the side the icons start at. */
+     spaced so two columns never share a thumb. */
   .desktop-icons { top: 12px; left: 12px; gap: 18px; }
 
-  body.glass-fullscreen .desktop-icons {
-    top: calc(12px + env(safe-area-inset-top, 0px));
-    left: calc(12px + env(safe-area-inset-left, 0px));
-  }
   .desktop-icon { width: 88px; padding: 8px 4px; gap: 6px; }
   .desktop-icon span { font-size: 13px; }
 }
