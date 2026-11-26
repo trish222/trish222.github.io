@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { LOOK } from '../config/look.js';
 import { fitFrame, frames } from './fitFrame.js';
-import { lookMode } from '../config/experience.js';
+import { lookFor, lookMode } from '../config/experience.js';
 
 // Arrival fits the screen with a margin; the dive just covers the viewport.
 const ARRIVE_PAD = 1.2;
@@ -68,11 +68,11 @@ export function createCameraRig({ getStage, getCamera, getFov, getFlightStart,
   }
   const seatedTarget = new THREE.Vector3();
   const homeTarget = () => alongSight(seatedTarget, 1);
-  // Look-around pivot (lookMode()): "orbit" swings the camera around LOOK.pivotDepth; "turn" puts the
+  // Look-around pivot (lookMode()): "orbit" swings the camera around pivotDepth; "turn" puts the
   // pivot a hair in front of the eye, so the camera rotates in place (OrbitControls needs a radius above 0).
   const TURN_DEPTH = 0.001;
   const orbitTarget = new THREE.Vector3();
-  const orbitPivot = () => alongSight(orbitTarget, lookMode() === 'turn' ? TURN_DEPTH : LOOK.pivotDepth);
+  const orbitPivot = () => alongSight(orbitTarget, lookMode() === 'turn' ? TURN_DEPTH : lookFor('pivotDepth'));
 
   function screenFrustum(aspect) {
     const { width, height } = surface();

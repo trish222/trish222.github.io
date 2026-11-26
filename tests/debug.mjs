@@ -39,28 +39,27 @@ try {
   assert.deepEqual(errors, []);
   console.log('PASS ?debug scene renders with the look panel');
 
-  // Desktops default to "orbit" (LOOK.lookMode), phones and tablets to "turn" (LOOK.lookModeHandheld). Orbit swings the
-  // camera about a pivot pivotDepth times as far out as the screen; turn rotates it in place. The limits keep void out
-  // of the frame at every corner in the default mode, and the panel's toggle for the device's own mode swaps to the other.
-  const pivotRadius = (page) => page.evaluate(() => {
+  // Desktops default to "orbit" (LOOK.lookMode), phones and tablets too (LOOK.lookModeHandheld). Orbit swings the
+  // camera about a pivot pivotDepth (pivotDepthHandheld) times as far out as the screen; turn rotates it in place. The limits keep void out
+  // of the frame at every corner in the default mode, and the panel's toggle for the device's own mode swaps to turn.
+  const pivotRadius = (page, key) => page.evaluate((key) => {
     window.__orbit(0, 0);
     const { world } = window.__fit('screen_plane');
     const centre = world[0].map((v, i) => (v + world[1][i]) / 2);
     const eye = window.__camera.position;
     const toScreen = Math.hypot(eye.x - centre[0], eye.y - centre[1], eye.z - centre[2]);
-    return { radius: window.__orbit().radius, expected: window.__look.LOOK.pivotDepth * toScreen };
-  });
+    return { radius: window.__orbit().radius, expected: window.__look.LOOK[key] * toScreen };
+  }, key);
   for (const [width, height, touch] of [[1920, 1080, false], [1440, 900, false], [844, 390, true]]) {
     const context = await browser.newContext({ viewport: { width, height }, isMobile: touch, hasTouch: touch });
     const page = await context.newPage();
     await page.goto(base + '?debug&diagnostics=1');
     await page.waitForFunction(() => window.__stillReady?.() && window.__look);
     const key = touch ? 'lookModeHandheld' : 'lookMode';
-    const [mode, other] = touch ? ['turn', 'orbit'] : ['orbit', 'turn'];
+    const [mode, other] = ['orbit', 'turn'];
     const { limits } = await page.evaluate(() => window.__orbit());
-    const first = await pivotRadius(page);
-    if (touch) assert.ok(first.radius < 0.01, `${width}x${height} turns in place: pivot ${first.radius} m away`);
-    else assert.ok(Math.abs(first.radius - first.expected) < 0.02, `${width}x${height} orbits a pivot ${first.radius} m away, expected ${first.expected}`);
+    const first = await pivotRadius(page, touch ? 'pivotDepthHandheld' : 'pivotDepth');
+    assert.ok(Math.abs(first.radius - first.expected) < 0.02, `${width}x${height} orbits a pivot ${first.radius} m away, expected ${first.expected}`);
     const worst = [];
     for (const swing of limits.swing) {
       for (const rise of limits.rise) {
@@ -75,10 +74,13 @@ try {
     assert.deepEqual(worst, [], `${width}x${height} ${mode} shows void at its yaw limit ${limits.swing[1].toFixed(1)}`);
     console.log(`PASS ${width}x${height} ${mode}: pivot ${first.radius.toFixed(2)} m, no void at yaw ${limits.swing.map((v) => v.toFixed(1))}`);
     await page.getByRole('button', { name: `${key}: ${mode}` }).click();
-    const swapped = await pivotRadius(page);
-    if (touch) assert.ok(Math.abs(swapped.radius - swapped.expected) < 0.02, `${width}x${height} ${key} orbit pivot ${swapped.radius} m away, expected ${swapped.expected}`);
-    else assert.ok(swapped.radius < 0.01, `${width}x${height} ${key} turns in place: pivot ${swapped.radius} m away`);
+    const swapped = await pivotRadius(page, 'pivotDepth');
+    assert.ok(swapped.radius < 0.01, `${width}x${height} ${key} turns in place: pivot ${swapped.radius} m away`);
     console.log(`PASS ${width}x${height} ${key} toggle to ${other}: pivot ${swapped.radius.toFixed(2)} m`);
+    const invert = touch ? 'invertDragHandheld' : 'invertDrag';
+    const was = await page.evaluate((k) => window.__look.LOOK[k], invert);
+    await page.getByRole('button', { name: `${invert}: ${was}` }).click();
+    assert.equal(await page.evaluate((k) => window.__look.LOOK[k], invert), !was, `${invert} toggles`);
     await context.close();
   }
 

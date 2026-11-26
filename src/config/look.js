@@ -55,13 +55,21 @@ export const LOOK = {
   parallaxStrength: 0.7,
   // Drag look-around: "orbit" swings the camera around a pivot pivotDepth times as far out as the screen
   // (1: the monitor), "turn" rotates it in place (camera.js). lookMode is for desktops, lookModeHandheld for
-  // phones and tablets (usesMobileScene).
+  // phones and tablets (usesMobileScene), as are the *Handheld pivot and limits.
   lookMode: 'orbit',
-  lookModeHandheld: 'turn',
+  lookModeHandheld: 'orbit',
   pivotDepth: 1.17,
   yawLimit: 30.5,
   pitchUpLimit: 25,
   pitchDownLimit: 16,
+  pivotDepthHandheld: 0.65,
+  yawLimitHandheld: 30.5,
+  pitchUpLimitHandheld: 20,
+  pitchDownLimitHandheld: 16,
+  // A pivot behind the screen (pivotDepth > 1) moves the desk with the finger; one in front moves it against,
+  // so invertDrag flips both drag axes back to grab-style.
+  invertDrag: false,
+  invertDragHandheld: true,
   plasticEnvIntensity: 0.2,
   plasticSpec: 0.85,
   standLift: [0.41, 0.25, 0.14], // the monitor's stand, in the chin's shadow (bakedMaterial.js)

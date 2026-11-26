@@ -21,5 +21,6 @@ export function hasWebGL() {
   }
 }
 
-// The look-around mode for this device: phones and tablets read lookModeHandheld.
-export const lookMode = () => (usesMobileScene() ? LOOK.lookModeHandheld : LOOK.lookMode);
+// A look-around setting for this device: phones and tablets read its *Handheld twin.
+export const lookFor = (key) => LOOK[usesMobileScene() ? `${key}Handheld` : key];
+export const lookMode = () => lookFor('lookMode');

@@ -31,6 +31,10 @@ const SLIDERS = [
   ['yawLimit', 0, 40, 0.5],
   ['pitchUpLimit', 0, 25, 0.5],
   ['pitchDownLimit', 0, 25, 0.5],
+  ['pivotDepthHandheld', 0.2, 2, 0.01],
+  ['yawLimitHandheld', 0, 40, 0.5],
+  ['pitchUpLimitHandheld', 0, 25, 0.5],
+  ['pitchDownLimitHandheld', 0, 25, 0.5],
   ['crtBarrel', 0, 0.3, 0.005],
   ['crtGlow', 0, 0.6, 0.01],
   ['crtMask', 0, 0.5, 0.01],
@@ -69,7 +73,7 @@ const SLIDERS = [
   ['fade', 0, 0.5, 0.005], ['warmth', -0.2, 0.2, 0.002], ['saturation', 0, 2, 0.01],
   ['shadowFloor', 0, 1, 0.01], ...[0, 1, 2].map((i) => ['shadowFloorColor', 0, 1, 0.01, i]),
 ];
-const CAMERA = ['overviewZoom', 'overviewHeight', 'overviewPitch', 'lookMode', 'lookModeHandheld', 'pivotDepth',
+const CAMERA = ['overviewZoom', 'overviewHeight', 'overviewPitch', 'lookMode', 'lookModeHandheld', 'pivotDepth', 'pivotDepthHandheld',
   'mobileFitMargin', 'mobileFov', 'mobileOffsetX', 'mobileOffsetY', 'mobileYaw', 'mobilePitch', 'mobileHeight'];
 // Frames the lamp like the r14 lamp panel (art/previews/b2-lamp-before-after.png).
 const CLOSE_UP = { position: new THREE.Vector3(-0.45, 1.12, 0.85), target: new THREE.Vector3(-0.54, 0.93, -0.04) };
@@ -132,9 +136,9 @@ export function installLampTuning(context, stage) {
   list.hidden = matchMedia('(max-width: 760px)').matches;
   collapse.textContent = list.hidden ? 'show' : 'hide';
   button('lamp', () => context.setLampOn(!context.lampOn, false));
-  for (const key of ['lookMode', 'lookModeHandheld']) {
+  for (const key of ['lookMode', 'lookModeHandheld', 'invertDrag', 'invertDragHandheld']) {
     const toggle = button(`${key}: ${LOOK[key]}`, () => {
-      LOOK[key] = LOOK[key] === 'turn' ? 'orbit' : 'turn';
+      LOOK[key] = typeof LOOK[key] === 'boolean' ? !LOOK[key] : LOOK[key] === 'turn' ? 'orbit' : 'turn';
       toggle.textContent = `${key}: ${LOOK[key]}`;
       apply();
     });

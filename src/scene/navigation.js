@@ -1,8 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { gsap } from 'gsap/gsap-core';
-import { LOOK } from '../config/look.js';
-import { lookMode } from '../config/experience.js';
+import { lookFor, lookMode } from '../config/experience.js';
 import { roomLimits } from './roomFit.js';
 const rad = THREE.MathUtils.degToRad;
 const ORBIT_DAMPING = 0.075;
@@ -43,8 +42,8 @@ export function createNavigation({ orbitPivot, framesRoom, isAtDesk, isHandheld,
 
   const orbitLeash = { min: 0, max: 0, softMin: 0, softMax: 0 };
   function yawLimit() {
-    if (lookMode() === 'turn' || !isHandheld()) return LOOK.yawLimit;
-    return LOOK.yawLimit * Math.min(1, LANDSCAPE_ASPECT / camera.aspect) * Math.min(1, DESKTOP_RADIUS / orbitHome.radius) ** 3.5;
+    if (lookMode() === 'turn' || !isHandheld()) return lookFor('yawLimit');
+    return lookFor('yawLimit') * Math.min(1, LANDSCAPE_ASPECT / camera.aspect) * Math.min(1, DESKTOP_RADIUS / orbitHome.radius) ** 3.5;
   }
 
   const probe = new THREE.PerspectiveCamera();
@@ -58,15 +57,15 @@ export function createNavigation({ orbitPivot, framesRoom, isAtDesk, isHandheld,
   }
 
   function pitchDownLimit() {
-    if (!isHandheld() || orbitHome.radius < DESKTOP_RADIUS * 1.02) return LOOK.pitchDownLimit;
+    if (!isHandheld() || orbitHome.radius < DESKTOP_RADIUS * 1.02) return lookFor('pitchDownLimit');
     const lowest = Math.acos(THREE.MathUtils.clamp((EYE_MIN - controls.target.y) / orbitHome.radius, -1, 1));
-    return Math.min(LOOK.pitchDownLimit, Math.max(0, THREE.MathUtils.radToDeg(lowest - orbitHome.phi)));
+    return Math.min(lookFor('pitchDownLimit'), Math.max(0, THREE.MathUtils.radToDeg(lowest - orbitHome.phi)));
   }
 
   let limits = [0, 0, 0, 0];
   function applyOrbitLimits() {
     const yaw = yawLimit();
-    limits = roomLimits([yaw, yaw, LOOK.pitchUpLimit, pitchDownLimit()], inRoom);
+    limits = roomLimits([yaw, yaw, lookFor('pitchUpLimit'), pitchDownLimit()], inRoom);
     orbitLeash.softMin = orbitLeash.min = orbitHome.theta - rad(limits[0]);
     orbitLeash.softMax = orbitLeash.max = orbitHome.theta + rad(limits[1]);
     controls.minAzimuthAngle = orbitLeash.min;
@@ -183,7 +182,7 @@ export function createNavigation({ orbitPivot, framesRoom, isAtDesk, isHandheld,
     controls.addEventListener("start", () => {
       // OrbitControls measures drags against the canvas height; on a portrait phone that made a full-width
       // swipe turn less than the look-around range, so drag speed follows the narrower side instead.
-      controls.rotateSpeed = ORBIT_SPEED * Math.max(1, canvasEl.clientHeight / canvasEl.clientWidth);
+      controls.rotateSpeed = (lookFor('invertDrag') ? -1 : 1) * ORBIT_SPEED * Math.max(1, canvasEl.clientHeight / canvasEl.clientWidth);
       resetParallax();
       orbitDragging = true;
       const returning = !!orbitTween;

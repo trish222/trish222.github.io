@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
-// The widened drag-to-look range (LOOK.yawLimit / pitchUpLimit / pitchDownLimit) never shows the void
+// The widened drag-to-look range (LOOK.yawLimit / pitchUpLimit / pitchDownLimit, *Handheld on phones) never shows the void
 // past the room, at every orbit extreme and corner, on desktop and on cam_mobile; a real drag (mouse)
 // or swipe (touch) far past the range stops at it and eases back home on release. The limits come from
 // framing the room (roomFit.js); the camera stays on a sphere around the pivot (the home distance, a ~1 mm
@@ -50,7 +50,10 @@ try {
     const cdp = touch && await context.newCDPSession(page);
     const touchAt = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
     const x0 = width * 0.15, y0 = height * 0.5;
+    // Grab-style: the monitor follows the finger (NDC y points up, the page's y down).
+    const monitor = () => page.evaluate(() => { const { ndc } = window.__fit('screen_plane'); return [(ndc.x0 + ndc.x1) / 2, (ndc.y0 + ndc.y1) / 2]; });
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const before = await monitor();
       if (touch) await touchAt('touchStart', x0, y0); else { await page.mouse.move(x0, y0); await page.mouse.down(); }
       for (let i = 1; i <= 12; i++) {
         const x = x0 + dx * width * 0.07 * i, y = y0 + dy * height * 0.07 * i;
@@ -60,6 +63,9 @@ try {
       await page.waitForTimeout(250);
       const held = await page.evaluate(() => window.__orbit());
       const [yawMin, yawMax] = held.limits.swing, [down, up] = held.limits.rise;
+      const after = await monitor();
+      assert.ok(dx ? Math.sign(after[0] - before[0]) === dx : Math.sign(after[1] - before[1]) === -dy,
+        `${width}x${height} drag ${dx},${dy} moves the monitor with the finger: ${before} -> ${after}`);
       assert.ok(onSphere(held), `${width}x${height} drag ${dx},${dy} orbits at the home distance: ${held.distance} vs ${held.radius}`);
       assert.ok(held.swing >= yawMin - 0.5 && held.swing <= yawMax + 0.5 && held.rise >= down - 0.5 && held.rise <= up + 0.5,
         `${width}x${height} drag ${dx},${dy} stays inside the leash: ${held.swing.toFixed(1)}, ${held.rise.toFixed(1)}`);

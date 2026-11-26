@@ -76,27 +76,31 @@ try {
     });
     assert.deepEqual([initial.width, initial.height], [width * Math.min(dpr, touch ? 1.5 : 2), height * Math.min(dpr, touch ? 1.5 : 2)], 'color buffer uses up to native DPR 2 (1.5 on phones) independently of the HTML desktop');
     // roomFit.js trims the look-around to what keeps void out of the frame (tests/lookaround.mjs checks that), so the
-    // yaw is at most LOOK.yawLimit: desktops keep at least 20 degrees of it, phones (which back off to frame the desk) some.
+    // yaw is at most yawLimit (phones read the *Handheld limits): desktops keep at least 20 degrees of it, phones
+    // (which back off to frame the desk) some.
+    const limit = (key) => LOOK[touch ? `${key}Handheld` : key];
     const [yawMinus, yawPlus] = initial.orbit.limits.swing;
     const yawFloor = touch ? 5 : 20;
-    assert.ok(-yawMinus >= yawFloor && yawPlus >= yawFloor && -yawMinus <= LOOK.yawLimit + .01 && yawPlus <= LOOK.yawLimit + .01,
+    assert.ok(-yawMinus >= yawFloor && yawPlus >= yawFloor && -yawMinus <= limit('yawLimit') + .01 && yawPlus <= limit('yawLimit') + .01,
       `horizontal limits are between ${yawFloor} and ±yawLimit degrees: ${initial.orbit.limits.swing}`);
     if (!touch) assert.ok(Math.abs(yawMinus + yawPlus) < .5, `a centred desktop frame turns equally both ways: ${initial.orbit.limits.swing}`);
     const [pitchDown, pitchUp] = initial.orbit.limits.rise;
     const pitchDownLimit = -pitchDown;
-    assert.ok(pitchUp <= LOOK.pitchUpLimit + .01 && -pitchDown <= LOOK.pitchDownLimit + .01, `vertical limits stay within the tuned range: ${initial.orbit.limits.rise}`);
+    assert.ok(pitchUp <= limit('pitchUpLimit') + .01 && -pitchDown <= limit('pitchDownLimit') + .01, `vertical limits stay within the tuned range: ${initial.orbit.limits.rise}`);
     if (!touch) assert.deepEqual(initial.orbit.limits.rise, [-LOOK.pitchDownLimit, LOOK.pitchUpLimit]);
     await page.evaluate(() => { window.__canvasWrites = 0; window.__measureAllocations = true; });
     // A drag, reversal, damping glide, and automatic walk home must never
-    // reallocate the drawing buffer or accidentally activate the monitor.
-    await page.mouse.move(width * .8, height * .8);
+    // reallocate the drawing buffer or accidentally activate the monitor. With invertDrag the same swings take the
+    // mirrored path.
+    const at = (f) => (limit('invertDrag') ? 1 - f : f);
+    await page.mouse.move(width * at(.8), height * at(.8));
     await page.mouse.down();
-    await page.mouse.move(width * .15, height * .15, { steps: 12 });
+    await page.mouse.move(width * at(.15), height * at(.15), { steps: 12 });
     await page.waitForTimeout(150);
     const heldLeft = await page.evaluate(() => window.__orbit());
     assert.ok(heldLeft.swing > 2 && heldLeft.swing <= yawPlus + .01 && heldLeft.rise < -2 && heldLeft.rise >= -pitchDownLimit - .01,
       `large diagonal drag stays inside the head-turn limits: ${JSON.stringify(heldLeft)}`);
-    await page.mouse.move(width * .85, height * .85, { steps: 12 });
+    await page.mouse.move(width * at(.85), height * at(.85), { steps: 12 });
     // The camera eases toward the held pose: wait until it has arrived (the pose stops changing), not a fixed
     // 150 ms, which a slow-rendering machine misses and then releases mid-travel.
     let heldRight = await page.evaluate(() => window.__orbit());
@@ -107,7 +111,7 @@ try {
       heldRight = next;
       if (arrived) break;
     }
-    assert.ok(heldRight.swing < heldLeft.swing - 10 && heldRight.swing >= yawMinus - .01 && heldRight.rise > heldLeft.rise + 10 && heldRight.rise <= LOOK.pitchUpLimit + .01,
+    assert.ok(heldRight.swing < heldLeft.swing - 10 && heldRight.swing >= yawMinus - .01 && heldRight.rise > heldLeft.rise + 10 && heldRight.rise <= limit('pitchUpLimit') + .01,
       `reverse drag stays inside the opposite head-turn limits: ${JSON.stringify(heldRight)}`);
     await page.mouse.up();
     if (reducedMotion !== 'reduce') {
