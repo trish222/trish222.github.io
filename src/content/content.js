@@ -20,6 +20,7 @@ export const UI = {
   credits: "credits",
   lofi: "skip 3D",
   lofiBack: "back to 3D",
+  slowLoad: "taking a while? skip 3D", // the boot screen, after SLOW_LOAD_MS (ui/slowLoad.js)
   saveResume: "Save PDF",
   objects: {
     crt: "use computer",

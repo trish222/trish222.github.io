@@ -100,6 +100,7 @@ export function createIntro({ boxWidth, mobile, reducedMotion, onFill, enter }) 
     // otherwise (review URLs) the boot screen just goes and the camera starts at the desk.
     async start({ wait, still, flyOut }) {
       removeEventListener('resize', placeBox);
+      boot.classList.add('loaded'); // the "skip 3D" line (ui/slowLoad.js) has done its job
       snapshot = still;
       if (!wait) { place = 'desk'; return end(); }
       setProgress(PHASE_A);

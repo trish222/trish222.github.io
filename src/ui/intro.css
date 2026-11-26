@@ -66,9 +66,32 @@ body:has(#boot:not([hidden])) { background: #000; }
 .boot-cursor { width: 22px; height: 34px; background: #b7f0b0; }
 #screen #boot.ready .boot-cursor { animation: cta-blink 1.1s steps(1) infinite; }
 @keyframes cta-blink { 50% { visibility: hidden; } }
+/* "taking a while? skip 3D": under the bar once the scene is slow (ui/slowLoad.js: .slow), gone when it
+   arrives (.loaded). It holds its space (visibility) so the boot screen does not shift when it shows. */
+.boot-slow {
+  visibility: hidden;
+  margin-top: -6px;
+  padding: 0 0 0 var(--menu-gutter);
+  color: #b7f0b0;
+  font: 600 0.72em/1.2 var(--ux-mono);
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  opacity: 0.7;
+  pointer-events: auto;
+  cursor: pointer;
+}
+/* The ▶ the room's links show on hover, in the gutter (menuCursor.js's glyph; its follower is not running yet). */
+.boot-slow { position: relative; }
+.boot-arrow { position: absolute; top: 50%; left: var(--ux-cursor-offset); margin-top: calc(var(--ux-cursor-size) / -2); opacity: 0; transition: opacity var(--ux-cursor-glide) ease-out; }
+.boot-arrow svg { display: block; width: calc(var(--ux-cursor-size) / 2); height: var(--ux-cursor-size); fill: currentColor; }
+.boot-slow:is(:hover, :focus-visible) .boot-arrow { opacity: 1; }
+.boot-slow:is(:hover, :focus-visible) .boot-arrow svg { animation: ux-cursor-bob var(--ux-cursor-bob) ease-in-out infinite alternate; }
+#boot.slow:not(.loaded, .ready) .boot-slow { visibility: visible; }
+.boot-slow:hover, .boot-slow:focus-visible { opacity: 1; }
 body.intro #screen-back-bar, body.intro #corner { visibility: hidden; }
 
 @media (prefers-reduced-motion: reduce) {
   #boot, .boot-bar span { transition: none; }
+  .boot-slow .boot-arrow svg { animation: none; }
   #screen .boot-text p, #screen .boot-dots::after, #screen #boot.ready .boot-cursor { animation: none; }
 }
